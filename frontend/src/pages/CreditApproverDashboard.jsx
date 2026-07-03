@@ -1,0 +1,330 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  Box,
+  Paper,
+  Typography,
+  Button,
+  Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  CircularProgress,
+  Stack,
+  Grid,
+} from "@mui/material";
+import { getApproverApplications } from "../api/client";
+
+export default function CreditApproverDashboard({ openApplication, backToClient }) {
+  const [applications, setApplications] = useState([]);
+  const [summary, setSummary] = useState({
+    total_applications: 0,
+    approved_percentage: 0,
+    further_review_percentage: 0,
+  });
+  const [filter, setFilter] = useState("REJECT_RECOMMENDED");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadApplications() {
+      try {
+        const data = await getApproverApplications();
+
+        setSummary(data.summary || {});
+        setApplications(data.applications || []);
+      } catch (err) {
+        setError(err.message || "Unable to load applications.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadApplications();
+  }, []);
+
+  const furtherReviewApplications = useMemo(() => {
+    return applications.filter((app) => app.system_decision !== "APPROVED");
+  }, [applications]);
+
+  const filteredApplications = useMemo(() => {
+    return furtherReviewApplications.filter(
+      (app) => app.review_category === filter
+    );
+  }, [filter, furtherReviewApplications]);
+
+  const formatCurrency = (value) => {
+    if (!value && value !== 0) return "-";
+    return `$${Number(value).toLocaleString()}`;
+  };
+
+  const reviewLabel = (category) => {
+    if (category === "REJECT_RECOMMENDED") return "Reject Recommended";
+    if (category === "MANUAL_REVIEW_REQUIRED") return "Manual Review Required";
+    return "Approved";
+  };
+
+  const reviewColor = (category) => {
+    if (category === "REJECT_RECOMMENDED") return "error";
+    if (category === "MANUAL_REVIEW_REQUIRED") return "warning";
+    return "success";
+  };
+
+  return (
+    <Box
+      sx={{
+        minHeight: "100vh",
+        bgcolor: "#f6f8fc",
+        fontFamily: "'Inter','Segoe UI',Arial,sans-serif",
+      }}
+    >
+    <Box
+    sx={{
+        background: "linear-gradient(100deg,#4f46e5,#8b5cf6,#d946ef)",
+        color: "white",
+        px: 4,
+        py: 4,
+    }}
+    >
+    <Box
+        sx={{
+        maxWidth: 1200,
+        mx: "auto",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 3,
+        }}
+    >
+        <Box>
+        <Typography
+            sx={{
+            fontSize: 30,
+            fontWeight: 850,
+            letterSpacing: "-0.03em",
+            }}
+        >
+            Credit Approver Work Queue
+        </Typography>
+
+        <Typography sx={{ mt: 1, opacity: 0.9 }}>
+            Review applications that require final credit assessment.
+        </Typography>
+        </Box>
+
+        <Button
+        variant="outlined"
+        onClick={backToClient}
+        sx={{
+            borderRadius: 3,
+            fontWeight: 800,
+            bgcolor: "white",
+            color: "#4f46e5",
+            borderColor: "white",
+            px: 3,
+            py: 1.2,
+            "&:hover": {
+            bgcolor: "#f8fafc",
+            borderColor: "white",
+            },
+        }}
+        >
+        Back to Client Portal
+        </Button>
+    </Box>
+    </Box>
+      <Box sx={{ maxWidth: 1200, mx: "auto", p: 4 }}>
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} md={4}>
+            <MetricCard
+              title="Total Applications"
+              value={summary.total_applications || 0}
+              subtitle="Applications submitted"
+              accent="#4f46e5"
+            />
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <MetricCard
+              title="Approved"
+              value={`${summary.approved_percentage || 0}%`}
+              subtitle="Passed automated assessment"
+              accent="#16a34a"
+            />
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <MetricCard
+              title="Needs Further Review"
+              value={`${summary.further_review_percentage || 0}%`}
+              subtitle="Requires credit approver attention"
+              accent="#f59e0b"
+            />
+          </Grid>
+        </Grid>
+
+        <Paper
+          elevation={0}
+          sx={{
+            p: 4,
+            borderRadius: 4,
+            border: "1px solid #e5e7eb",
+            boxShadow: "0 12px 28px rgba(15,23,42,.08)",
+          }}
+        >
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            justifyContent="space-between"
+            alignItems={{ xs: "flex-start", md: "center" }}
+            spacing={2}
+            sx={{ mb: 3 }}
+          >
+            <Box>
+              <Typography sx={{ fontSize: 22, fontWeight: 800 }}>
+                Applications Requiring Review
+              </Typography>
+              <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+                Filter between likely rejection cases and applications requiring manual assessment.
+              </Typography>
+            </Box>
+
+          </Stack>
+
+        <Stack direction="row" spacing={1.5} sx={{ mb: 3 }}>
+        <Button
+            color="error"
+            variant={filter === "REJECT_RECOMMENDED" ? "contained" : "outlined"}
+            onClick={() => setFilter("REJECT_RECOMMENDED")}
+            sx={{ borderRadius: 3, fontWeight: 800 }}
+        >
+            Reject Recommended
+        </Button>
+
+        <Button
+            color="warning"
+            variant={filter === "MANUAL_REVIEW_REQUIRED" ? "contained" : "outlined"}
+            onClick={() => setFilter("MANUAL_REVIEW_REQUIRED")}
+            sx={{ borderRadius: 3, fontWeight: 800 }}
+        >
+            Manual Review Required
+        </Button>
+        </Stack>
+          {loading && (
+            <Box sx={{ py: 8, textAlign: "center" }}>
+              <CircularProgress />
+              <Typography sx={{ mt: 2 }}>Loading applications...</Typography>
+            </Box>
+          )}
+
+          {error && (
+            <Box sx={{ py: 5, textAlign: "center" }}>
+              <Typography color="error">{error}</Typography>
+            </Box>
+          )}
+
+          {!loading && !error && (
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 800 }}>Reference</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>Company</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>UEN</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>Requested Amount</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>Review Category</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }} align="right">
+                    Action
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+
+              <TableBody>
+                {filteredApplications.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                      No applications found for this filter.
+                    </TableCell>
+                  </TableRow>
+                )}
+
+                {filteredApplications.map((app) => (
+                  <TableRow key={app.application_id} hover>
+                    <TableCell>{app.reference_number}</TableCell>
+
+                    <TableCell>
+                      <Typography fontWeight={700}>
+                        {app.company_name}
+                      </Typography>
+                    </TableCell>
+
+                    <TableCell>{app.uen}</TableCell>
+
+                    <TableCell>{formatCurrency(app.requested_quantum)}</TableCell>
+
+                    <TableCell>
+                      <Chip
+                        label={reviewLabel(app.review_category)}
+                        color={reviewColor(app.review_category)}
+                        size="small"
+                        sx={{ fontWeight: 700 }}
+                      />
+                    </TableCell>
+
+                    <TableCell align="right">
+                      <Button
+                        variant="contained"
+                        size="small"
+                        sx={{
+                          borderRadius: 2,
+                          fontWeight: 700,
+                          background: "linear-gradient(90deg,#4f46e5,#7c3aed)",
+                        }}
+                        onClick={() => openApplication(app)}
+                      >
+                        Open Review
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </Paper>
+      </Box>
+    </Box>
+  );
+}
+
+function MetricCard({ title, value, subtitle, accent }) {
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        p: 3,
+        borderRadius: 4,
+        border: "1px solid #e5e7eb",
+        boxShadow: "0 12px 28px rgba(15,23,42,.08)",
+      }}
+    >
+      <Typography color="text.secondary" sx={{ fontWeight: 700 }}>
+        {title}
+      </Typography>
+
+      <Typography
+        sx={{
+          mt: 1,
+          fontSize: 36,
+          fontWeight: 850,
+          color: accent,
+          letterSpacing: "-0.04em",
+        }}
+      >
+        {value}
+      </Typography>
+
+      <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+        {subtitle}
+      </Typography>
+    </Paper>
+  );
+}

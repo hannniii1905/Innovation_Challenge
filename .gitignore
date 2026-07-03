@@ -1,0 +1,14 @@
+# Python virtual environments and caches
+.venv/
+.venv-1/
+.pytest_cache/
+.kiro/
+__pycache__/
+
+# Frontend files
+frontend/node_modules/
+frontend/dist/
+
+# OS files
+.DS_Store
+*.local

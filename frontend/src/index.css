@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-800 font-sans;
+    background-image:
+      radial-gradient(60rem 60rem at 110% -10%, rgba(129, 140, 248, 0.18), transparent 60%),
+      radial-gradient(50rem 50rem at -10% 0%, rgba(99, 102, 241, 0.12), transparent 55%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl bg-white/90 backdrop-blur shadow-card border border-slate-100;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5
+      text-sm font-semibold transition-all duration-200 focus:outline-none
+      focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn text-white shadow-soft
+      bg-gradient-to-r from-brand-500 to-violet-500
+      hover:from-brand-600 hover:to-violet-600 hover:-translate-y-0.5;
+  }
+
+  .btn-ghost {
+    @apply btn bg-white text-slate-600 border border-slate-200
+      hover:bg-slate-50 hover:text-slate-900;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm
+      text-slate-800 shadow-sm transition
+      focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100;
+  }
+
+  .input-corrected {
+    @apply border-amber-400 bg-amber-50 ring-1 ring-amber-200;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+}
+
+/* Thin, subtle scrollbars for the transaction table */
+.scroll-thin::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45);
+  border-radius: 9999px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
