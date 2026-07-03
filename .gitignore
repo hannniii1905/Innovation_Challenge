@@ -1,19 +1,20 @@
-# Block python environments and caches
+# Ensure folders end with a trailing slash so it doesn't block files containing the same name
+node_modules/
+dist/
 .venv/
 .venv-1/
 .pytest_cache/
 .kiro/
-__pycache__/
 .vscode/
 
-# Block database and pdf files
 *.db
 *.sqlite3
 *.pdf
-
-# Block frontend dependencies
-node_modules/
-dist/
-
-# OS specific files
 .DS_Store
+
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
