@@ -1,14 +1,19 @@
-# Python virtual environments and caches
+# Block python environments and caches
 .venv/
 .venv-1/
 .pytest_cache/
 .kiro/
 __pycache__/
+.vscode/
 
-# Frontend files
-frontend/node_modules/
-frontend/dist/
+# Block database and pdf files
+*.db
+*.sqlite3
+*.pdf
 
-# OS files
+# Block frontend dependencies
+node_modules/
+dist/
+
+# OS specific files
 .DS_Store
-*.local
