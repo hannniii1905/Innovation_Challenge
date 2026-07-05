@@ -1,14 +1,36 @@
 # Python virtual environments and caches
 .venv/
 .venv-1/
+venv/
+env/
 .pytest_cache/
-.kiro/
+.mypy_cache/
+.ruff_cache/
 __pycache__/
+*.py[cod]
+*.egg-info/
 
-# Frontend files
+# Node / frontend
+node_modules/
 frontend/node_modules/
 frontend/dist/
+dist/
 
-# OS files
+# Runtime data (regenerate with scripts/seed_demo.py)
+innovation_challenge.db
+*.sqlite
+*.sqlite3
+
+# Editor / OS
 .DS_Store
+.vscode/
+.idea/
 *.local
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Tooling
+.kiro/
