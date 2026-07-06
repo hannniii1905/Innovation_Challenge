@@ -13,11 +13,11 @@ export default function PortalShell({ application, children, sidebar = true }) {
     >
       <Box
         sx={{
-          background: "linear-gradient(100deg,#4f46e5,#8b5cf6,#d946ef)",
+          background: "linear-gradient(120deg, #001A3F 0%, #002E5D 45%, #005EB8 100%)",
           color: "white",
           px: 4,
           py: 3,
-          boxShadow: "0 8px 20px rgba(79,70,229,.18)",
+          boxShadow: "0 8px 20px rgba(0,94,184,.18)",
         }}
       >
         <Box sx={{ maxWidth: 1400, mx: "auto" }}>
@@ -75,7 +75,7 @@ export default function PortalShell({ application, children, sidebar = true }) {
                   width: 52,
                   height: 52,
                   borderRadius: 3,
-                  bgcolor: "#ede9fe",
+                  bgcolor: "#e6f0fa",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -109,8 +109,8 @@ export default function PortalShell({ application, children, sidebar = true }) {
                 width: "100%",
                 height: "auto",
                 py: 1,
-                bgcolor: "#f1effe",
-                color: "#4f46e5",
+                bgcolor: "#e6f0fa",
+                color: "#005EB8",
                 fontWeight: 600,
                 whiteSpace: "normal",
               }}

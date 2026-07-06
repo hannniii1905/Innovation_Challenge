@@ -12,6 +12,7 @@ import { submitApplication } from "../api/client";
 export default function InitialAssessment({
   application,
   setApplication,
+  uploadSupportingDocs,
   backToHome,
 }) {
   const [loading, setLoading] = useState(true);
@@ -248,14 +249,32 @@ export default function InitialAssessment({
           )}
         </Paper>
 
-        <Button
-          variant="contained"
-          size="large"
-          sx={{ mt: 5 }}
-          onClick={backToHome}
+        <Typography color="text.secondary" fontSize={14} sx={{ mt: 5 }}>
+          Didn't upload everything? You can add supporting documents (IC,
+          financials, income statement) now or any time before final approval.
+        </Typography>
+
+        <Box
+          sx={{
+            mt: 2,
+            display: "flex",
+            gap: 2,
+            justifyContent: "center",
+            flexWrap: "wrap",
+          }}
         >
-          Return Home
-        </Button>
+          <Button
+            variant="outlined"
+            size="large"
+            onClick={uploadSupportingDocs}
+          >
+            Upload Supporting Documents
+          </Button>
+
+          <Button variant="contained" size="large" onClick={backToHome}>
+            Return Home
+          </Button>
+        </Box>
       </Paper>
     </Box>
   );

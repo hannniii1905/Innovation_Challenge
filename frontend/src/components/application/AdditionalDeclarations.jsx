@@ -70,7 +70,7 @@ export default function AdditionalDeclarations({ application, setApplication }) 
             py: 3,
             borderBottom: "1px solid #e5e7eb",
             background:
-              "linear-gradient(90deg, rgba(238,242,255,0.9), rgba(255,255,255,0.9))",
+              "linear-gradient(90deg, rgba(230,240,250,0.9), rgba(255,255,255,0.9))",
           }}
         >
           <Typography sx={{ fontSize: 18, fontWeight: 800, color: "#0f172a" }}>
@@ -84,21 +84,21 @@ export default function AdditionalDeclarations({ application, setApplication }) 
 
         <Box sx={{ p: 4 }}>
           <Grid container spacing={2.5}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <QuestionCard
                 title="Has your company recorded a positive EBITDA in the latest financial year?"
                 field="positiveEBITDA"
               />
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <QuestionCard
                 title="Does your company have a positive Tangible Net Worth?"
                 field="positiveTNW"
               />
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <QuestionCard
                 title="Does your company currently have existing loans or banking facilities?"
                 field="existingLoans"
@@ -106,7 +106,7 @@ export default function AdditionalDeclarations({ application, setApplication }) 
             </Grid>
 
             {declarations.existingLoans === "yes" && (
-              <Grid item xs={12}>
+              <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
                   multiline
@@ -118,7 +118,7 @@ export default function AdditionalDeclarations({ application, setApplication }) 
                 />
               </Grid>
             )}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <QuestionCard
                 title="Has the company defaulted on any loan repayments in the past 12 months?"
                 field="recentDefault"

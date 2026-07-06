@@ -156,13 +156,29 @@ export async function submitApplication(application) {
   );
 
   formData.append(
+    "personal_guarantors_json",
+    JSON.stringify(application.personalGuarantors || [])
+  );
+
+  formData.append("pg_coverage", application.pgCoverage ?? 0);
+
+  formData.append(
     "credit_bureau_consent",
     application.consent?.creditBureau ? "YES" : "NO"
   );
 
+  // Bank statement is mandatory; supporting docs are optional and may be
+  // uploaded later, so only append the ones that are present.
   formData.append("bank_statement", application.uploads.bankStatement);
-  formData.append("income_statement", application.uploads.incomeStatement);
-  formData.append("ic_copy", application.uploads.ic);
+  if (application.uploads.incomeStatement) {
+    formData.append("income_statement", application.uploads.incomeStatement);
+  }
+  if (application.uploads.ic) {
+    formData.append("ic_copy", application.uploads.ic);
+  }
+  if (application.uploads.financials) {
+    formData.append("financials", application.uploads.financials);
+  }
 
   const response = await fetch(`${API_BASE}/client/submit`, {
     method: "POST",
@@ -172,6 +188,60 @@ export async function submitApplication(application) {
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw new Error(error.detail || "Application submission failed.");
+  }
+
+  return response.json();
+}
+
+/**
+ * Fetch which documents are currently on file for a submitted application.
+ * @param {number} applicationId
+ */
+export async function getApplicationDocuments(applicationId) {
+  const response = await fetch(
+    `${API_BASE}/client/applications/${applicationId}/documents`
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || "Failed to load application documents.");
+  }
+
+  return response.json();
+}
+
+/**
+ * Attach supporting documents to an already-submitted application. Any subset
+ * of { incomeStatement, ic, financials, bankStatement } may be provided.
+ * @param {number} applicationId
+ * @param {object} uploads
+ */
+export async function uploadSupportingDocuments(applicationId, uploads = {}) {
+  const formData = new FormData();
+  if (uploads.incomeStatement) {
+    formData.append("income_statement", uploads.incomeStatement);
+  }
+  if (uploads.ic) {
+    formData.append("ic_copy", uploads.ic);
+  }
+  if (uploads.financials) {
+    formData.append("financials", uploads.financials);
+  }
+  if (uploads.bankStatement) {
+    formData.append("bank_statement", uploads.bankStatement);
+  }
+
+  const response = await fetch(
+    `${API_BASE}/client/applications/${applicationId}/documents`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || "Failed to upload supporting documents.");
   }
 
   return response.json();
@@ -226,4 +296,39 @@ export async function submitApproverDecision(
   }
 
   return response.json();
+}
+
+// --------------------------------------------------------------------------- //
+// ACRA lookup + keyman approval (mock)
+// These use the Vite /api proxy to the FastAPI backend.
+// --------------------------------------------------------------------------- //
+
+/**
+ * Look up a company and its keymen (directors) by UEN from the mock ACRA
+ * registry. Used by the "no Singpass/Corppass" retrieve-by-UEN path.
+ * @param {string} uen
+ */
+export async function acraLookup(uen) {
+  const response = await fetch(
+    `${BASE}/acra/company?uen=${encodeURIComponent(uen)}`
+  );
+  return handle(response);
+}
+
+/**
+ * Ask the backend to notify a company's ACRA keymen to approve an application
+ * submitted by a non-keyman applicant. Non-blocking for the demo.
+ * @param {{uen: string, applicantName?: string, applicantEmail?: string}} params
+ */
+export async function requestKeymanApproval({ uen, applicantName, applicantEmail }) {
+  const form = new FormData();
+  form.append("uen", uen);
+  form.append("applicant_name", applicantName || "");
+  form.append("applicant_email", applicantEmail || "");
+
+  const response = await fetch(`${BASE}/keyman/request-approval`, {
+    method: "POST",
+    body: form,
+  });
+  return handle(response);
 }

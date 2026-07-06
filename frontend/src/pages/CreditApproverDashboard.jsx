@@ -23,7 +23,7 @@ export default function CreditApproverDashboard({ openApplication, backToClient 
     approved_percentage: 0,
     further_review_percentage: 0,
   });
-  const [filter, setFilter] = useState("REJECT_RECOMMENDED");
+  const [filter, setFilter] = useState("MANUAL_REVIEW_REQUIRED");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -44,15 +44,9 @@ export default function CreditApproverDashboard({ openApplication, backToClient 
     loadApplications();
   }, []);
 
-  const furtherReviewApplications = useMemo(() => {
-    return applications.filter((app) => app.system_decision !== "APPROVED");
-  }, [applications]);
-
   const filteredApplications = useMemo(() => {
-    return furtherReviewApplications.filter(
-      (app) => app.review_category === filter
-    );
-  }, [filter, furtherReviewApplications]);
+    return applications.filter((app) => app.review_category === filter);
+  }, [filter, applications]);
 
   const formatCurrency = (value) => {
     if (!value && value !== 0) return "-";
@@ -81,7 +75,7 @@ export default function CreditApproverDashboard({ openApplication, backToClient 
     >
     <Box
     sx={{
-        background: "linear-gradient(100deg,#4f46e5,#8b5cf6,#d946ef)",
+        background: "linear-gradient(120deg, #001A3F 0%, #002E5D 45%, #005EB8 100%)",
         color: "white",
         px: 4,
         py: 4,
@@ -120,7 +114,7 @@ export default function CreditApproverDashboard({ openApplication, backToClient 
             borderRadius: 3,
             fontWeight: 800,
             bgcolor: "white",
-            color: "#4f46e5",
+            color: "#005EB8",
             borderColor: "white",
             px: 3,
             py: 1.2,
@@ -135,34 +129,43 @@ export default function CreditApproverDashboard({ openApplication, backToClient 
     </Box>
     </Box>
       <Box sx={{ maxWidth: 1200, mx: "auto", p: 4 }}>
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} md={4}>
-            <MetricCard
-              title="Total Applications"
-              value={summary.total_applications || 0}
-              subtitle="Applications submitted"
-              accent="#4f46e5"
-            />
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <MetricCard
-              title="Approved"
-              value={`${summary.approved_percentage || 0}%`}
-              subtitle="Passed automated assessment"
-              accent="#16a34a"
-            />
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <MetricCard
-              title="Needs Further Review"
-              value={`${summary.further_review_percentage || 0}%`}
-              subtitle="Requires credit approver attention"
-              accent="#f59e0b"
-            />
-          </Grid>
-        </Grid>
+        <Box
+          sx={{
+            mb: 4,
+            display: "grid",
+            gap: 3,
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, 1fr)",
+              md: "repeat(4, 1fr)",
+            },
+          }}
+        >
+          <MetricCard
+            title="Total Applications"
+            value={summary.total_applications || 0}
+            subtitle="Applications submitted"
+            accent="#005EB8"
+          />
+          <MetricCard
+            title="Auto-Approved"
+            value={`${summary.approved_percentage || 0}%`}
+            subtitle="Passed automated assessment"
+            accent="#16a34a"
+          />
+          <MetricCard
+            title="Needs Further Review"
+            value={`${summary.further_review_percentage || 0}%`}
+            subtitle="Requires credit approver attention"
+            accent="#f59e0b"
+          />
+          <MetricCard
+            title="Rejected"
+            value={`${summary.rejected_percentage || 0}%`}
+            subtitle="Declined for obvious reasons"
+            accent="#dc2626"
+          />
+        </Box>
 
         <Paper
           elevation={0}
@@ -193,6 +196,15 @@ export default function CreditApproverDashboard({ openApplication, backToClient 
 
         <Stack direction="row" spacing={1.5} sx={{ mb: 3 }}>
         <Button
+            color="warning"
+            variant={filter === "MANUAL_REVIEW_REQUIRED" ? "contained" : "outlined"}
+            onClick={() => setFilter("MANUAL_REVIEW_REQUIRED")}
+            sx={{ borderRadius: 3, fontWeight: 800 }}
+        >
+            Manual Review Required
+        </Button>
+
+        <Button
             color="error"
             variant={filter === "REJECT_RECOMMENDED" ? "contained" : "outlined"}
             onClick={() => setFilter("REJECT_RECOMMENDED")}
@@ -202,12 +214,12 @@ export default function CreditApproverDashboard({ openApplication, backToClient 
         </Button>
 
         <Button
-            color="warning"
-            variant={filter === "MANUAL_REVIEW_REQUIRED" ? "contained" : "outlined"}
-            onClick={() => setFilter("MANUAL_REVIEW_REQUIRED")}
+            color="success"
+            variant={filter === "APPROVED" ? "contained" : "outlined"}
+            onClick={() => setFilter("APPROVED")}
             sx={{ borderRadius: 3, fontWeight: 800 }}
         >
-            Manual Review Required
+            Auto-Approved
         </Button>
         </Stack>
           {loading && (
@@ -277,7 +289,7 @@ export default function CreditApproverDashboard({ openApplication, backToClient 
                         sx={{
                           borderRadius: 2,
                           fontWeight: 700,
-                          background: "linear-gradient(90deg,#4f46e5,#7c3aed)",
+                          background: "linear-gradient(90deg, #005EB8 0%, #0072CE 100%)",
                         }}
                         onClick={() => openApplication(app)}
                       >
@@ -302,6 +314,7 @@ function MetricCard({ title, value, subtitle, accent }) {
       sx={{
         p: 3,
         borderRadius: 4,
+        height: "100%",
         border: "1px solid #e5e7eb",
         boxShadow: "0 12px 28px rgba(15,23,42,.08)",
       }}

@@ -61,7 +61,7 @@ export default function ConsentSection({ application, setApplication }) {
             py: 3,
             borderBottom: "1px solid #e5e7eb",
             background:
-              "linear-gradient(90deg, rgba(238,242,255,0.9), rgba(255,255,255,0.9))",
+              "linear-gradient(90deg, rgba(230,240,250,0.9), rgba(255,255,255,0.9))",
           }}
         >
           <Typography sx={{ fontSize: 18, fontWeight: 800, color: "#0f172a" }}>

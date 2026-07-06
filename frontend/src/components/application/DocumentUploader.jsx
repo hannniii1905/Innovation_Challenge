@@ -6,9 +6,14 @@ import {
   Button,
   Grid,
   Paper,
+  Chip,
 } from "@mui/material";
 
-export default function DocumentUploader({ application, setApplication }) {
+export default function DocumentUploader({
+  application,
+  setApplication,
+  supportingOnly = false,
+}) {
   const upload = (field, file) => {
     if (!file) return;
 
@@ -21,7 +26,7 @@ export default function DocumentUploader({ application, setApplication }) {
     }));
   };
 
-  const UploadBox = ({ icon, title, field, helper }) => {
+  const UploadBox = ({ icon, title, field, helper, required }) => {
     const uploaded = application.uploads[field];
 
     return (
@@ -36,11 +41,30 @@ export default function DocumentUploader({ application, setApplication }) {
           textAlign: "center",
           transition: ".2s",
           "&:hover": {
-            borderColor: "#8b5cf6",
-            boxShadow: "0 10px 24px rgba(79,70,229,.12)",
+            borderColor: "#0072CE",
+            boxShadow: "0 10px 24px rgba(0,94,184,.12)",
           },
         }}
       >
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            mb: 1.5,
+          }}
+        >
+          <Chip
+            size="small"
+            label={required ? "Required" : "Optional"}
+            sx={{
+              fontWeight: 800,
+              fontSize: 11,
+              bgcolor: required ? "#fee2e2" : "#e6f0fa",
+              color: required ? "#b91c1c" : "#005EB8",
+            }}
+          />
+        </Box>
+
         <Box
           sx={{
             width: 46,
@@ -48,7 +72,7 @@ export default function DocumentUploader({ application, setApplication }) {
             mx: "auto",
             mb: 2,
             borderRadius: 3,
-            bgcolor: "#ede9fe",
+            bgcolor: "#e6f0fa",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -124,44 +148,86 @@ export default function DocumentUploader({ application, setApplication }) {
             py: 3,
             borderBottom: "1px solid #e5e7eb",
             background:
-              "linear-gradient(90deg, rgba(238,242,255,0.9), rgba(255,255,255,0.9))",
+              "linear-gradient(90deg, rgba(230,240,250,0.9), rgba(255,255,255,0.9))",
           }}
         >
           <Typography sx={{ fontSize: 18, fontWeight: 800, color: "#0f172a" }}>
-            Supporting Documents
+            {supportingOnly ? "Supporting Documents" : "Documents"}
           </Typography>
 
           <Typography color="text.secondary" sx={{ mt: 0.8, fontSize: 14 }}>
-            Upload the required documents for your application review.
+            {supportingOnly
+              ? "Add any supporting documents. These are optional and can be provided at any time."
+              : "Only the corporate bank statement is required to submit. Supporting documents are optional and can be uploaded later."}
           </Typography>
         </Box>
 
         <Box sx={{ p: 4 }}>
+          {!supportingOnly && (
+            <Box sx={{ mb: 4 }}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: "#64748b",
+                  textTransform: "uppercase",
+                  letterSpacing: ".08em",
+                  mb: 2,
+                }}
+              >
+                Required
+              </Typography>
+              <Grid container spacing={3}>
+                <Grid size={{ xs: 12, md: 4 }}>
+                  <UploadBox
+                    icon="🏦"
+                    title="Corporate Bank Statement"
+                    field="bankStatement"
+                    helper="Upload your latest corporate bank statement."
+                    required
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+
+          <Typography
+            sx={{
+              fontSize: 13,
+              fontWeight: 800,
+              color: "#64748b",
+              textTransform: "uppercase",
+              letterSpacing: ".08em",
+              mb: 2,
+            }}
+          >
+            Supporting Documents (optional)
+          </Typography>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={4}>
-              <UploadBox
-                icon="🏦"
-                title="Corporate Bank Statement"
-                field="bankStatement"
-                helper="Upload your latest corporate bank statement."
-              />
-            </Grid>
-
-            <Grid item xs={12} md={4}>
-              <UploadBox
-                icon="📄"
-                title="IRAS Income Statement"
-                field="incomeStatement"
-                helper="Upload your latest income or tax supporting document."
-              />
-            </Grid>
-
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <UploadBox
                 icon="🪪"
                 title="NRIC / Identification Card"
                 field="ic"
                 helper="Upload the key person’s identification document."
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 4 }}>
+              <UploadBox
+                icon="📊"
+                title="Company Financials"
+                field="financials"
+                helper="Upload management accounts or audited financials."
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 4 }}>
+              <UploadBox
+                icon="📄"
+                title="IRAS Income Statement"
+                field="incomeStatement"
+                helper="Upload your latest income or tax supporting document."
               />
             </Grid>
           </Grid>

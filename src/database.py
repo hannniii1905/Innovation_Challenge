@@ -49,6 +49,7 @@ class StagedApplication(Base):
     # Local Storage Document File Tracking Infrastructure Roots
     bank_statement_path = Column(String(512), nullable=True)   # Pointer to raw UOB statement file location
     income_statement_path = Column(String(512), nullable=True) # Pointer to raw IRAS tax record statement location
+    financials_path = Column(String(512), nullable=True)       # Pointer to uploaded company financials (optional)
 
     # Loan Configuration
     loan_tenure_months = Column(Integer, nullable=True)
@@ -104,14 +105,48 @@ class StagedApplication(Base):
     # Final recommendation
     approved_amount = Column(Float, nullable=True)
 
+    # Personal guarantee selection (from customer portal) + underwriting evidence
+    personal_guarantors_json = Column(SQLiteJSON, nullable=True)
+    pg_coverage = Column(Float, nullable=True)
+    underwriting_json = Column(SQLiteJSON, nullable=True)
+
 
 # 4. Database Lifecycle Initialization Interface Entry Points
+def _ensure_columns():
+    """Lightweight, idempotent migration for existing SQLite databases.
+
+    ``create_all`` does not alter existing tables, so newly added columns are
+    added here via ``ALTER TABLE ... ADD COLUMN`` when missing. Safe to run on
+    every startup.
+    """
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "applications" not in inspector.get_table_names():
+        return
+
+    existing = {col["name"] for col in inspector.get_columns("applications")}
+    wanted = {
+        "financials_path": "VARCHAR(512)",
+        "personal_guarantors_json": "TEXT",
+        "pg_coverage": "FLOAT",
+        "underwriting_json": "TEXT",
+    }
+    with engine.begin() as conn:
+        for name, ddl_type in wanted.items():
+            if name not in existing:
+                conn.execute(
+                    text(f"ALTER TABLE applications ADD COLUMN {name} {ddl_type}")
+                )
+
+
 def init_db():
     """
     Called at application startup bootstrap phase inside src/main.py.
     Safely generates tables automatically if they do not exist.
     """
     Base.metadata.create_all(bind=engine)
+    _ensure_columns()
 
 def get_db():
     """

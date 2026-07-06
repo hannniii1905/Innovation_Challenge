@@ -6,6 +6,9 @@ import {
   Typography,
   Button,
   Divider,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
 } from "@mui/material";
 import PortalShell from "../components/PortalShell";
 
@@ -78,9 +81,50 @@ export default function SingpassLogin({
   application,
   setApplication,
   next,
+  needsKeymanApproval,
+  useUenInstead,
   back,
 }) {
   const [step, setStep] = useState("landing");
+  const directors = application.profile.directors || [];
+  // Who is logging in: an authorised director (keyman) or a non-director rep.
+  // We avoid revealing the company's actual keymen before login completes.
+  const [applicantChoice, setApplicantChoice] = useState("keyman");
+
+  const isKeyman = applicantChoice === "keyman";
+  const applicantName = isKeyman
+    ? directors[0] || "Authorised Director"
+    : "Authorised Representative";
+
+  const handleApprove = () => {
+    setApplication((prev) => ({
+      ...prev,
+      authMethod: "SINGPASS_MYINFO",
+      applicant: {
+        name: applicantName,
+        email: null,
+        isKeyman,
+      },
+      singpass: {
+        authenticated: true,
+        method: "SINGPASS_MYINFO",
+        company: prev.profile,
+        keymanApprovalPending: !isKeyman,
+      },
+    }));
+
+    // After approving the login, Singpass shows the MyInfo consent screen.
+    setStep("consent");
+  };
+
+  const handleAgree = () => {
+    if (isKeyman) {
+      setStep("success");
+    } else {
+      // Non-keyman applicant → route to the keyman approval gate.
+      needsKeymanApproval();
+    }
+  };
 
   useEffect(() => {
     if (step === "success") {
@@ -91,7 +135,7 @@ export default function SingpassLogin({
 
   if (step === "success") {
     return (
-      <PortalShell application={application} activeStep={1}>
+      <PortalShell application={application} sidebar={false} activeStep={1}>
         <Paper
           sx={{
             p: 6,
@@ -132,7 +176,7 @@ export default function SingpassLogin({
   }
 
   return (
-    <PortalShell application={application} activeStep={1}>
+    <PortalShell application={application} sidebar={false} activeStep={1}>
       <Paper
         sx={{
           p: 5,
@@ -141,129 +185,120 @@ export default function SingpassLogin({
         }}
       >
         {step === "landing" && (
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "1.2fr 1fr",
-              gap: 5,
-              alignItems: "center",
-            }}
-          >
-            <Box>
-              <Typography color="#4f46e5" fontWeight={950}>
-                Secure Business Login
-              </Typography>
+          <Box sx={{ maxWidth: 540, mx: "auto", textAlign: "center", py: { xs: 2, md: 4 } }}>
+            <Box
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 1,
+                px: 2,
+                py: 0.75,
+                borderRadius: 99,
+                bgcolor: "#e6f0fa",
+                color: "#005EB8",
+                fontWeight: 800,
+                fontSize: 13,
+                mb: 3,
+              }}
+            >
+              🔒 Secure Business Login
+            </Box>
 
             <Typography
               sx={{
-                mt: 1,
-                mb: 0.5,
-                fontSize: "28px",
-                fontWeight: 800,
+                fontSize: { xs: 30, md: 38 },
+                fontWeight: 900,
                 color: "#0f172a",
-                letterSpacing: "-0.025em",
-                lineHeight: 1.15,
+                letterSpacing: "-0.03em",
+                lineHeight: 1.1,
               }}
             >
-              Link Business Profile with Singpass
+              Apply for BizMoney financing in minutes
             </Typography>
 
-              <Typography color="text.secondary" sx={{ mt: 2.5, lineHeight: 1.2 }}>
-                Retrieve registered entity information securely via Singpass MyInfo
-                Business to pre-fill your application and reduce manual entry.
-              </Typography>
+            <Typography
+              color="text.secondary"
+              sx={{ mt: 2, fontSize: 16, lineHeight: 1.6, maxWidth: 440, mx: "auto" }}
+            >
+              Let's fetch some business info from
+            </Typography>
 
-              <Paper
-                elevation={0}
-                sx={{
-                  mt: 4,
-                  p: 3,
-                  borderRadius: 3,
-                  bgcolor: "#faf7ff",
-                  border: "1px solid #e9d5ff",
-                }}
-              >
-                <Typography fontWeight={950}>
-                  Company
-                </Typography>
-                <Typography sx={{ mt: 1 }}>
-                  {application.profile.companyName}
-                </Typography>
-                <Typography color="text.secondary" fontSize={14}>
-                  UEN: {application.profile.uen}
-                </Typography>
-              </Paper>
-
+            <Box
+              sx={{
+                mt: 3,
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                gap: 2,
+                justifyContent: "center",
+              }}
+            >
               <Button
                 onClick={() => setStep("qr")}
                 variant="contained"
                 sx={{
-                  mt: 4,
+                  flex: 1,
+                  maxWidth: 240,
                   bgcolor: "#dc2626",
                   "&:hover": { bgcolor: "#b91c1c" },
-                  px: 4,
-                  py: 1.6,
+                  py: 1.8,
                   borderRadius: 3,
                   fontWeight: 950,
-                  boxShadow: "0 10px 24px rgba(220,38,38,.25)",
+                  fontSize: 16,
+                  boxShadow: "0 12px 28px rgba(220,38,38,.28)",
                 }}
               >
-                <span style={{ fontWeight: 950, marginRight: 12 }}>
-                  singpass
-                </span>
-                Log In with MyInfo Business
+                MyInfo Business
               </Button>
 
-              <Box sx={{ mt: 2 }}>
-                <Button variant="text" onClick={back}>
-                  Back to profile selection
-                </Button>
-              </Box>
+              <Button
+                onClick={useUenInstead}
+                variant="outlined"
+                sx={{
+                  flex: 1,
+                  maxWidth: 240,
+                  py: 1.8,
+                  borderRadius: 3,
+                  fontWeight: 950,
+                  fontSize: 16,
+                  color: "#005EB8",
+                  borderColor: "#b3d1ec",
+                  borderWidth: 2,
+                  "&:hover": { borderColor: "#005EB8", borderWidth: 2, bgcolor: "#e6f0fa" },
+                }}
+              >
+                ACRA Search
+              </Button>
             </Box>
 
-            <Paper
-              variant="outlined"
+            <Box
               sx={{
-                p: 3,
-                borderRadius: 4,
-                bgcolor: "#fcfcff",
+                mt: 2.5,
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" },
+                gap: 2,
+                justifyContent: "center",
+                maxWidth: 500,
+                mx: "auto",
               }}
             >
-              <Typography variant="h6" fontWeight={950} color="#4f46e5">
-                How it works
+              <Typography fontSize={12.5} color="text.secondary" sx={{ flex: 1, maxWidth: 240 }}>
+                Log in with Singpass to auto-fill verified company details.
               </Typography>
+              <Typography fontSize={12.5} color="text.secondary" sx={{ flex: 1, maxWidth: 240 }}>
+                No Singpass or Corppass? Look up the company by UEN — ideal for
+                foreign directors.
+              </Typography>
+            </Box>
 
-              {[
-                ["Scan QR Code", "Use your Singpass app to scan the login QR code."],
-                ["Approve Login", "Review the request and approve the login on your mobile device."],
-                ["Continue Securely", "Your verified business profile is retrieved automatically."],
-              ].map(([title, desc], i) => (
-                <Box key={title} sx={{ display: "flex", gap: 2, mt: 3 }}>
-                  <Box
-                    sx={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: "50%",
-                      bgcolor: "#ede9fe",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: 900,
-                    }}
-                  >
-                    {i + 1}
-                  </Box>
-                  <Box>
-                    <Typography fontWeight={800} sx={{ mb: 0.5 }}>
-                      {title}
-                    </Typography>
-                    <Typography color="text.secondary" fontSize={14}>
-                      {desc}
-                    </Typography>
-                  </Box>
-                </Box>
-              ))}
-            </Paper>
+            <Divider sx={{ my: 4 }} />
+
+            <Button
+              variant="text"
+              onClick={back}
+              sx={{ color: "text.secondary", textTransform: "none" }}
+            >
+              Back to profile selection
+            </Button>
           </Box>
         )}
 
@@ -277,7 +312,7 @@ export default function SingpassLogin({
             }}
           >
             <Box>
-              <Typography color="#4f46e5" fontWeight={950}>
+              <Typography color="#005EB8" fontWeight={950}>
                 Step 1 of 2
               </Typography>
 
@@ -403,10 +438,10 @@ export default function SingpassLogin({
                 </Typography>
 
                 <Box sx={{ mt: 3 }}>
-                  <Typography sx={{ color: "#4f46e5", fontSize: 13, mb: 1 }}>
+                  <Typography sx={{ color: "#005EB8", fontSize: 13, mb: 1 }}>
                     Register for Singpass
                   </Typography>
-                  <Typography sx={{ color: "#4f46e5", fontSize: 13 }}>
+                  <Typography sx={{ color: "#005EB8", fontSize: 13 }}>
                     Download Singpass app
                   </Typography>
                 </Box>
@@ -425,7 +460,7 @@ export default function SingpassLogin({
             }}
           >
             <Box>
-              <Typography color="#4f46e5" fontWeight={950}>
+              <Typography color="#005EB8" fontWeight={950}>
                 Step 2 of 2
               </Typography>
 
@@ -438,9 +473,57 @@ export default function SingpassLogin({
                 to continue to the UOB loan application portal.
               </Typography>
 
+              <Paper
+                variant="outlined"
+                sx={{ mt: 3, p: 2.5, borderRadius: 3, bgcolor: "#f8fafc" }}
+              >
+                <Typography fontWeight={800} fontSize={14} sx={{ mb: 1.5 }}>
+                  Who is applying?
+                </Typography>
+                <RadioGroup
+                  value={applicantChoice}
+                  onChange={(e) => setApplicantChoice(e.target.value)}
+                >
+                  <FormControlLabel
+                    value="keyman"
+                    control={<Radio size="small" />}
+                    label={
+                      <Typography fontSize={14}>
+                        An authorised director{" "}
+                        <Typography
+                          component="span"
+                          fontSize={12}
+                          color="#15803d"
+                          fontWeight={800}
+                        >
+                          · Authorised keyman
+                        </Typography>
+                      </Typography>
+                    }
+                  />
+                  <FormControlLabel
+                    value="other"
+                    control={<Radio size="small" />}
+                    label={
+                      <Typography fontSize={14}>
+                        A non-director representative{" "}
+                        <Typography
+                          component="span"
+                          fontSize={12}
+                          color="#b45309"
+                          fontWeight={800}
+                        >
+                          · Needs keyman approval
+                        </Typography>
+                      </Typography>
+                    }
+                  />
+                </RadioGroup>
+              </Paper>
+
               <Button
                 variant="outlined"
-                sx={{ mt: 4, borderRadius: 3, px: 4, py: 1.3, fontWeight: 900 }}
+                sx={{ mt: 3, borderRadius: 3, px: 4, py: 1.3, fontWeight: 900 }}
                 onClick={() => setStep("qr")}
               >
                 Back to QR
@@ -508,7 +591,7 @@ export default function SingpassLogin({
                     }}
                   >
                     <Typography fontSize={12} fontWeight={800}>
-                      {application.profile.directors?.[0] || "Authorised User"}
+                      {applicantName}
                     </Typography>
                     <Typography fontSize={12}>👁️</Typography>
                   </Paper>
@@ -530,16 +613,7 @@ export default function SingpassLogin({
                     variant="contained"
                     color="success"
                     sx={{ borderRadius: 2, minHeight: 38, fontWeight: 900, fontSize: 12 }}
-                    onClick={() => {
-                      setApplication((prev) => ({
-                        ...prev,
-                        singpass: {
-                          authenticated: true,
-                          company: prev.profile,
-                        },
-                      }));
-                      setStep("success");
-                    }}
+                    onClick={handleApprove}
                   >
                     ✓ Approve
                   </Button>
@@ -566,6 +640,100 @@ export default function SingpassLogin({
                 </Typography>
               </Box>
             </PhoneFrame>
+          </Box>
+        )}
+
+        {step === "consent" && (
+          <Box sx={{ maxWidth: 560, mx: "auto" }}>
+            <Paper
+              variant="outlined"
+              sx={{
+                borderRadius: 3,
+                overflow: "hidden",
+                borderTop: "5px solid #ef4444",
+              }}
+            >
+              <Box sx={{ px: { xs: 3, md: 4 }, pt: 3, pb: 1, textAlign: "center" }}>
+                <Typography
+                  sx={{ color: "#ef4444", fontWeight: 950, fontSize: 26, letterSpacing: "-0.02em" }}
+                >
+                  singpass
+                </Typography>
+                <Typography color="text.secondary" fontSize={13} sx={{ mt: 1, lineHeight: 1.5 }}>
+                  Singpass retrieves data from relevant government agencies to
+                  pre-fill the relevant fields, making digital transactions
+                  faster and more convenient.
+                </Typography>
+              </Box>
+
+              <Box sx={{ px: { xs: 3, md: 4 }, py: 2, bgcolor: "#f6f4fb" }}>
+                <Typography fontWeight={800} fontSize={14} sx={{ lineHeight: 1.5 }}>
+                  This digital service, <strong>UOB Credit AI</strong>, by United
+                  Overseas Bank Limited, is requesting the following information
+                  from Singpass to pre-fill your business loan application:
+                </Typography>
+              </Box>
+
+              <Box sx={{ px: { xs: 3, md: 4 }, py: 2 }}>
+                <Typography fontSize={12} fontWeight={800} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: ".06em", mb: 1 }}>
+                  Personal (MyInfo)
+                </Typography>
+                {[
+                  "NRIC / FIN",
+                  "Full Name",
+                  "Date of Birth",
+                  "Nationality & Residential Status",
+                  "Registered Address",
+                  "Contact Details (Mobile & Email)",
+                ].map((item) => (
+                  <Typography key={item} sx={{ py: 0.6, fontSize: 15, borderBottom: "1px solid #f1f5f9" }}>
+                    › {item}
+                  </Typography>
+                ))}
+
+                <Typography fontSize={12} fontWeight={800} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: ".06em", mt: 2.5, mb: 1 }}>
+                  Business (MyInfo Business)
+                </Typography>
+                {[
+                  "Entity Name & UEN",
+                  "Entity Type & Status",
+                  "Principal Activity (SSIC)",
+                  "Registered Address",
+                  "Share Capital",
+                  "Appointments — Directors & Shareholders",
+                ].map((item) => (
+                  <Typography key={item} sx={{ py: 0.6, fontSize: 15, borderBottom: "1px solid #f1f5f9" }}>
+                    › {item}
+                  </Typography>
+                ))}
+              </Box>
+
+              <Box sx={{ px: { xs: 3, md: 4 }, pb: 3 }}>
+                <Typography fontSize={12} color="text.secondary" sx={{ textAlign: "center", mb: 2.5 }}>
+                  Clicking "I Agree" permits this digital service to retrieve your
+                  data based on the Terms of Use.
+                </Typography>
+                <Box sx={{ display: "flex", gap: 2 }}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={() => setStep("approve")}
+                    sx={{ borderRadius: 2, py: 1.3, fontWeight: 800 }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    color="error"
+                    onClick={handleAgree}
+                    sx={{ borderRadius: 2, py: 1.3, fontWeight: 900 }}
+                  >
+                    I Agree
+                  </Button>
+                </Box>
+              </Box>
+            </Paper>
           </Box>
         )}
       </Paper>

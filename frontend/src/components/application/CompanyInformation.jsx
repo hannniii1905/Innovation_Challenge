@@ -57,7 +57,7 @@ export default function CompanyInformation({ application }) {
             py: 3,
             borderBottom: "1px solid #e5e7eb",
             background:
-              "linear-gradient(90deg, rgba(238,242,255,0.9), rgba(255,255,255,0.9))",
+              "linear-gradient(90deg, rgba(230,240,250,0.9), rgba(255,255,255,0.9))",
           }}
         >
           <Stack
@@ -89,23 +89,23 @@ export default function CompanyInformation({ application }) {
 
         <Box sx={{ p: 4 }}>
           <Grid container spacing={2.5}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Field label="Company Name" value={p.companyName} />
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Field label="UEN" value={p.uen} />
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{ xs: 12, md: 3 }}>
               <Field label="Incorporation Date" value={p.incorporationDate} />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Field label="Industry" value={p.industry} />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Field label="Directors" value={p.directors?.join(", ")} />
             </Grid>
           </Grid>

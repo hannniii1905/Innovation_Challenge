@@ -3,52 +3,62 @@ import {
   CardContent,
   Typography,
   Slider,
-  Grid,
-  TextField,
   Box,
+  Button,
   Stack,
-  Divider,
 } from "@mui/material";
 import { useMemo, useEffect } from "react";
+
+// UOB-style palette
+const NAVY = "#0a1f3c";
+const UOB_BLUE = "#1d4ed8";
+
+const MIN_AMOUNT = 30000;
+const MAX_AMOUNT = 800000;
+const AMOUNT_STEP = 10000;
+const INTEREST_RATE = 7.75; // indicative rate, matches UOB calculator
+
+const TENURES = [
+  { label: "1 year", months: 12 },
+  { label: "2 years", months: 24 },
+  { label: "3 years", months: 36 },
+  { label: "4 years", months: 48 },
+  { label: "5 years", months: 60 },
+];
+
+const sgd = (n, opts = {}) =>
+  `SGD ${Number(n || 0).toLocaleString(undefined, {
+    maximumFractionDigits: 0,
+    ...opts,
+  })}`;
 
 export default function LoanCalculator({ application, setApplication }) {
   const monthly = useMemo(() => {
     const P = Number(application.loanAmount || 0);
-    const annualRate = Number(application.interestRate || 0) / 100;
-    const r = annualRate / 12;
+    const r = INTEREST_RATE / 100 / 12;
     const n = Number(application.tenure || 0);
-
     if (!P || !n) return 0;
-    if (r === 0) return P / n;
-
     return (P * r) / (1 - Math.pow(1 + r, -n));
-  }, [application.loanAmount, application.tenure, application.interestRate]);
+  }, [application.loanAmount, application.tenure]);
 
   useEffect(() => {
     setApplication((prev) => ({
       ...prev,
+      interestRate: INTEREST_RATE,
       monthlyInstallment: Number(monthly.toFixed(2)),
     }));
   }, [monthly, setApplication]);
 
-  const SummaryRow = ({ label, value }) => (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: "1fr auto",
-        columnGap: 3,
-        alignItems: "center",
-        py: 0.8,
-      }}
-    >
-    <Typography color="text.secondary">
-      {label}
-    </Typography>
+  const setAmount = (value) => {
+    let v = Number(value);
+    if (Number.isNaN(v)) v = MIN_AMOUNT;
+    v = Math.min(MAX_AMOUNT, Math.max(MIN_AMOUNT, v));
+    setApplication((prev) => ({ ...prev, loanAmount: v }));
+  };
 
-    <Typography fontWeight={700} sx={{ textAlign: "right" }}>
-      {value}
-    </Typography>
-  </Box>
+  const amount = Math.min(
+    MAX_AMOUNT,
+    Math.max(MIN_AMOUNT, Number(application.loanAmount) || MIN_AMOUNT)
   );
 
   return (
@@ -56,194 +66,207 @@ export default function LoanCalculator({ application, setApplication }) {
       elevation={0}
       sx={{
         mb: 4,
-        borderRadius: 5,
-        border: "1px solid #e5e7eb",
-        boxShadow: "0 18px 40px rgba(15,23,42,.07)",
+        borderRadius: 4,
         overflow: "hidden",
+        boxShadow: "0 18px 40px rgba(15,23,42,.10)",
       }}
     >
       <CardContent sx={{ p: 0 }}>
+        {/* Navy banner */}
         <Box
           sx={{
-            px: 4,
-            py: 3,
-            borderBottom: "1px solid #e5e7eb",
-            background:
-              "linear-gradient(90deg, rgba(238,242,255,0.9), rgba(255,255,255,0.9))",
+            position: "relative",
+            background: `linear-gradient(120deg, ${NAVY} 0%, #002E5D 60%, ${UOB_BLUE} 140%)`,
+            color: "white",
+            px: { xs: 4, md: 6 },
+            pt: 5,
+            pb: 7,
+            minHeight: { xs: 150, md: 175 },
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            overflow: "hidden",
           }}
         >
-          <Typography sx={{ fontSize: 20, fontWeight: 800, color: "#0f172a" }}>
-            Loan Details
-          </Typography>
-          <Typography color="text.secondary" sx={{ mt: 0.8, fontSize: 14 }}>
-            Configure the requested facility and estimated repayment profile.
+          {/* Subtle decorative circles */}
+          <Box
+            sx={{
+              position: "absolute",
+              right: -60,
+              top: -70,
+              width: 220,
+              height: 220,
+              borderRadius: "50%",
+              bgcolor: "rgba(255,255,255,0.05)",
+            }}
+          />
+          <Box
+            sx={{
+              position: "absolute",
+              right: 70,
+              bottom: -80,
+              width: 160,
+              height: 160,
+              borderRadius: "50%",
+              bgcolor: "rgba(0,163,224,0.18)",
+            }}
+          />
+
+          <Typography
+            sx={{
+              position: "relative",
+              fontSize: { xs: 22, md: 26 },
+              fontWeight: 800,
+              lineHeight: 1.35,
+              maxWidth: 620,
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Let's begin! Enter a loan amount, and enjoy a speedy application by
+            applying with Singpass.
           </Typography>
         </Box>
 
-        <Grid container>
-          <Grid item xs={12} md={7}>
-            <Box sx={{ p: 4 }}>
-              <Box sx={{ mb: 4 }}>
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr auto",
-                    columnGap: 3,
-                    alignItems: "center",
-                    mb: 1.5,
-                  }}
-                >
-                  <Typography sx={{ fontWeight: 700, color: "#0f172a" }}>
-                    Requested Loan Amount
-                  </Typography>
+        {/* Overlapping white card body */}
+        <Box
+          sx={{
+            bgcolor: "white",
+            mx: { xs: 2, md: 4 },
+            mt: -4,
+            mb: 3,
+            borderRadius: 4,
+            boxShadow: "0 12px 30px rgba(15,23,42,.10)",
+            px: { xs: 3, md: 7 },
+            pt: { xs: 7, md: 8 },
+            pb: { xs: 5, md: 6 },
+            textAlign: "center",
+          }}
+        >
+          {/* Amount */}
+          <Typography sx={{ fontWeight: 800, color: "#0f172a" }}>
+            Indicate your desired loan amount
+          </Typography>
 
-                  <Typography
-                    sx={{
-                      fontWeight: 800,
-                      color: "#4f46e5",
-                      bgcolor: "#eef2ff",
-                      px: 1.5,
-                      py: 0.5,
-                      borderRadius: 2,
-                    }}
-                  >
-                    ${Number(application.loanAmount).toLocaleString()}
-                  </Typography>
-                </Box>
+          <Typography
+            sx={{
+              mt: 1.5,
+              fontSize: { xs: 34, md: 44 },
+              fontWeight: 800,
+              color: "#0f172a",
+              letterSpacing: "-0.02em",
+              borderBottom: "2px dashed #cbd5e1",
+              display: "inline-block",
+              pb: 1,
+              px: 2,
+            }}
+          >
+            {sgd(amount)}
+          </Typography>
 
-                <Slider
-                  min={10000}
-                  max={200000}
-                  step={10000}
-                  marks={[
-                    { value: 10000, label: "10k" },
-                    { value: 50000, label: "50k" },
-                    { value: 100000, label: "100k" },
-                    { value: 150000, label: "150k" },
-                    { value: 200000, label: "200k" },
-                  ]}
-                  value={application.loanAmount}
-                  valueLabelDisplay="auto"
-                  valueLabelFormat={(v) => `$${v.toLocaleString()}`}
-                  onChange={(e, value) =>
-                    setApplication((prev) => ({
-                      ...prev,
-                      loanAmount: value,
-                    }))
-                  }
-                />
-              </Box>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr auto",
-                  columnGap: 3,
-                  alignItems: "center",
-                  mb: 1.5,
-                }}
-              >
-                <Typography sx={{ fontWeight: 700, color: "#0f172a" }}>
-                  Loan Tenure
-                </Typography>
-
-                <Typography
-                  sx={{
-                    fontWeight: 800,
-                    color: "#4f46e5",
-                    bgcolor: "#eef2ff",
-                    px: 1.5,
-                    py: 0.5,
-                    borderRadius: 2,
-                  }}
-                >
-                  {application.tenure} months
-                </Typography>
-              
-
-                <Slider
-                  min={12}
-                  max={60}
-                  step={12}
-                  marks={[
-                    { value: 12, label: "12" },
-                    { value: 24, label: "24" },
-                    { value: 36, label: "36" },
-                    { value: 48, label: "48" },
-                    { value: 60, label: "60" },
-                  ]}
-                  value={application.tenure}
-                  valueLabelDisplay="auto"
-                  valueLabelFormat={(v) => `${v} months`}
-                  onChange={(e, value) =>
-                    setApplication((prev) => ({
-                      ...prev,
-                      tenure: value,
-                    }))
-                  }
-                />
-              </Box>
-            </Box>
-          </Grid>
-
-          <Grid item xs={12} md={5}>
-            <Box
+          <Box sx={{ mt: 3, px: { xs: 0, md: 2 } }}>
+            <Slider
+              min={MIN_AMOUNT}
+              max={MAX_AMOUNT}
+              step={AMOUNT_STEP}
+              value={amount}
+              valueLabelDisplay="auto"
+              valueLabelFormat={(v) => sgd(v)}
+              onChange={(e, value) => setAmount(value)}
               sx={{
-                height: "100%",
-                p: 4,
-                bgcolor: "#f8fafc",
-                borderLeft: { md: "1px solid #e5e7eb", xs: "none" },
-                borderTop: { xs: "1px solid #e5e7eb", md: "none" },
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
+                color: UOB_BLUE,
+                height: 6,
+                "& .MuiSlider-thumb": {
+                  width: 22,
+                  height: 22,
+                  bgcolor: UOB_BLUE,
+                  border: "3px solid #fff",
+                  boxShadow: "0 2px 8px rgba(29,78,216,.4)",
+                },
+                "& .MuiSlider-rail": { bgcolor: "#e2e8f0", opacity: 1 },
+              }}
+            />
+            <Box sx={{ display: "flex", justifyContent: "space-between", mt: 0.5 }}>
+              <Typography fontSize={13} color="text.secondary">
+                {sgd(MIN_AMOUNT)}
+              </Typography>
+              <Typography fontSize={13} color="text.secondary">
+                {sgd(MAX_AMOUNT)}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Tenure pills */}
+          <Typography sx={{ fontWeight: 800, color: "#0f172a", mt: 6, mb: 2.5 }}>
+            Choose your loan tenure
+          </Typography>
+
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              gap: 1.5,
+            }}
+          >
+            {TENURES.map((t) => {
+              const selected = application.tenure === t.months;
+              return (
+                <Button
+                  key={t.months}
+                  onClick={() =>
+                    setApplication((prev) => ({ ...prev, tenure: t.months }))
+                  }
+                  disableElevation
+                  sx={{
+                    minWidth: 96,
+                    px: 3,
+                    py: 1.25,
+                    borderRadius: 99,
+                    fontWeight: 700,
+                    textTransform: "none",
+                    fontSize: 15,
+                    bgcolor: selected ? UOB_BLUE : "white",
+                    color: selected ? "white" : "#334155",
+                    border: `1.5px solid ${selected ? UOB_BLUE : "#cbd5e1"}`,
+                    "&:hover": {
+                      bgcolor: selected ? "#1e40af" : "#f1f5f9",
+                      border: `1.5px solid ${selected ? "#1e40af" : "#94a3b8"}`,
+                    },
+                  }}
+                >
+                  {t.label}
+                </Button>
+              );
+            })}
+          </Box>
+
+          {/* Divider + instalment */}
+          <Box sx={{ borderTop: "1px solid #e5e7eb", mt: 6, pt: 5 }}>
+            <Typography sx={{ fontWeight: 800, color: "#0f172a" }}>
+              Your calculated monthly instalment
+            </Typography>
+            <Typography fontSize={13} color="text.secondary" sx={{ mt: 0.5 }}>
+              based on an indicative interest rate of {INTEREST_RATE}% p.a
+            </Typography>
+
+            <Typography
+              sx={{
+                mt: 2,
+                fontSize: { xs: 34, md: 40 },
+                fontWeight: 900,
+                color: UOB_BLUE,
+                letterSpacing: "-0.02em",
               }}
             >
-              <Typography
-                sx={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "#64748b",
-                  textTransform: "uppercase",
-                  letterSpacing: ".08em",
-                }}
-              >
-                Estimated Monthly Instalment
-              </Typography>
+              {sgd(monthly, { minimumFractionDigits: 0 })}
+            </Typography>
 
-              <Typography
-                sx={{
-                  mt: 1,
-                  fontSize: 44,
-                  fontWeight: 800,
-                  letterSpacing: "-0.03em",
-                  color: "#2563eb",
-                  lineHeight: 1,
-                }}
-              >
-                ${monthly.toFixed(2)}
-              </Typography>
-
-              <Divider sx={{ my: 3 }} />
-
-              <Stack spacing={1.6}>
-                <SummaryRow
-                  label="Principal Amount"
-                  value={`$${Number(application.loanAmount).toLocaleString()}`}
-                />
-
-                <SummaryRow
-                  label="Tenure"
-                  value={`${application.tenure} months`}
-                />
-
-                <SummaryRow
-                  label="Interest Rate"
-                  value={`${application.interestRate ?? 10.88}% p.a.`}
-                />
-              </Stack>
-            </Box>
-          </Grid>
-        </Grid>
+            <Typography sx={{ mt: 2, fontSize: 11.5, color: "#94a3b8", lineHeight: 1.5, maxWidth: 560, mx: "auto" }}>
+              This is an indicative estimate only and not a final offer. Actual
+              rates and repayments are subject to credit assessment and approval.
+            </Typography>
+          </Box>
+        </Box>
       </CardContent>
     </Card>
   );

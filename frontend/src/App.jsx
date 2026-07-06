@@ -2,7 +2,11 @@ import { useState } from "react";
 
 import DemoProfileSelector from "./pages/DemoProfileSelector";
 import SingpassLogin from "./pages/SingpassLogin";
+import UenLookup from "./pages/UenLookup";
+import KeymanApproval from "./pages/KeymanApproval";
+import MyInfoReview from "./pages/MyInfoReview";
 import LoanApplication from "./pages/LoanApplication";
+import SupportingDocuments from "./pages/SupportingDocuments";
 import InitialAssessment from "./pages/InitialAssessment";
 import CreditApproverDashboard from "./pages/CreditApproverDashboard";
 import CreditDecisionWorkbench from "./pages/CreditDecisionWorkbench";
@@ -14,6 +18,8 @@ export default function App() {
   const [application, setApplication] = useState({
     profile: null,
     singpass: null,
+    authMethod: null,
+    applicant: null,
     loanAmount: 50000,
     tenure: 24,
     interestRate: 6,
@@ -30,6 +36,7 @@ export default function App() {
       bankStatement: null,
       incomeStatement: null,
       ic: null,
+      financials: null,
     },
     consent: {
       creditBureau: false,
@@ -76,8 +83,39 @@ export default function App() {
         <SingpassLogin
           application={application}
           setApplication={setApplication}
-          next={() => setScreen("application")}
+          next={() => setScreen("myInfoReview")}
+          needsKeymanApproval={() => setScreen("keymanApproval")}
+          useUenInstead={() => setScreen("uenLookup")}
           back={() => setScreen("profile")}
+        />
+      );
+
+    case "uenLookup":
+      return (
+        <UenLookup
+          application={application}
+          setApplication={setApplication}
+          next={() => setScreen("keymanApproval")}
+          back={() => setScreen("singpass")}
+        />
+      );
+
+    case "keymanApproval":
+      return (
+        <KeymanApproval
+          application={application}
+          next={() => setScreen("myInfoReview")}
+          back={() => setScreen("singpass")}
+        />
+      );
+
+    case "myInfoReview":
+      return (
+        <MyInfoReview
+          application={application}
+          setApplication={setApplication}
+          next={() => setScreen("application")}
+          back={() => setScreen("singpass")}
         />
       );
 
@@ -94,6 +132,16 @@ export default function App() {
     case "initialAssessment":
       return (
         <InitialAssessment
+          application={application}
+          setApplication={setApplication}
+          uploadSupportingDocs={() => setScreen("supportingDocs")}
+          backToHome={() => setScreen("profile")}
+        />
+      );
+
+    case "supportingDocs":
+      return (
+        <SupportingDocuments
           application={application}
           setApplication={setApplication}
           backToHome={() => setScreen("profile")}

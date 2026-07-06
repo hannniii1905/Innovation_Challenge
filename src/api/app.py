@@ -44,6 +44,8 @@ from src.api.schemas import (
     VerificationRequest,
 )
 
+from src.api.acra_client import lookup_company, request_keyman_approval
+from src.mock_data.company_profiles import COMPANY_PROFILES
 from src.api.session_store import Session as OCRSession
 from src.api.session_store import SessionStore
 from src.credit_kiting import CreditKitingDetector
@@ -63,13 +65,19 @@ from src.reporter import ReportGenerator
 # Maximum upload size: 10 MB.
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
-# Allowed dev origins for the React frontend.
+# Allowed dev origins for the React frontend. The explicit list covers the
+# common Vite/CRA ports; the regex below additionally permits ANY localhost /
+# 127.0.0.1 port, so the app keeps working when Vite auto-bumps to 5174, 5175,
+# etc. because another dev server is already holding 5173.
 ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
+
+# Matches http://localhost:<port> and http://127.0.0.1:<port> for any port.
+ALLOWED_ORIGIN_REGEX = r"http://(localhost|127\.0\.0\.1):\d+"
 
 app = FastAPI(
     title="OCR Financial Statement Analyzer API",
@@ -82,6 +90,189 @@ app = FastAPI(
 
 UPLOAD_DIR = "uploaded_applications"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+CBS_FAIL_GRADES = {"HH", "HX", "HZ"}
+
+
+def _profile_by_uen(uen: str):
+    """Look up a demo company profile by UEN (for coherent CBS / litigation)."""
+    if not uen:
+        return None
+    target = str(uen).strip().upper()
+    for prof in COMPANY_PROFILES.values():
+        if str(prof.get("uen", "")).strip().upper() == target:
+            return prof
+    return None
+
+
+def _build_underwriting_summary(app_record, result: dict) -> dict:
+    """Assemble a JSON-serializable evidence bundle for the approver view.
+
+    Combines the underwriting engine output (bank OCR, AML/blacklist) with the
+    demo company profile (CBS grade, litigation) and the shareholders captured
+    from Singpass/MyInfo Business at application time.
+    """
+    result = result or {}
+    profile = _profile_by_uen(app_record.uen)
+
+    # --- Bank statement OCR (sanitized; drop non-serializable objects) ---
+    bank = result.get("bank") or {}
+    bank_ocr = {
+        "bank": bank.get("bank"),
+        "total_credits": round(float(bank.get("raw_credits_total", 0) or 0), 2),
+        "flagged_kiting_volume": round(float(bank.get("flagged_kiting_volume", 0) or 0), 2),
+        "detected_loans": bank.get("detected_loans_count", 0),
+        "has_fraud_tampering": bool(bank.get("has_fraud_tampering", False)),
+    }
+
+    # --- Credit Bureau (CBS) rating — prefer the profile grade for coherence ---
+    cb = result.get("credit_bureau") or {}
+    grade = (profile or {}).get("credit_bureau_grade") or cb.get("risk_grade")
+    credit_bureau = {
+        "grade": grade,
+        "passed": grade is not None and grade not in CBS_FAIL_GRADES,
+    }
+
+    # --- Shareholders (from Singpass / MyInfo Business captured at apply time) ---
+    singpass = app_record.singpass_profile_json or {}
+    shareholders = singpass.get("keymen") or []
+
+    acra = {
+        "company_status": (profile or {}).get("company_status") or "Live Company",
+        "registration_date": (profile or {}).get("incorporation_date")
+        or singpass.get("incorporationDate"),
+        "shareholders": [
+            {
+                "name": s.get("name"),
+                "role": s.get("role"),
+                "shareholding": s.get("shareholding"),
+            }
+            for s in shareholders
+        ],
+    }
+
+    # --- Litigation search (from profile) ---
+    lit_count = int((profile or {}).get("litigation_count", 0) or 0)
+    charges = (profile or {}).get("corporate_charges", []) or []
+    adverse = bool((profile or {}).get("has_adverse_bureau_records", False))
+    litigation = {
+        "count": lit_count,
+        "charges": charges,
+        "high_risk": lit_count > 0 or adverse,
+        "passed": not (lit_count > 0 or adverse),
+    }
+
+    # --- AML / sanctions & blacklist screening (from engine) ---
+    bl = result.get("blacklist") or {}
+    aml = {
+        "passed": not bool(bl.get("blocked", False)),
+        "reason": bl.get("reason", ""),
+    }
+
+    # --- Credit Flash Model: probability of default + approved limit ---
+    risk_model = _run_credit_flash_model(
+        app_record, bank_ocr, credit_bureau, litigation, aml
+    )
+
+    return {
+        "bank_ocr": bank_ocr,
+        "credit_bureau": credit_bureau,
+        "acra": acra,
+        "litigation": litigation,
+        "aml": aml,
+        "risk_model": risk_model,
+    }
+
+
+# Probability-of-default baseline by credit bureau grade (percent).
+_GRADE_PD = {
+    "AA": 1.5, "BB": 2.5, "CC": 5.0, "DD": 8.0, "EE": 12.0,
+    "FF": 18.0, "GG": 25.0, "HH": 40.0, "HX": 55.0, "HZ": 70.0,
+}
+
+
+def _run_credit_flash_model(app_record, bank_ocr, credit_bureau, litigation, aml) -> dict:
+    """A lightweight 'Credit Flash' PD model + limit recommendation (demo).
+
+    Produces a probability of default from the credit bureau grade adjusted for
+    behavioural/risk signals, and an indicative approved limit.
+    """
+    grade = credit_bureau.get("grade")
+    pd = _GRADE_PD.get(grade, 10.0)
+
+    reasons = []
+    if bank_ocr.get("flagged_kiting_volume", 0) > 0:
+        pd += 8.0
+        reasons.append("Credit-kiting patterns detected")
+    if bank_ocr.get("has_fraud_tampering"):
+        pd += 10.0
+        reasons.append("Bank statement integrity flag")
+    if litigation.get("high_risk"):
+        pd += 6.0
+        reasons.append("Outstanding litigation / charges")
+    if not aml.get("passed", True):
+        pd += 20.0
+        reasons.append("AML / blacklist hit")
+
+    pg_coverage = float(app_record.pg_coverage or 0)
+    if pg_coverage < 50:
+        pd += 4.0
+        reasons.append("PG shareholding coverage below 50%")
+
+    pgs = app_record.personal_guarantors_json or []
+    if any((p.get("age") or 0) >= 70 for p in pgs):
+        pd += 5.0
+        reasons.append("A personal guarantor is 70 or older")
+
+    pd = max(1.0, min(95.0, round(pd, 1)))
+
+    if pd < 5:
+        band = "Low"
+    elif pd < 15:
+        band = "Moderate"
+    elif pd < 30:
+        band = "Elevated"
+    else:
+        band = "High"
+
+    # Indicative approved limit.
+    requested = float(app_record.requested_quantum or 0)
+    hard_fail = (not aml.get("passed", True)) or (not credit_bureau.get("passed", True))
+    if hard_fail:
+        approved_limit = 0.0
+    elif pd <= 15:
+        approved_limit = requested
+    elif pd <= 30:
+        approved_limit = round(requested * 0.6 / 1000) * 1000  # counter-offer
+    else:
+        approved_limit = 0.0
+
+    return {
+        "model_name": "Credit Flash Model",
+        "model_version": "v1.2",
+        "pd_percent": pd,
+        "rating_band": band,
+        "approved_limit": approved_limit,
+        "requested_amount": requested,
+        "drivers": reasons,
+    }
+
+
+def _save_upload(app_folder: str, upload: Optional[UploadFile]) -> Optional[str]:
+    """Persist an uploaded file into the application folder.
+
+    Returns the saved path, or None when no file was provided. Tolerates the
+    various "empty upload" shapes FastAPI/browsers can send for optional file
+    fields (None, or an UploadFile with an empty filename).
+    """
+    if upload is None or not getattr(upload, "filename", ""):
+        return None
+    os.makedirs(app_folder, exist_ok=True)
+    dest = os.path.join(app_folder, upload.filename)
+    with open(dest, "wb") as f:
+        shutil.copyfileobj(upload.file, f)
+    return dest
 
 
 @app.post("/client/submit")
@@ -97,10 +288,13 @@ async def submit_client_application(
     declared_loans: str = Form("NIL"),
     pre_questionnaire_json: str = Form("{}"),
     singpass_profile_json: str = Form("{}"),
+    personal_guarantors_json: str = Form("[]"),
+    pg_coverage: float = Form(0),
     credit_bureau_consent: str = Form("NO"),
     bank_statement: UploadFile = File(...),
-    income_statement: UploadFile = File(...),
-    ic_copy: UploadFile = File(...),
+    income_statement: Optional[UploadFile] = File(None),
+    ic_copy: Optional[UploadFile] = File(None),
+    financials: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
 ):
     try:
@@ -108,10 +302,13 @@ async def submit_client_application(
             status="PENDING",
             uen=uen,
             company_name=company_name,
+            industry=industry,
             requested_quantum=requested_quantum,
             declared_loans=declared_loans,
             pre_questionnaire_json=json.loads(pre_questionnaire_json),
             singpass_profile_json=json.loads(singpass_profile_json),
+            personal_guarantors_json=json.loads(personal_guarantors_json),
+            pg_coverage=pg_coverage,
         )
 
         db.add(application)
@@ -121,21 +318,21 @@ async def submit_client_application(
         app_folder = os.path.join(UPLOAD_DIR, f"application_{application.id}")
         os.makedirs(app_folder, exist_ok=True)
 
-        bank_path = os.path.join(app_folder, bank_statement.filename)
-        income_path = os.path.join(app_folder, income_statement.filename)
-        ic_path = os.path.join(app_folder, ic_copy.filename)
+        # Bank statement is mandatory; the rest are optional supporting docs
+        # that may also be uploaded later.
+        application.bank_statement_path = _save_upload(app_folder, bank_statement)
 
-        with open(bank_path, "wb") as f:
-            shutil.copyfileobj(bank_statement.file, f)
+        income_path = _save_upload(app_folder, income_statement)
+        if income_path:
+            application.income_statement_path = income_path
 
-        with open(income_path, "wb") as f:
-            shutil.copyfileobj(income_statement.file, f)
+        ic_path = _save_upload(app_folder, ic_copy)
+        if ic_path:
+            application.ic_path = ic_path
 
-        with open(ic_path, "wb") as f:
-            shutil.copyfileobj(ic_copy.file, f)
-
-        application.bank_statement_path = bank_path
-        application.income_statement_path = income_path
+        financials_path = _save_upload(app_folder, financials)
+        if financials_path:
+            application.financials_path = financials_path
 
         db.commit()
         db.refresh(application)
@@ -143,31 +340,52 @@ async def submit_client_application(
         engine = UnderwritingEngine(db)
         result = engine.execute_evaluation(application.id)
 
-        decision = (
-            result.get("evaluation_status")
-            or result.get("decision")
-            or "APPROVE"
-        )
+        # Persist a JSON-serializable evidence bundle for the approver workbench.
+        flash_limit = None
+        try:
+            summary = _build_underwriting_summary(application, result)
+            application.underwriting_json = summary
+            flash_limit = (summary.get("risk_model") or {}).get("approved_limit")
+        except Exception:  # noqa: BLE001 - evidence is best-effort, never block submit
+            import traceback
 
-        risk_flags = result.get("risk_flags") or result.get("engine_warnings") or []
-        decision_upper = str(decision).upper()
+            traceback.print_exc()
 
-        if decision_upper in ["APPROVE", "APPROVED"]:
-            ai_recommendation = "APPROVED"
-            review_category = "APPROVED"
+        # Derive the decision from the coherent Credit Flash evidence bundle
+        # (the legacy engine hardcodes DSCR=0 and would flag every case).
+        uw = application.underwriting_json or {}
+        cb = uw.get("credit_bureau", {})
+        aml_res = uw.get("aml", {})
+        lit = uw.get("litigation", {})
+        rm = uw.get("risk_model", {})
+        pd = rm.get("pd_percent", 10)
+        drivers = rm.get("drivers", []) or []
+        cbs_ok = cb.get("passed", True)
+        aml_ok = aml_res.get("passed", True)
 
-        elif decision_upper in ["DECLINE", "REJECT", "REJECTED"]:
+        if not cbs_ok or not aml_ok or pd > 30:
             ai_recommendation = "NEEDS_FURTHER_REVIEW"
             review_category = "REJECT_RECOMMENDED"
-
-        else:
+            app_status = "REJECTED"
+            reason = "Adverse credit bureau grade / screening or high probability of default. Declined."
+        elif pd >= 12 or lit.get("high_risk") or drivers:
             ai_recommendation = "NEEDS_FURTHER_REVIEW"
             review_category = "MANUAL_REVIEW_REQUIRED"
+            app_status = "PENDING"
+            reason = "Elevated risk indicators require manual credit review."
+        else:
+            ai_recommendation = "APPROVED"
+            review_category = "APPROVED"
+            app_status = "PENDING"
+            reason = "Clean bureau grade and low probability of default. Auto-approved within risk tolerance."
 
         application.system_decision = ai_recommendation
-        application.system_reason = result.get("justification", "")
-        application.risk_flags = risk_flags
-        application.approved_amount = result.get("recommended_offer", requested_quantum)
+        application.system_reason = reason
+        application.risk_flags = drivers
+        application.status = app_status
+        application.approved_amount = (
+            flash_limit if flash_limit is not None else requested_quantum
+        )
 
         db.commit()
         db.refresh(application)
@@ -176,8 +394,8 @@ async def submit_client_application(
             "reference_number": f"APP-2026-{str(application.id).zfill(6)}",
             "ai_recommendation": ai_recommendation,
             "review_category": review_category,
-            "recommended_amount": result.get("recommended_offer", requested_quantum),
-            "status": "PENDING_FINAL_CREDIT_APPROVAL",
+            "recommended_amount": application.approved_amount,
+            "status": app_status,
             "raw_result": result,
         }
         
@@ -188,6 +406,101 @@ async def submit_client_application(
         db.rollback()
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/client/applications/{application_id}/documents")
+def get_application_documents(application_id: int, db: Session = Depends(get_db)):
+    """Return which documents are on file for an application.
+
+    Supports the "come back later to upload supporting documents" flow: the
+    client can see what's already uploaded and what's still outstanding.
+    """
+    app_record = (
+        db.query(StagedApplication)
+        .filter(StagedApplication.id == application_id)
+        .first()
+    )
+    if not app_record:
+        raise HTTPException(status_code=404, detail="Application not found.")
+
+    def _name(path):
+        return os.path.basename(path) if path else None
+
+    return {
+        "application_id": app_record.id,
+        "reference_number": f"APP-2026-{str(app_record.id).zfill(6)}",
+        "company_name": app_record.company_name,
+        "documents": {
+            "bank_statement": _name(app_record.bank_statement_path),
+            "income_statement": _name(app_record.income_statement_path),
+            "ic": _name(app_record.ic_path),
+            "financials": _name(app_record.financials_path),
+        },
+    }
+
+
+@app.post("/client/applications/{application_id}/documents")
+async def upload_application_documents(
+    application_id: int,
+    income_statement: Optional[UploadFile] = File(None),
+    ic_copy: Optional[UploadFile] = File(None),
+    financials: Optional[UploadFile] = File(None),
+    bank_statement: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+):
+    """Attach supporting documents to an already-submitted application.
+
+    All fields are optional; any subset can be uploaded. Lets an applicant
+    return after submission to provide IC, financials, or the income statement.
+    """
+    app_record = (
+        db.query(StagedApplication)
+        .filter(StagedApplication.id == application_id)
+        .first()
+    )
+    if not app_record:
+        raise HTTPException(status_code=404, detail="Application not found.")
+
+    app_folder = os.path.join(UPLOAD_DIR, f"application_{app_record.id}")
+    updated = []
+
+    bank_path = _save_upload(app_folder, bank_statement)
+    if bank_path:
+        app_record.bank_statement_path = bank_path
+        updated.append("bank_statement")
+
+    income_path = _save_upload(app_folder, income_statement)
+    if income_path:
+        app_record.income_statement_path = income_path
+        updated.append("income_statement")
+
+    ic_path = _save_upload(app_folder, ic_copy)
+    if ic_path:
+        app_record.ic_path = ic_path
+        updated.append("ic")
+
+    financials_path = _save_upload(app_folder, financials)
+    if financials_path:
+        app_record.financials_path = financials_path
+        updated.append("financials")
+
+    db.commit()
+    db.refresh(app_record)
+
+    def _name(path):
+        return os.path.basename(path) if path else None
+
+    return {
+        "application_id": app_record.id,
+        "reference_number": f"APP-2026-{str(app_record.id).zfill(6)}",
+        "updated": updated,
+        "documents": {
+            "bank_statement": _name(app_record.bank_statement_path),
+            "income_statement": _name(app_record.income_statement_path),
+            "ic": _name(app_record.ic_path),
+            "financials": _name(app_record.financials_path),
+        },
+    }
 
 
 @app.get("/approver/applications")
@@ -235,16 +548,24 @@ def list_approver_applications(db: Session = Depends(get_db)):
         )
 
     total = len(rows)
-    approved = len([x for x in rows if x["system_decision"] == "APPROVED"])
-    further_review = len([x for x in rows if x["system_decision"] != "APPROVED"])
+    approved = len([x for x in rows if x["review_category"] == "APPROVED"])
+    rejected = len([x for x in rows if x["review_category"] == "REJECT_RECOMMENDED"])
+    further_review = len(
+        [x for x in rows if x["review_category"] == "MANUAL_REVIEW_REQUIRED"]
+    )
+
+    def pct(n):
+        return round((n / total) * 100, 1) if total else 0
 
     return {
         "summary": {
             "total_applications": total,
             "approved_count": approved,
             "further_review_count": further_review,
-            "approved_percentage": round((approved / total) * 100, 1) if total else 0,
-            "further_review_percentage": round((further_review / total) * 100, 1) if total else 0,
+            "rejected_count": rejected,
+            "approved_percentage": pct(approved),
+            "further_review_percentage": pct(further_review),
+            "rejected_percentage": pct(rejected),
         },
         "applications": rows,
     }
@@ -279,6 +600,11 @@ def get_approver_application(application_id: int, db: Session = Depends(get_db))
         "industry": app_record.industry,
         "approver_decision": app_record.approver_decision,
         "approver_notes": app_record.approver_notes,
+        # Evidence for the credit decision workbench
+        "singpass_profile": app_record.singpass_profile_json,
+        "personal_guarantors": app_record.personal_guarantors_json or [],
+        "pg_coverage": app_record.pg_coverage,
+        "underwriting": app_record.underwriting_json or {},
     }
 @app.post("/approver/applications/{application_id}/decision")
 def submit_approver_decision(
@@ -328,6 +654,37 @@ def submit_approver_decision(
         "approver_notes": app_record.approver_notes,
     }
 
+# --------------------------------------------------------------------------- #
+# ACRA lookup + keyman approval (mock)
+# --------------------------------------------------------------------------- #
+@app.get("/api/acra/company")
+def acra_company_lookup(uen: str):
+    """Look up a company (and its keymen) by UEN from the mock ACRA registry.
+
+    Backs the "no Singpass/Corppass" path where an applicant (e.g. a foreign
+    director) retrieves the registered company profile by typing in the UEN.
+    """
+    if not uen or not uen.strip():
+        raise HTTPException(status_code=400, detail="A UEN is required.")
+    return lookup_company(uen)
+
+
+@app.post("/api/keyman/request-approval")
+def keyman_request_approval(
+    uen: str = Form(...),
+    applicant_name: str = Form(""),
+    applicant_email: str = Form(""),
+):
+    """Notify the company's ACRA keymen to approve a non-keyman's application.
+
+    Mock/demo stub: it "sends" approval emails (logged server-side) and returns
+    the notified keymen. It does not block the application flow.
+    """
+    if not uen or not uen.strip():
+        raise HTTPException(status_code=400, detail="A UEN is required.")
+    return request_keyman_approval(uen, applicant_name, applicant_email)
+
+
 @app.on_event("startup")
 def startup():
     init_db()
@@ -336,6 +693,7 @@ def startup():
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
