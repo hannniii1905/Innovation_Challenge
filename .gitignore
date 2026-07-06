@@ -1,36 +1,22 @@
-# Python virtual environments and caches
+# Ensure folders end with a trailing slash so it doesn't block files containing the same name
+node_modules/
+dist/
 .venv/
 .venv-1/
 venv/
 env/
 .pytest_cache/
-.mypy_cache/
-.ruff_cache/
+.kiro/
+.vscode/
+
+*.db
+*.sqlite3
+*.pdf
+.DS_Store
+
 __pycache__/
 *.py[cod]
-*.egg-info/
-
-# Node / frontend
-node_modules/
-frontend/node_modules/
-frontend/dist/
-dist/
-
-# Runtime data (regenerate with scripts/seed_demo.py)
-innovation_challenge.db
-*.sqlite
-*.sqlite3
-
-# Editor / OS
-.DS_Store
-.vscode/
-.idea/
-*.local
-
-# Env / secrets
+*$py.class
+.venv/
+venv/
 .env
-.env.*
-!.env.example
-
-# Tooling
-.kiro/
