@@ -43,8 +43,7 @@ const profiles = [
         dob: "1990-09-30",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
-        registeredAddress: "Ayer Rajah Crescent, #03-12, Singapore 139951",
-
+        registeredAddress: "6 Woodlands North 20, #16-32, Singapore 579798",
       },
       {
         name: "Rajesh Kumar s/o Devan",
@@ -121,7 +120,7 @@ const profiles = [
         residentialStatus: "Citizen",
         mobile: "+65 8•••5678",
         email: "c•••@vortex.com.sg",
-        registeredAddress: "Ayer Rajah Crescent, #03-12, Singapore 139951",
+        registeredAddress: "6 Woodlands North 20, #16-32, Singapore 579798",
 
       },
       {
@@ -132,6 +131,7 @@ const profiles = [
         dob: "1982-11-05",
         nationality: "Singapore PR",
         residentialStatus: "PR",
+        registeredAddress: "6 Woodlands North 20, #16-32, Singapore 579798",
       },
       {
         name: "Marcus Sim Boon Keng",
@@ -141,6 +141,8 @@ const profiles = [
         dob: "1975-05-30",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
+        registeredAddress: "6 Woodlands North 20, #16-32, Singapore 579798",
+
       },
       {
         name: "Priya Nair",
@@ -150,6 +152,8 @@ const profiles = [
         dob: "1986-09-18",
         nationality: "Singapore PR",
         residentialStatus: "PR",
+        registeredAddress: "6 Woodlands North 20, #16-32, Singapore 579798",
+
       },
       {
         name: "Hafiz Bin Rahman",
@@ -159,6 +163,8 @@ const profiles = [
         dob: "1991-03-25",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
+        registeredAddress: "6 Woodlands North 20, #16-32, Singapore 579798",
+
       },
       {
         name: "Jonathan Lee Chee Wai",
@@ -168,6 +174,8 @@ const profiles = [
         dob: "1958-07-14",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
+        registeredAddress: "6 Woodlands North 20, #16-32, Singapore 579798",
+
       },
     ],
   },

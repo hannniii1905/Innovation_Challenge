@@ -10,12 +10,18 @@ import SupportingDocuments from "./pages/SupportingDocuments";
 import InitialAssessment from "./pages/InitialAssessment";
 import CreditApproverDashboard from "./pages/CreditApproverDashboard";
 import CreditDecisionWorkbench from "./pages/CreditDecisionWorkbench";
+import TamperingDetailsPage from "./pages/TamperingDetailsPage";
+import LitigationDetailsPage from "./pages/LitigationDetailsPage";
+import RiskFlagDetailsPage from "./pages/RiskFlagDetailsPage";
 import LoanLandingPage from "./pages/LoanLandingPage";
 
 export default function App() {
   const [screen, setScreen] = useState("profile");
   const [selectedApproverApplication, setSelectedApproverApplication] = useState(null);
   const [decidedApplications, setDecidedApplications] = useState([]);
+  const [tamperingApplication, setTamperingApplication] = useState(null);
+  const [litigationApplication, setLitigationApplication] = useState(null);
+  const [riskFlagState, setRiskFlagState] = useState(null);
   const [application, setApplication] = useState({
     profile: null,
     singpass: null,
@@ -169,6 +175,56 @@ export default function App() {
           onDecision={(app, decision) =>
             setDecidedApplications((prev) => [...prev, { ...app, approverDecision: decision }])
           }
+          onViewTampering={(app) => {
+            setTamperingApplication(app);
+            setScreen("tamperingDetails");
+          }}
+          onViewLitigation={(app) => {
+            setLitigationApplication(app);
+            setScreen("litigationDetails");
+          }}
+          onViewRiskFlag={(flag, app) => {
+            setRiskFlagState({ flag, application: app });
+            setScreen("riskFlagDetails");
+          }}
+        />
+      );
+
+    case "tamperingDetails":
+      return (
+        <TamperingDetailsPage
+          bankOcr={tamperingApplication?.underwriting?.bank_ocr}
+          companyName={tamperingApplication?.company_name}
+          referenceNumber={tamperingApplication?.reference_number}
+          back={() => {
+            setTamperingApplication(null);
+            setScreen("creditDecision");
+          }}
+        />
+      );
+
+    case "litigationDetails":
+      return (
+        <LitigationDetailsPage
+          litigation={litigationApplication?.underwriting?.litigation}
+          companyName={litigationApplication?.company_name}
+          referenceNumber={litigationApplication?.reference_number}
+          back={() => {
+            setLitigationApplication(null);
+            setScreen("creditDecision");
+          }}
+        />
+      );
+
+    case "riskFlagDetails":
+      return (
+        <RiskFlagDetailsPage
+          flag={riskFlagState?.flag}
+          application={riskFlagState?.application}
+          back={() => {
+            setRiskFlagState(null);
+            setScreen("creditDecision");
+          }}
         />
       );
 

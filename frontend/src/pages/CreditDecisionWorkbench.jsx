@@ -23,7 +23,7 @@ import {
 } from "../api/client";
 
 
-export default function CreditDecisionWorkbench({ applicationSummary, back, onDecision }) {
+export default function CreditDecisionWorkbench({ applicationSummary, back, onDecision, onViewTampering, onViewLitigation, onViewRiskFlag }) {
   const [application, setApplication] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -179,7 +179,7 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
           </Grid>
         </Paper>
 
-        <EvidenceSection application={application} formatCurrency={formatCurrency} />
+        <EvidenceSection application={application} formatCurrency={formatCurrency} onViewTampering={onViewTampering} onViewLitigation={onViewLitigation} />
 
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 7 }}>
@@ -192,11 +192,36 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
             <Panel title="Risk Flags">
               {application.risk_flags && application.risk_flags.length > 0 ? (
                 <Stack spacing={1.5}>
-                  {application.risk_flags.map((flag, index) => (
-                    <Paper key={index} variant="outlined" sx={{ p: 2, borderRadius: 3 }}>
-                      <Typography fontWeight={700}>⚠️ {flag}</Typography>
-                    </Paper>
-                  ))}
+                  {application.risk_flags.map((flag, index) => {
+                    const flagLower = flag.toLowerCase();
+                    const isTampering = flagLower.includes("bank statement integrity") || flagLower.includes("tampering");
+                    const isLitigation = flagLower.includes("litigation") || flagLower.includes("charge");
+                    return (
+                      <Button
+                        key={index}
+                        fullWidth
+                        variant="outlined"
+                        onClick={() => {
+                          if (isTampering) onViewTampering?.(application);
+                          else if (isLitigation) onViewLitigation?.(application);
+                          else onViewRiskFlag?.(flag, application);
+                        }}
+                        sx={{
+                          p: 2,
+                          borderRadius: 3,
+                          justifyContent: "flex-start",
+                          textTransform: "none",
+                          borderColor: "#fecaca",
+                          bgcolor: "#fef2f2",
+                          "&:hover": { bgcolor: "#fee2e2", borderColor: "#fca5a5" },
+                        }}
+                      >
+                        <Typography fontWeight={700} color="#b91c1c" textAlign="left">
+                          ⚠️ {flag}
+                        </Typography>
+                      </Button>
+                    );
+                  })}
                 </Stack>
               ) : (
                 <Typography color="text.secondary">No material risk flags surfaced by the automated assessment.</Typography>
@@ -346,7 +371,7 @@ function groupDeductions(items) {
   return Array.from(map.values());
 }
 
-function EvidenceSection({ application, formatCurrency }) {
+function EvidenceSection({ application, formatCurrency, onViewTampering, onViewLitigation }) {
   const uw = application.underwriting || {};
   const bank = uw.bank_ocr || {};
   const cbs = uw.credit_bureau || {};
@@ -470,7 +495,32 @@ function EvidenceSection({ application, formatCurrency }) {
               </Box>
               <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
                 <Typography color="text.secondary">Statement integrity:</Typography>
-                <PassChip passed={!bank.has_fraud_tampering} passLabel="No tampering" failLabel="Tampering flagged" />
+                {bank.has_fraud_tampering ? (
+                  <Button
+                    size="small"
+                    variant="contained"
+                    sx={{
+                      borderRadius: 2,
+                      fontWeight: 800,
+                      textTransform: "none",
+                      px: 2,
+                      py: 0.8,
+                      bgcolor: "#dc2626",
+                      "&:hover": { bgcolor: "#b91c1c" },
+                      boxShadow: "0 2px 8px rgba(220,38,38,.3)",
+                    }}
+                    endIcon={<Typography sx={{ fontSize: 16, lineHeight: 1 }}>→</Typography>}
+                    onClick={() => onViewTampering?.(application)}
+                  >
+                    Tampering Flagged
+                  </Button>
+                ) : (
+                  <Chip
+                    size="small"
+                    label="No tampering"
+                    sx={{ fontWeight: 800, bgcolor: "#dcfce7", color: "#15803d" }}
+                  />
+                )}
               </Box>
             </Stack>
           </Panel>
@@ -505,8 +555,8 @@ function EvidenceSection({ application, formatCurrency }) {
           }}
         >
           <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2}>
-            <Typography fontWeight={800}>
-              PG shareholding coverage (min 50% required)
+            <Typography fontWeight={800} sx={{ mr: 0.5 }}>
+              Personal Guarantee Shareholding Coverage:
             </Typography>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <Typography fontWeight={900} sx={{ color: pgCoverageOk ? "#15803d" : "#b91c1c" }}>
@@ -771,12 +821,35 @@ function EvidenceSection({ application, formatCurrency }) {
 
         <Grid size={{ xs: 12, md: 6 }}>
           <Panel title="Litigation Search">
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography color="text.secondary">
-                Outstanding cases / charges: {litigation.count ?? 0}
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <Typography color="text.secondary" sx={{ mt: 0.3 }}>
+                Outstanding cases/charges: {litigation.count ?? 0}
               </Typography>
-              <PassChip passed={!!litigation.passed} passLabel="Clear" failLabel="Found" />
-            </Stack>
+              {!litigation.passed ? (
+                <Button
+                  size="small"
+                  variant="contained"
+                  sx={{
+                    borderRadius: 2,
+                    fontWeight: 800,
+                    textTransform: "none",
+                    px: 1.5,
+                    py: 0.8,
+                    bgcolor: "#d97706",
+                    "&:hover": { bgcolor: "#b45309" },
+                    boxShadow: "0 2px 8px rgba(217,119,6,.3)",
+                    mr: -0.5,
+                    mt: -0.5,
+                  }}
+                  endIcon={<Typography sx={{ fontSize: 16, lineHeight: 1 }}>→</Typography>}
+                  onClick={() => onViewLitigation?.(application)}
+                >
+                  Issues Found
+                </Button>
+              ) : (
+                <PassChip passed={true} passLabel="Clear" failLabel="Found" />
+              )}
+            </Box>
             {litigation.charges && litigation.charges.length > 0 && (
               <Stack spacing={1} sx={{ mt: 1.5 }}>
                 {litigation.charges.map((c, i) => (
