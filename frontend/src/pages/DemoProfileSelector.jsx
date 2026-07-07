@@ -1,4 +1,4 @@
-import { Box, Paper, Typography, Button } from "@mui/material";
+import { Box, Paper, Typography, Button, Stack } from "@mui/material";
 
 const profiles = [
   {
@@ -43,8 +43,7 @@ const profiles = [
         dob: "1990-09-30",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
-        registeredAddress: "Ayer Rajah Crescent, #03-12, Singapore 139951",
-
+        registeredAddress: "6 Woodlands North 20, #16-32, Singapore 579798",
       },
       {
         name: "Rajesh Kumar s/o Devan",
@@ -121,7 +120,7 @@ const profiles = [
         residentialStatus: "Citizen",
         mobile: "+65 8•••5678",
         email: "c•••@vortex.com.sg",
-        registeredAddress: "Ayer Rajah Crescent, #03-12, Singapore 139951",
+        registeredAddress: "6 Woodlands North 20, #16-32, Singapore 579798",
 
       },
       {
@@ -132,6 +131,7 @@ const profiles = [
         dob: "1982-11-05",
         nationality: "Singapore PR",
         residentialStatus: "PR",
+        registeredAddress: "6 Woodlands North 20, #16-32, Singapore 579798",
       },
       {
         name: "Marcus Sim Boon Keng",
@@ -141,6 +141,8 @@ const profiles = [
         dob: "1975-05-30",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
+        registeredAddress: "6 Woodlands North 20, #16-32, Singapore 579798",
+
       },
       {
         name: "Priya Nair",
@@ -150,6 +152,8 @@ const profiles = [
         dob: "1986-09-18",
         nationality: "Singapore PR",
         residentialStatus: "PR",
+        registeredAddress: "6 Woodlands North 20, #16-32, Singapore 579798",
+
       },
       {
         name: "Hafiz Bin Rahman",
@@ -159,6 +163,8 @@ const profiles = [
         dob: "1991-03-25",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
+        registeredAddress: "6 Woodlands North 20, #16-32, Singapore 579798",
+
       },
       {
         name: "Jonathan Lee Chee Wai",
@@ -168,6 +174,8 @@ const profiles = [
         dob: "1958-07-14",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
+        registeredAddress: "6 Woodlands North 20, #16-32, Singapore 579798",
+
       },
     ],
   },
@@ -201,6 +209,7 @@ const profiles = [
         residentialStatus: "Citizen",
         mobile: "+65 9•••4321",
         email: "m•••@orion.com.sg",
+        registeredAddress: "6 Boon Lay Drive, #07-87, Singapore 640213",
       },
       {
         name: "Daniel Goh Wei Ming",
@@ -210,6 +219,7 @@ const profiles = [
         dob: "1980-01-10",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
+        registeredAddress: "6 Boon Lay Drive, #07-87, Singapore 640213",
       },
       {
         name: "Steven Tan Kok Leong",
@@ -219,6 +229,7 @@ const profiles = [
         dob: "1972-04-05",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
+        registeredAddress: "6 Boon Lay Drive, #07-87, Singapore 640213",
       },
       {
         name: "Michelle Koh Swee Lian",
@@ -228,6 +239,7 @@ const profiles = [
         dob: "1984-10-28",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
+        registeredAddress: "6 Boon Lay Drive, #07-87, Singapore 640213",
       },
       {
         name: "Arjun Menon",
@@ -237,6 +249,7 @@ const profiles = [
         dob: "1990-06-11",
         nationality: "Singapore PR",
         residentialStatus: "PR",
+        registeredAddress: "6 Boon Lay Drive, #07-87, Singapore 640213",
       },
       {
         name: "Lim Wei Jie",
@@ -246,6 +259,7 @@ const profiles = [
         dob: "1996-01-19",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
+        registeredAddress: "6 Boon Lay Drive, #07-87, Singapore 640213",
       },
     ],
   },
@@ -279,16 +293,18 @@ export default function DemoProfileSelector({ onSelect }) {
           }}
         >
           <Box>
-            <Typography
-              sx={{
-                fontSize: 36,
-                fontWeight: 850,
-                letterSpacing: "-0.03em",
-                lineHeight: 1.15,
-              }}
-            >
-              UOB Credit AI
-            </Typography>
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <Typography
+                sx={{
+                  fontSize: 36,
+                  fontWeight: 850,
+                  letterSpacing: "-0.03em",
+                  lineHeight: 1.15,
+                }}
+              >
+                UOB Credit AI
+              </Typography>
+            </Stack>
 
             <Typography sx={{ mt: 1, opacity: 0.92, fontSize: 16 }}>
               Three demo scenarios, one per credit outcome. Pick a company to

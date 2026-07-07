@@ -16,7 +16,7 @@ import { requestKeymanApproval } from "../api/client";
 // while still showing the realistic "awaiting keyman approval" state.
 const AUTO_CONTINUE_MS = 12000;
 
-export default function KeymanApproval({ application, next, back }) {
+export default function KeymanApproval({ application, next, back, goHome }) {
   const profile = application.profile || {};
   const applicant = application.applicant || {};
 
@@ -59,7 +59,7 @@ export default function KeymanApproval({ application, next, back }) {
   }, [loading, secondsLeft, next]);
 
   return (
-    <PortalShell application={application} activeStep={1}>
+    <PortalShell application={application} activeStep={1} onHome={goHome}>
       <Paper
         sx={{
           p: { xs: 4, md: 6 },

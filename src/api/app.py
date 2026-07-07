@@ -118,12 +118,25 @@ def _build_underwriting_summary(app_record, result: dict) -> dict:
 
     # --- Bank statement OCR (sanitized; drop non-serializable objects) ---
     bank = result.get("bank") or {}
+    raw_credits = bank.get("suspicious_credits") or []
     bank_ocr = {
         "bank": bank.get("bank"),
         "total_credits": round(float(bank.get("raw_credits_total", 0) or 0), 2),
         "flagged_kiting_volume": round(float(bank.get("flagged_kiting_volume", 0) or 0), 2),
         "detected_loans": bank.get("detected_loans_count", 0),
         "has_fraud_tampering": bool(bank.get("has_fraud_tampering", False)),
+        "suspicious_credits": [
+            {
+                "date": sc.transaction.date,
+                "description": sc.transaction.description,
+                "amount": sc.transaction.amount,
+                "transaction_type": sc.transaction.transaction_type,
+                "raw_text": sc.transaction.raw_text,
+                "risk_score": sc.risk_score,
+                "reason": sc.reason,
+            }
+            for sc in raw_credits
+        ],
     }
 
     # --- Credit Bureau (CBS) rating — prefer the profile grade for coherence ---
@@ -159,6 +172,7 @@ def _build_underwriting_summary(app_record, result: dict) -> dict:
     litigation = {
         "count": lit_count,
         "charges": charges,
+        "has_adverse_bureau_records": adverse,
         "high_risk": lit_count > 0 or adverse,
         "passed": not (lit_count > 0 or adverse),
     }
@@ -631,7 +645,7 @@ def submit_approver_decision(
 
     normalized = decision.upper()
 
-    if normalized not in ["APPROVED", "SUBJECT_TO_APPROVAL", "REJECTED"]:
+    if normalized not in ["APPROVED", "SUBJECT TO APPROVAL", "REJECTED"]:
         raise HTTPException(status_code=400, detail="Invalid approver decision.")
 
     app_record.approver_decision = normalized
@@ -641,7 +655,7 @@ def submit_approver_decision(
 
     if normalized == "APPROVED":
         app_record.approved_amount = approved_amount or app_record.requested_quantum
-    elif normalized == "SUBJECT_TO_APPROVAL":
+    elif normalized == "SUBJECT TO APPROVAL":
         app_record.approved_amount = approved_amount
     else:
         app_record.approved_amount = 0

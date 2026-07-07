@@ -9,7 +9,7 @@ import { Button, Box, Typography, Paper, Stack } from "@mui/material";
 
 const steps = ["Loan Details", "Questionnaire", "Documents", "Consent"];
 
-export default function LoanApplication({ application, setApplication, next, back }) {
+export default function LoanApplication({ application, setApplication, next, back, goHome }) {
   const [step, setStep] = useState(0);
 
   const validateDocuments = () => {
@@ -17,6 +17,19 @@ export default function LoanApplication({ application, setApplication, next, bac
     // income statement are optional supporting docs that can be uploaded later.
     if (!application.uploads.bankStatement) {
       alert("Please upload your Corporate Bank Statement.");
+      return false;
+    }
+    return true;
+  };
+
+  const validateDeclarations = () => {
+    const d = application.declarations || {};
+    if (!d.positiveEBITDA || !d.positiveTNW || !d.existingLoans || !d.recentDefault) {
+      alert("Please answer all 4 declaration questions before proceeding.");
+      return false;
+    }
+    if (d.existingLoans === "yes" && !d.existingLoanDetails?.trim()) {
+      alert("Please provide details of your existing loans or banking facilities.");
       return false;
     }
     return true;
@@ -32,6 +45,7 @@ export default function LoanApplication({ application, setApplication, next, bac
   };
 
   const handleNext = () => {
+    if (step === 1 && !validateDeclarations()) return;
     if (step === 2 && !validateDocuments()) return;
     if (step === 3) {
       if (!validateConsent()) return;
@@ -50,7 +64,7 @@ export default function LoanApplication({ application, setApplication, next, bac
   };
 
   return (
-    <PortalShell application={application}>
+    <PortalShell application={application} onHome={goHome}>
       <Box>
         <Paper
           elevation={0}

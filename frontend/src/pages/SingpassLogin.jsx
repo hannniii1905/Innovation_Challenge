@@ -84,6 +84,7 @@ export default function SingpassLogin({
   needsKeymanApproval,
   useUenInstead,
   back,
+  goHome,
 }) {
   const [step, setStep] = useState("landing");
   const directors = application.profile.directors || [];
@@ -135,7 +136,7 @@ export default function SingpassLogin({
 
   if (step === "success") {
     return (
-      <PortalShell application={application} sidebar={false} activeStep={1}>
+      <PortalShell application={application} sidebar={false} activeStep={1} onHome={goHome}>
         <Paper
           sx={{
             p: 6,
@@ -176,7 +177,7 @@ export default function SingpassLogin({
   }
 
   return (
-    <PortalShell application={application} sidebar={false} activeStep={1}>
+    <PortalShell application={application} sidebar={false} activeStep={1} onHome={goHome}>
       <Paper
         sx={{
           p: 5,
