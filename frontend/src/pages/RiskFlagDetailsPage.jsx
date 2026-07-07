@@ -13,7 +13,7 @@ import {
   Divider,
 } from "@mui/material";
 
-export default function RiskFlagDetailsPage({ flag, application, back }) {
+export default function RiskFlagDetailsPage({ flag, application, back, goHome }) {
   const uw = application?.underwriting || {};
   const bank = uw.bank_ocr || {};
   const aml = uw.aml || {};
@@ -24,6 +24,11 @@ export default function RiskFlagDetailsPage({ flag, application, back }) {
     <Box sx={{ minHeight: "100vh", bgcolor: "#f6f8fc", fontFamily: "'Inter','Segoe UI',Arial,sans-serif" }}>
       <Box sx={{ background: "linear-gradient(120deg, #1e3a5f 0%, #2d5a87 45%, #3b82f6 100%)", color: "white", px: 4, py: 4 }}>
         <Box sx={{ maxWidth: 1250, mx: "auto" }}>
+          <Stack direction="row" alignItems="center" spacing={0.7} onClick={goHome} sx={{ cursor: "pointer", mb: 1 }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 700, opacity: 0.8, letterSpacing: "0.02em", "&:hover": { opacity: 1 } }}>
+              UOB Credit AI
+            </Typography>
+          </Stack>
           <Button variant="outlined" onClick={back} sx={{ mb: 2, bgcolor: "white", borderColor: "white", color: "#1e3a5f" }}>
             ← Back to Workbench
           </Button>

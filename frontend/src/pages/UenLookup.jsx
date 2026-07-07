@@ -13,7 +13,7 @@ import {
 import PortalShell from "../components/PortalShell";
 import { acraLookup } from "../api/client";
 
-export default function UenLookup({ application, setApplication, next, back }) {
+export default function UenLookup({ application, setApplication, next, back, goHome }) {
   const profile = application.profile || {};
 
   const [uen, setUen] = useState(profile.uen || "");
@@ -74,7 +74,7 @@ export default function UenLookup({ application, setApplication, next, back }) {
   };
 
   return (
-    <PortalShell application={application} sidebar={false} activeStep={1}>
+    <PortalShell application={application} sidebar={false} activeStep={1} onHome={goHome}>
       <Paper
         sx={{
           p: { xs: 4, md: 5 },

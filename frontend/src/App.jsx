@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Box } from "@mui/material";
 
 import DemoProfileSelector from "./pages/DemoProfileSelector";
 import SingpassLogin from "./pages/SingpassLogin";
@@ -56,9 +57,10 @@ export default function App() {
     assessment: null,
   });
 
+  let page;
   switch (screen) {
     case "profile":
-      return (
+      page = (
         <DemoProfileSelector
           onSelect={(profile) => {
             if (profile === "__APPROVER__") {
@@ -66,27 +68,42 @@ export default function App() {
               return;
             }
 
-            setApplication((prev) => ({
-              ...prev,
+            setApplication({
               profile,
-            }));
+              singpass: null,
+              authMethod: null,
+              applicant: null,
+              loanAmount: 50000,
+              tenure: 24,
+              interestRate: 6,
+              monthlyInstallment: 0,
+              loanPurpose: "Working Capital",
+              declarations: { positiveEBITDA: "", positiveTNW: "", existingLoans: "", existingLoanDetails: "", industry: "" },
+              uploads: { bankStatement: null, incomeStatement: null, ic: null, financials: null },
+              consent: { creditBureau: false, acra: false, screening: false, declaration: false },
+              applicationId: null,
+              referenceNumber: null,
+              assessment: null,
+            });
 
             setScreen("loanLandingPage");;
           }}
         />
       );
+      break;
 
     case "loanLandingPage":
-      return (
+      page = (
         <LoanLandingPage
           application={application}
           next={() => setScreen("singpass")}
           back={() => setScreen("profile")}
         />
       );
+      break;
       
     case "singpass":
-      return (
+      page = (
         <SingpassLogin
           application={application}
           setApplication={setApplication}
@@ -94,50 +111,60 @@ export default function App() {
           needsKeymanApproval={() => setScreen("keymanApproval")}
           useUenInstead={() => setScreen("uenLookup")}
           back={() => setScreen("profile")}
+          goHome={() => setScreen("profile")}
         />
       );
+      break;
 
     case "uenLookup":
-      return (
+      page = (
         <UenLookup
           application={application}
           setApplication={setApplication}
           next={() => setScreen("keymanApproval")}
           back={() => setScreen("singpass")}
+          goHome={() => setScreen("profile")}
         />
       );
+      break;
 
     case "keymanApproval":
-      return (
+      page = (
         <KeymanApproval
           application={application}
           next={() => setScreen("myInfoReview")}
           back={() => setScreen("singpass")}
+          goHome={() => setScreen("profile")}
         />
       );
+      break;
 
     case "myInfoReview":
-      return (
+      page = (
         <MyInfoReview
           application={application}
           setApplication={setApplication}
           next={() => setScreen("application")}
           back={() => setScreen("singpass")}
+          goHome={() => setScreen("profile")}
         />
       );
+      break;
 
     case "application":
-      return (
+      page = (
         <LoanApplication
           application={application}
           setApplication={setApplication}
           next={() => setScreen("initialAssessment")}
           back={() => setScreen("myInfoReview")}
+          goHome={() => setScreen("profile")}
         />
       );
+      break;
 
     case "initialAssessment":
-      return (
+      page = (
         <InitialAssessment
           application={application}
           setApplication={setApplication}
@@ -145,18 +172,20 @@ export default function App() {
           backToHome={() => setScreen("profile")}
         />
       );
+      break;
 
     case "supportingDocs":
-      return (
+      page = (
         <SupportingDocuments
           application={application}
           setApplication={setApplication}
           backToHome={() => setScreen("profile")}
         />
       );
+      break;
 
     case "creditApprover":
-      return (
+      page = (
         <CreditApproverDashboard
           backToClient={() => setScreen("profile")}
           openApplication={(app) => {
@@ -166,9 +195,10 @@ export default function App() {
           decidedApplications={decidedApplications}
         />
       );
+      break;
 
     case "creditDecision":
-      return (
+      page = (
         <CreditDecisionWorkbench
           applicationSummary={selectedApproverApplication}
           back={() => setScreen("creditApprover")}
@@ -187,11 +217,13 @@ export default function App() {
             setRiskFlagState({ flag, application: app });
             setScreen("riskFlagDetails");
           }}
+          goHome={() => setScreen("profile")}
         />
       );
+      break;
 
     case "tamperingDetails":
-      return (
+      page = (
         <TamperingDetailsPage
           bankOcr={tamperingApplication?.underwriting?.bank_ocr}
           companyName={tamperingApplication?.company_name}
@@ -200,11 +232,13 @@ export default function App() {
             setTamperingApplication(null);
             setScreen("creditDecision");
           }}
+          goHome={() => setScreen("profile")}
         />
       );
+      break;
 
     case "litigationDetails":
-      return (
+      page = (
         <LitigationDetailsPage
           litigation={litigationApplication?.underwriting?.litigation}
           companyName={litigationApplication?.company_name}
@@ -213,11 +247,13 @@ export default function App() {
             setLitigationApplication(null);
             setScreen("creditDecision");
           }}
+          goHome={() => setScreen("profile")}
         />
       );
+      break;
 
     case "riskFlagDetails":
-      return (
+      page = (
         <RiskFlagDetailsPage
           flag={riskFlagState?.flag}
           application={riskFlagState?.application}
@@ -225,10 +261,33 @@ export default function App() {
             setRiskFlagState(null);
             setScreen("creditDecision");
           }}
+          goHome={() => setScreen("profile")}
         />
       );
+      break;
 
     default:
-      return null;
+      page = null;
   }
+
+  return (
+    <>
+      {page}
+      {screen !== "loanLandingPage" && (
+        <Box
+          component="img"
+          src="/uob-logo.png"
+          sx={{
+            position: "fixed",
+            bottom: 20,
+            right: 20,
+            height: 40,
+            opacity: 0.7,
+            zIndex: 9999,
+            pointerEvents: "none",
+          }}
+        />
+      )}
+    </>
+  );
 }

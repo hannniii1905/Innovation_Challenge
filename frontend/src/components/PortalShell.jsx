@@ -1,6 +1,6 @@
-import { Box, Paper, Typography, Chip, Divider } from "@mui/material";
+import { Box, Paper, Typography, Chip, Divider, Stack } from "@mui/material";
 
-export default function PortalShell({ application, children, sidebar = true }) {
+export default function PortalShell({ application, children, sidebar = true, onHome }) {
   const p = application?.profile;
 
   return (
@@ -21,16 +21,18 @@ export default function PortalShell({ application, children, sidebar = true }) {
         }}
       >
         <Box sx={{ maxWidth: 1400, mx: "auto" }}>
-          <Typography
-            sx={{
-              fontSize: 25,
-              fontWeight: 800,
-              lineHeight: 1.2,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            UOB Credit AI
-          </Typography>
+          <Stack direction="row" alignItems="center" spacing={1} onClick={() => onHome?.()} sx={{ cursor: "pointer" }}>
+            <Typography
+              sx={{
+                fontSize: 25,
+                fontWeight: 800,
+                lineHeight: 1.2,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              UOB Credit AI
+            </Typography>
+          </Stack>
 
           <Typography
             sx={{

@@ -23,7 +23,7 @@ import {
 } from "../api/client";
 
 
-export default function CreditDecisionWorkbench({ applicationSummary, back, onDecision, onViewTampering, onViewLitigation, onViewRiskFlag }) {
+export default function CreditDecisionWorkbench({ applicationSummary, back, onDecision, onViewTampering, onViewLitigation, onViewRiskFlag, goHome }) {
   const [application, setApplication] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -60,7 +60,7 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
       const approvedAmount =
         decision === "APPROVED"
           ? application.requested_quantum
-          : decision === "SUBJECT_TO_APPROVAL"
+          : decision === "SUBJECT TO APPROVAL"
           ? application.recommended_amount
           : 0;
 
@@ -120,6 +120,11 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
     <Box sx={{ minHeight: "100vh", bgcolor: "#f6f8fc", fontFamily: "'Inter','Segoe UI',Arial,sans-serif" }}>
       <Box sx={{ background: "linear-gradient(120deg, #001A3F 0%, #002E5D 45%, #005EB8 100%)", color: "white", px: 4, py: 4 }}>
         <Box sx={{ maxWidth: 1250, mx: "auto" }}>
+          <Stack direction="row" alignItems="center" spacing={0.7} onClick={goHome} sx={{ cursor: "pointer", mb: 1 }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 700, opacity: 0.8, letterSpacing: "0.02em", "&:hover": { opacity: 1 } }}>
+              UOB Credit AI
+            </Typography>
+          </Stack>
           <Button variant="outlined" onClick={back} sx={{ mb: 2, bgcolor: "white", borderColor: "white" }}>
             ← Back to Work Queue
           </Button>
@@ -274,7 +279,7 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
                   fullWidth
                   disabled={decisionLoading}
                   sx={{ borderRadius: 3, fontWeight: 800 }}
-                  onClick={() => handleDecision("SUBJECT_TO_APPROVAL")}
+                  onClick={() => handleDecision("SUBJECT TO APPROVAL")}
                 >
                   Counter-offer / Subject to Approval
                 </Button>

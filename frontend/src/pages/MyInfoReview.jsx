@@ -67,7 +67,7 @@ function SectionCard({ title, source, children }) {
   );
 }
 
-export default function MyInfoReview({ application, setApplication, next, back }) {
+export default function MyInfoReview({ application, setApplication, next, back, goHome }) {
   const profile = application.profile || {};
   const business = profile.businessInfo || {};
   const keymen = profile.keymen || [];
@@ -132,7 +132,7 @@ export default function MyInfoReview({ application, setApplication, next, back }
   };
 
   return (
-    <PortalShell application={application} activeStep={1}>
+    <PortalShell application={application} activeStep={1} onHome={goHome}>
       <Box>
         <Paper
           sx={{

@@ -99,6 +99,11 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
     return "success";
   };
 
+  const formatDecision = (d) => {
+    if (!d) return "";
+    return d.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
   return (
     <Box
       sx={{
@@ -126,6 +131,19 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
         }}
     >
         <Box>
+          <Stack direction="row" alignItems="center" spacing={0.7} onClick={backToClient} sx={{ cursor: "pointer", mb: 0.5 }}>
+            <Typography
+              sx={{
+                fontSize: 13,
+                fontWeight: 700,
+                opacity: 0.8,
+                letterSpacing: "0.02em",
+                "&:hover": { opacity: 1 },
+              }}
+            >
+              UOB Credit AI
+            </Typography>
+          </Stack>
         <Typography
             sx={{
             fontSize: 30,
@@ -278,7 +296,7 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
                   <TableCell sx={{ fontWeight: 800 }}>UEN</TableCell>
                   <TableCell sx={{ fontWeight: 800 }}>Requested Amount</TableCell>
                   <TableCell sx={{ fontWeight: 800 }}>Review Category</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }} align="right">
+                  <TableCell sx={{ fontWeight: 800, whiteSpace: "nowrap" }} align="right">
                     Action
                   </TableCell>
                 </TableRow>
@@ -316,7 +334,7 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
                       />
                     </TableCell>
 
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
                       <Button
                         variant="contained"
                         size="small"
@@ -330,6 +348,7 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
                         Open Review
                       </Button>
                       <Button
+                        variant="contained"
                         size="small"
                         color="error"
                         sx={{ ml: 1, borderRadius: 2, fontWeight: 700 }}
@@ -383,7 +402,7 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
                     <TableCell>{formatCurrency(app.requested_quantum)}</TableCell>
                     <TableCell>
                       <Chip
-                        label={app.approverDecision}
+                        label={formatDecision(app.approverDecision)}
                         color={
                           app.approverDecision === "APPROVED"
                             ? "success"
@@ -395,11 +414,24 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
                         sx={{ fontWeight: 700 }}
                       />
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
                       <Button
+                        variant="contained"
+                        size="small"
+                        sx={{
+                          borderRadius: 2,
+                          fontWeight: 700,
+                          background: "linear-gradient(90deg, #005EB8 0%, #0072CE 100%)",
+                        }}
+                        onClick={() => openApplication(app)}
+                      >
+                        Open Review
+                      </Button>
+                      <Button
+                        variant="contained"
                         size="small"
                         color="error"
-                        sx={{ borderRadius: 2, fontWeight: 700 }}
+                        sx={{ ml: 1, borderRadius: 2, fontWeight: 700 }}
                         onClick={() => handleDelete(app.application_id)}
                       >
                         Delete

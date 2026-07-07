@@ -645,7 +645,7 @@ def submit_approver_decision(
 
     normalized = decision.upper()
 
-    if normalized not in ["APPROVED", "SUBJECT_TO_APPROVAL", "REJECTED"]:
+    if normalized not in ["APPROVED", "SUBJECT TO APPROVAL", "REJECTED"]:
         raise HTTPException(status_code=400, detail="Invalid approver decision.")
 
     app_record.approver_decision = normalized
@@ -655,7 +655,7 @@ def submit_approver_decision(
 
     if normalized == "APPROVED":
         app_record.approved_amount = approved_amount or app_record.requested_quantum
-    elif normalized == "SUBJECT_TO_APPROVAL":
+    elif normalized == "SUBJECT TO APPROVAL":
         app_record.approved_amount = approved_amount
     else:
         app_record.approved_amount = 0

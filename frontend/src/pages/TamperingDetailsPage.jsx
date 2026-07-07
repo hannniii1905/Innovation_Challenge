@@ -33,7 +33,7 @@ function riskLevel(score) {
   return { label: "Low", color: "#ca8a04", bg: "#fef9c3" };
 }
 
-export default function TamperingDetailsPage({ bankOcr, companyName, referenceNumber, back }) {
+export default function TamperingDetailsPage({ bankOcr, companyName, referenceNumber, back, goHome }) {
   const credits = bankOcr?.suspicious_credits || [];
   const totalCredits = bankOcr?.total_credits || 0;
 
@@ -41,6 +41,11 @@ export default function TamperingDetailsPage({ bankOcr, companyName, referenceNu
     <Box sx={{ minHeight: "100vh", bgcolor: "#f6f8fc", fontFamily: "'Inter','Segoe UI',Arial,sans-serif" }}>
       <Box sx={{ background: "linear-gradient(120deg, #991b1b 0%, #b91c1c 45%, #dc2626 100%)", color: "white", px: 4, py: 4 }}>
         <Box sx={{ maxWidth: 1250, mx: "auto" }}>
+          <Stack direction="row" alignItems="center" spacing={0.7} onClick={goHome} sx={{ cursor: "pointer", mb: 1 }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 700, opacity: 0.8, letterSpacing: "0.02em", "&:hover": { opacity: 1 } }}>
+              UOB Credit AI
+            </Typography>
+          </Stack>
           <Button variant="outlined" onClick={back} sx={{ mb: 2, bgcolor: "white", borderColor: "white", color: "#b91c1c" }}>
             ← Back to Workbench
           </Button>
