@@ -9,7 +9,7 @@ const profiles = [
     accent: "#16a34a",
     accentBg: "#dcfce7",
     companyName: "NEXUS INNOVATION PTE. LTD.",
-    uen: "202188341M",
+    uen: "202188341M",  
     industry: "Development of software and applications",
     directors: ["Alex Tan Wei Liang", "Sarah Lim Xiu Qi"],
     incorporationDate: "2021-03-15",
@@ -33,6 +33,7 @@ const profiles = [
         residentialStatus: "Citizen",
         mobile: "+65 9•••1234",
         email: "a•••@nexus.com.sg",
+        registeredAddress: "6 Bishan Street 13, #10-32, Singapore 579798",
       },
       {
         name: "Sarah Lim Xiu Qi",
@@ -42,6 +43,8 @@ const profiles = [
         dob: "1990-09-30",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
+        registeredAddress: "Ayer Rajah Crescent, #03-12, Singapore 139951",
+
       },
       {
         name: "Rajesh Kumar s/o Devan",
@@ -51,6 +54,7 @@ const profiles = [
         dob: "1978-06-22",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
+        registeredAddress: "Ayer Rajah Crescent, #03-12, Singapore 139951",
       },
       {
         name: "Grace Chua Hui Min",
@@ -60,6 +64,8 @@ const profiles = [
         dob: "1988-12-03",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
+        registeredAddress: "Ayer Rajah Crescent, #03-12, Singapore 139951",
+
       },
       {
         name: "Benjamin Ng Jun Hao",
@@ -69,6 +75,8 @@ const profiles = [
         dob: "1995-02-17",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
+        registeredAddress: "Ayer Rajah Crescent, #03-12, Singapore 139951",
+
       },
       {
         name: "Kelvin Wong Kok Wai",
@@ -78,6 +86,8 @@ const profiles = [
         dob: "1965-08-09",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
+        registeredAddress: "Ayer Rajah Crescent, #03-12, Singapore 139951",
+
       },
     ],
   },
@@ -111,6 +121,8 @@ const profiles = [
         residentialStatus: "Citizen",
         mobile: "+65 8•••5678",
         email: "c•••@vortex.com.sg",
+        registeredAddress: "Ayer Rajah Crescent, #03-12, Singapore 139951",
+
       },
       {
         name: "Alicia Teo Min",

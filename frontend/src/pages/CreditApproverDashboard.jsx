@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import { getApproverApplications } from "../api/client";
 
-export default function CreditApproverDashboard({ openApplication, backToClient }) {
+export default function CreditApproverDashboard({ openApplication, backToClient, decidedApplications }) {
   const [applications, setApplications] = useState([]);
   const [summary, setSummary] = useState({
     total_applications: 0,
@@ -44,9 +44,13 @@ export default function CreditApproverDashboard({ openApplication, backToClient 
     loadApplications();
   }, []);
 
+  const decidedIds = useMemo(() => new Set(decidedApplications?.map((a) => a.application_id)), [decidedApplications]);
+
   const filteredApplications = useMemo(() => {
-    return applications.filter((app) => app.review_category === filter);
-  }, [filter, applications]);
+    return applications.filter(
+      (app) => app.review_category === filter && !decidedIds.has(app.application_id)
+    );
+  }, [filter, applications, decidedIds]);
 
   const formatCurrency = (value) => {
     if (!value && value !== 0) return "-";
@@ -302,6 +306,60 @@ export default function CreditApproverDashboard({ openApplication, backToClient 
             </Table>
           )}
         </Paper>
+
+        {decidedApplications?.length > 0 && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 4,
+              borderRadius: 4,
+              mt: 3,
+              border: "1px solid #e5e7eb",
+              boxShadow: "0 12px 28px rgba(15,23,42,.08)",
+            }}
+          >
+            <Typography sx={{ fontSize: 22, fontWeight: 800, mb: 3 }}>
+              History
+            </Typography>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 800 }}>Reference</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>Company</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>UEN</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>Requested Amount</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }}>Decision</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {decidedApplications.map((app) => (
+                  <TableRow key={app.application_id}>
+                    <TableCell>{app.reference_number}</TableCell>
+                    <TableCell>
+                      <Typography fontWeight={700}>{app.company_name}</Typography>
+                    </TableCell>
+                    <TableCell>{app.uen}</TableCell>
+                    <TableCell>{formatCurrency(app.requested_quantum)}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={app.approverDecision}
+                        color={
+                          app.approverDecision === "APPROVED"
+                            ? "success"
+                            : app.approverDecision === "REJECTED"
+                            ? "error"
+                            : "warning"
+                        }
+                        size="small"
+                        sx={{ fontWeight: 700 }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Paper>
+        )}
       </Box>
     </Box>
   );

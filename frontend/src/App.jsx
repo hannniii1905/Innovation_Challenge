@@ -15,6 +15,7 @@ import LoanLandingPage from "./pages/LoanLandingPage";
 export default function App() {
   const [screen, setScreen] = useState("profile");
   const [selectedApproverApplication, setSelectedApproverApplication] = useState(null);
+  const [decidedApplications, setDecidedApplications] = useState([]);
   const [application, setApplication] = useState({
     profile: null,
     singpass: null,
@@ -125,7 +126,7 @@ export default function App() {
           application={application}
           setApplication={setApplication}
           next={() => setScreen("initialAssessment")}
-          back={() => setScreen("singpass")}
+          back={() => setScreen("myInfoReview")}
         />
       );
 
@@ -156,6 +157,7 @@ export default function App() {
             setSelectedApproverApplication(app);
             setScreen("creditDecision");
           }}
+          decidedApplications={decidedApplications}
         />
       );
 
@@ -164,6 +166,9 @@ export default function App() {
         <CreditDecisionWorkbench
           applicationSummary={selectedApproverApplication}
           back={() => setScreen("creditApprover")}
+          onDecision={(app, decision) =>
+            setDecidedApplications((prev) => [...prev, { ...app, approverDecision: decision }])
+          }
         />
       );
 
