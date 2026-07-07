@@ -247,8 +247,12 @@ export async function uploadSupportingDocuments(applicationId, uploads = {}) {
   return response.json();
 }
 
-export async function getApproverApplications() {
-  const response = await fetch(`${API_BASE}/approver/applications`);
+export async function getApproverApplications(decided) {
+  let url = `${API_BASE}/approver/applications`;
+  if (decided !== undefined) {
+    url += `?decided=${decided}`;
+  }
+  const response = await fetch(url);
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
@@ -293,6 +297,19 @@ export async function submitApproverDecision(
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw new Error(error.detail || "Failed to submit approver decision.");
+  }
+
+  return response.json();
+}
+
+export async function deleteApplication(applicationId) {
+  const response = await fetch(`${API_BASE}/approver/applications/${applicationId}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || "Failed to delete application.");
   }
 
   return response.json();

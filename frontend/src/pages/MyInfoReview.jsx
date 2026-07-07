@@ -15,7 +15,7 @@ import {
   TableRow,
   LinearProgress,
   Alert,
-} from "@mui/material";
+} from "@mui/material"; 
 import PortalShell from "../components/PortalShell";
 import { uob } from "../theme";
 
@@ -52,7 +52,7 @@ function SectionCard({ title, source, children }) {
   return (
     <Paper sx={{ p: 3.5, borderRadius: 4, boxShadow: "0 10px 24px rgba(15,23,42,.06)" }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-        <Typography fontWeight={900} sx={{ color: uob.ink }}>
+        <Typography sx={{ color: uob.ink, fontWeight: "bold" }}>
           {title}
         </Typography>
         <Chip
@@ -80,12 +80,22 @@ export default function MyInfoReview({ application, setApplication, next, back }
     [keymen]
   );
 
-  // Personal guarantors: default to ALL keymen selected.
-  const [selected, setSelected] = useState(() =>
-    new Set(rankedKeymen.map((k) => k.name))
+  // Personal guarantors with shareholding >= 25% are mandatory (auto-selected, grayed out).
+  const mandatoryPgs = useMemo(
+    () => new Set(rankedKeymen.filter((k) => (k.shareholding || 0) >= 25).map((k) => k.name)),
+    [rankedKeymen]
   );
 
+  // Personal guarantors: default to ALL keymen selected, ensuring mandatory ones are included.
+  const [selected, setSelected] = useState(() => {
+    const allNames = new Set(rankedKeymen.map((k) => k.name));
+    mandatoryPgs.forEach((name) => allNames.add(name));
+    return allNames;
+  });
+
   const toggle = (name) => {
+    // Prevent deselecting mandatory PGs (shareholding >= 25%).
+    if (mandatoryPgs.has(name)) return;
     setSelected((prev) => {
       const nextSet = new Set(prev);
       if (nextSet.has(name)) nextSet.delete(name);
@@ -168,7 +178,7 @@ export default function MyInfoReview({ application, setApplication, next, back }
                 <Field label="Mobile" value={person.mobile} />
                 <Field label="Email" value={person.email} />
               </Box>
-              <Field label="Registered Address" value={business.registeredAddress} />
+              <Field label="Registered Address" value={person.registeredAddress} />
             </SectionCard>
           ) : (
             <SectionCard title="Applicant identity" source="Not via Singpass">
@@ -192,18 +202,21 @@ export default function MyInfoReview({ application, setApplication, next, back }
             </Box>
             <Field label="Principal Activity (SSIC)" value={business.primarySsic} />
             <Field label="Registered Address" value={business.registeredAddress} />
+            <Field label="Status of property" value={"Owned"} />
+          {/* need edit */}
           </SectionCard>
         </Box>
 
         {/* Keymen / personal guarantee */}
         {rankedKeymen.length > 0 && (
           <Paper sx={{ p: 3.5, borderRadius: 4, mt: 3, boxShadow: "0 10px 24px rgba(15,23,42,.06)" }}>
-            <Typography fontWeight={900} sx={{ color: uob.ink, mb: 0.5 }}>
-              Company keymen & personal guarantee
+            <Typography sx={{ color: uob.ink, mb: 0.5, fontWeight: "bold" }}>
+              Company Keymen & Personal Guarantee
             </Typography>
             <Typography color="text.secondary" fontSize={14} sx={{ mb: 2 }}>
-              All keymen are selected as personal guarantors by default. You may
-              choose who provides the personal guarantee, as long as the selected
+              All keymen are selected as personal guarantors by default. Shareholders
+              with <strong>25% or more shareholding are mandatory</strong> and cannot
+              be deselected. You may choose other guarantors, as long as the selected
               guarantors together hold at least {PG_MIN_COVERAGE}% of shareholding.
               Age is derived from the MyInfo date of birth.
             </Typography>
@@ -224,8 +237,8 @@ export default function MyInfoReview({ application, setApplication, next, back }
                 alignItems="center"
                 gap={2}
               >
-                <Typography fontWeight={800}>
-                  Selected PG shareholding coverage
+                <Typography fontWeight={800} sx={{ mr:0.5 }}>
+                  Selected PG shareholding coverage:
                 </Typography>
                 <Typography
                   fontWeight={900}
@@ -270,16 +283,22 @@ export default function MyInfoReview({ application, setApplication, next, back }
                   const flagged =
                     ageAtMaturity != null && ageAtMaturity > PG_MAX_AGE_AT_MATURITY;
                   const isSelected = selected.has(k.name);
+                  const isMandatory = mandatoryPgs.has(k.name);
                   return (
                     <TableRow
                       key={k.name}
-                      sx={{ bgcolor: isSelected ? "rgba(0,94,184,.04)" : "transparent" }}
+                      sx={{
+                        bgcolor: isSelected ? "rgba(0,94,184,.04)" : "transparent",
+                        opacity: isMandatory ? 0.7 : 1,
+                      }}
                     >
                       <TableCell padding="checkbox">
                         <Checkbox
                           checked={isSelected}
                           onChange={() => toggle(k.name)}
+                          disabled={isMandatory}
                           size="small"
+                          title={isMandatory ? "Auto-selected (shareholding ≥ 25%)" : ""}
                         />
                       </TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>{k.name}</TableCell>

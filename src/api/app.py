@@ -504,12 +504,16 @@ async def upload_application_documents(
 
 
 @app.get("/approver/applications")
-def list_approver_applications(db: Session = Depends(get_db)):
-    applications = (
-        db.query(StagedApplication)
-        .order_by(StagedApplication.id.desc())
-        .all()
-    )
+def list_approver_applications(
+    decided: Optional[bool] = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(StagedApplication)
+    if decided is True:
+        query = query.filter(StagedApplication.approver_decision.isnot(None))
+    elif decided is False:
+        query = query.filter(StagedApplication.approver_decision.is_(None))
+    applications = query.order_by(StagedApplication.id.desc()).all()
 
     rows = []
 
@@ -543,6 +547,7 @@ def list_approver_applications(db: Session = Depends(get_db)):
                 "system_decision": system_decision,
                 "review_category": review_category,
                 "approved_amount": app.approved_amount,
+                "approver_decision": app.approver_decision,
                 "created_at": str(getattr(app, "created_at", "")),
             }
         )
@@ -653,6 +658,32 @@ def submit_approver_decision(
         "approver_name": app_record.approver_name,
         "approver_notes": app_record.approver_notes,
     }
+
+
+@app.delete("/approver/applications/{application_id}")
+def delete_approver_application(application_id: int, db: Session = Depends(get_db)):
+    """Delete an application from the queue and its uploaded files."""
+    app_record = (
+        db.query(StagedApplication)
+        .filter(StagedApplication.id == application_id)
+        .first()
+    )
+
+    if not app_record:
+        raise HTTPException(status_code=404, detail="Application not found.")
+
+    app_folder = os.path.join(UPLOAD_DIR, f"application_{application_id}")
+    if os.path.isdir(app_folder):
+        shutil.rmtree(app_folder, ignore_errors=True)
+
+    db.delete(app_record)
+    db.commit()
+
+    return {
+        "application_id": application_id,
+        "deleted": True,
+    }
+
 
 # --------------------------------------------------------------------------- #
 # ACRA lookup + keyman approval (mock)

@@ -23,7 +23,7 @@ import {
 } from "../api/client";
 
 
-export default function CreditDecisionWorkbench({ applicationSummary, back }) {
+export default function CreditDecisionWorkbench({ applicationSummary, back, onDecision }) {
   const [application, setApplication] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -80,6 +80,8 @@ export default function CreditDecisionWorkbench({ applicationSummary, back }) {
       }));
 
       alert("Decision recorded successfully.");
+      onDecision?.(application, decision);
+      back();
     } catch (err) {
       alert(err.message || "Failed to record decision.");
     } finally {

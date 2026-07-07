@@ -7,7 +7,7 @@ import ConsentSection from "../components/application/ConsentSection";
 import PortalShell from "../components/PortalShell";
 import { Button, Box, Typography, Paper, Stack } from "@mui/material";
 
-const steps = ["Information", "Loan Details", "Questionnaire", "Documents", "Consent"];
+const steps = ["Loan Details", "Questionnaire", "Documents", "Consent"];
 
 export default function LoanApplication({ application, setApplication, next, back }) {
   const [step, setStep] = useState(0);
@@ -32,8 +32,8 @@ export default function LoanApplication({ application, setApplication, next, bac
   };
 
   const handleNext = () => {
-    if (step === 3 && !validateDocuments()) return;
-    if (step === 4) {
+    if (step === 2 && !validateDocuments()) return;
+    if (step === 3) {
       if (!validateConsent()) return;
       next();
       return;
@@ -104,30 +104,30 @@ export default function LoanApplication({ application, setApplication, next, bac
           </Box>
         </Paper>
 
-        {step === 0 && <CompanyInformation application={application} />}
+        {/* {step === 0 && <CompanyInformation application={application} />} */}
 
-        {step === 1 && (
+        {step === 0 && (
           <LoanCalculator
             application={application}
             setApplication={setApplication}
           />
         )}
 
-        {step === 2 && (
+        {step === 1 && (
           <AdditionalDeclarations
             application={application}
             setApplication={setApplication}
           />
         )}
 
-        {step === 3 && (
+        {step === 2 && (
           <DocumentUploader
             application={application}
             setApplication={setApplication}
           />
         )}
 
-        {step === 4 && (
+        {step === 3 && (
           <ConsentSection
             application={application}
             setApplication={setApplication}
