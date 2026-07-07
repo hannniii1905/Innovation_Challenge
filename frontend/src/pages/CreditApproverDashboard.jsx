@@ -14,10 +14,11 @@ import {
   Stack,
   Grid,
 } from "@mui/material";
-import { getApproverApplications } from "../api/client";
+import { getApproverApplications, deleteApplication } from "../api/client";
 
 export default function CreditApproverDashboard({ openApplication, backToClient, decidedApplications }) {
   const [applications, setApplications] = useState([]);
+  const [historyApplications, setHistoryApplications] = useState([]);
   const [summary, setSummary] = useState({
     total_applications: 0,
     approved_percentage: 0,
@@ -30,10 +31,14 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
   useEffect(() => {
     async function loadApplications() {
       try {
-        const data = await getApproverApplications();
+        const [allData, historyData] = await Promise.all([
+          getApproverApplications(),
+          getApproverApplications(true),
+        ]);
 
-        setSummary(data.summary || {});
-        setApplications(data.applications || []);
+        setSummary(allData.summary || {});
+        setApplications(allData.applications || []);
+        setHistoryApplications(historyData.applications || []);
       } catch (err) {
         setError(err.message || "Unable to load applications.");
       } finally {
@@ -48,9 +53,34 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
 
   const filteredApplications = useMemo(() => {
     return applications.filter(
-      (app) => app.review_category === filter && !decidedIds.has(app.application_id)
+      (app) =>
+        app.review_category === filter &&
+        !app.approver_decision &&
+        !decidedIds.has(app.application_id)
     );
   }, [filter, applications, decidedIds]);
+
+  const allHistory = useMemo(() => {
+    const map = new Map();
+    for (const app of historyApplications) {
+      map.set(app.application_id, { ...app, approverDecision: app.approver_decision });
+    }
+    for (const app of decidedApplications || []) {
+      map.set(app.application_id, app);
+    }
+    return Array.from(map.values());
+  }, [historyApplications, decidedApplications]);
+
+  const handleDelete = async (appId) => {
+    if (!window.confirm("Delete this application from the queue?")) return;
+    try {
+      await deleteApplication(appId);
+      setApplications((prev) => prev.filter((a) => a.application_id !== appId));
+      setHistoryApplications((prev) => prev.filter((a) => a.application_id !== appId));
+    } catch (err) {
+      setError(err.message || "Failed to delete application.");
+    }
+  };
 
   const formatCurrency = (value) => {
     if (!value && value !== 0) return "-";
@@ -299,6 +329,14 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
                       >
                         Open Review
                       </Button>
+                      <Button
+                        size="small"
+                        color="error"
+                        sx={{ ml: 1, borderRadius: 2, fontWeight: 700 }}
+                        onClick={() => handleDelete(app.application_id)}
+                      >
+                        Delete
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -307,7 +345,7 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
           )}
         </Paper>
 
-        {decidedApplications?.length > 0 && (
+        {allHistory.length > 0 && (
           <Paper
             elevation={0}
             sx={{
@@ -329,10 +367,13 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
                   <TableCell sx={{ fontWeight: 800 }}>UEN</TableCell>
                   <TableCell sx={{ fontWeight: 800 }}>Requested Amount</TableCell>
                   <TableCell sx={{ fontWeight: 800 }}>Decision</TableCell>
+                  <TableCell sx={{ fontWeight: 800 }} align="right">
+                    Action
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {decidedApplications.map((app) => (
+                {allHistory.map((app) => (
                   <TableRow key={app.application_id}>
                     <TableCell>{app.reference_number}</TableCell>
                     <TableCell>
@@ -353,6 +394,16 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
                         size="small"
                         sx={{ fontWeight: 700 }}
                       />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        size="small"
+                        color="error"
+                        sx={{ borderRadius: 2, fontWeight: 700 }}
+                        onClick={() => handleDelete(app.application_id)}
+                      >
+                        Delete
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
