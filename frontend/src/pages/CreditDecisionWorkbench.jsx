@@ -97,6 +97,9 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
       ? "error"
       : "warning";
 
+  const uw = application?.underwriting || {};
+  const fin = uw.financials || {};
+
   if (loading) {
     return (
       <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", bgcolor: "#f6f8fc" }}>
@@ -237,11 +240,24 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
           <Grid size={{ xs: 12, md: 5 }}>
             <Panel title="Financial Indicators">
               <Stack spacing={1.6}>
-                <SummaryRow label="Annualised Revenue" value={formatCurrency(application.annualised_revenue)} />
-                <SummaryRow label="DSCR" value={application.dscr ?? "-"} />
-                <SummaryRow label="Existing Debt" value={formatCurrency(application.existing_debt)} />
-                <SummaryRow label="Credit Kiting Score" value={application.credit_kiting_score ?? "-"} />
+                <SummaryRow label="Annualised Revenue" value={fin.annualised_revenue != null ? formatCurrency(fin.annualised_revenue) : formatCurrency(application.annualised_revenue)} />
+                <SummaryRow label="DSCR" value={fin.dscr != null ? fin.dscr.toFixed(2) : application.dscr ?? "-"} />
+                <SummaryRow label="Existing Debt" value={application.existing_debt != null ? formatCurrency(application.existing_debt) : "—"} />
+                <SummaryRow label="Credit Kiting Score" value={application.credit_kiting_score != null ? `${application.credit_kiting_score}/100` : "—"} />
                 <SummaryRow label="Industry" value={application.industry || "-"} />
+                <Divider sx={{ my: 1 }} />
+                <SummaryRow label="MUE" value={fin.mue != null ? formatCurrency(fin.mue) : "—"} />
+                <SummaryRow label="FCC (avg closing balance)" value={fin.fcc != null ? formatCurrency(fin.fcc) : "—"} />
+                <SummaryRow label="Tangible Net Worth" value={fin.tnw != null ? formatCurrency(fin.tnw) : "—"} />
+                <SummaryRow label="EBITDA" value={fin.ebitda != null ? `${formatCurrency(fin.ebitda)}${fin.ebitda_margin != null ? ` (${fin.ebitda_margin}%)` : ""}` : "—"} />
+                <SummaryRow label="Serviceable income" value={fin.serviceable_income != null ? formatCurrency(fin.serviceable_income) : "—"} />
+                <SummaryRow label="Monthly debt service" value={fin.monthly_debt_service != null ? formatCurrency(fin.monthly_debt_service) : "—"} />
+                <SummaryRow label="Annual debt service" value={fin.annual_debt_service != null ? formatCurrency(fin.annual_debt_service) : "—"} />
+                <Box sx={{ mt: 1.5, p: 1.5, borderRadius: 2, bgcolor: "#f0f7ff", border: "1px solid #bfdbfe" }}>
+                  <Typography fontSize={12.5} color="#1d4ed8" fontWeight={700}>
+                    DSCR = serviceable income (revenue × industry income factor) ÷ annual debt service
+                  </Typography>
+                </Box>
               </Stack>
             </Panel>
 
@@ -642,68 +658,6 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
           </>
         )}
       </Panel>
-
-      {/* AML + litigation */}
-      {/* Financial ratios & coverage */}
-      {(fin.dscr != null || fin.annualised_revenue != null) && (
-        <Panel title="Financial Ratios & Coverage">
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 6, md: 3 }}>
-              <RatioTile
-                label="DSCR"
-                value={fin.dscr != null ? fin.dscr.toFixed(2) : "—"}
-                ok={fin.dscr == null ? null : fin.dscr >= 1.2}
-                hint="≥ 1.20"
-              />
-            </Grid>
-            <Grid size={{ xs: 6, md: 3 }}>
-              <RatioTile
-                label="MUE"
-                value={fin.mue != null ? formatCurrency(fin.mue) : "—"}
-                ok={null}
-                hint="Max on-us clean exposure"
-              />
-            </Grid>
-            <Grid size={{ xs: 6, md: 3 }}>
-              <RatioTile
-                label="FCC (month-end balance)"
-                value={fin.fcc != null ? formatCurrency(fin.fcc) : "—"}
-                ok={null}
-                hint="Avg. closing balance"
-              />
-            </Grid>
-            <Grid size={{ xs: 6, md: 3 }}>
-              <RatioTile
-                label="Tangible Net Worth"
-                value={fin.tnw != null ? formatCurrency(fin.tnw) : "—"}
-                ok={fin.tnw == null ? null : fin.tnw > 0}
-                hint="> 0"
-              />
-            </Grid>
-          </Grid>
-
-          <Divider sx={{ my: 2 }} />
-
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <SummaryRow label="Annualised revenue" value={fin.annualised_revenue != null ? formatCurrency(fin.annualised_revenue) : "—"} />
-              <SummaryRow label="Industry income factor" value={fin.industry_income_factor != null ? `${(fin.industry_income_factor * 100).toFixed(0)}% of revenue` : "—"} />
-              <SummaryRow label="Serviceable income" value={fin.serviceable_income != null ? formatCurrency(fin.serviceable_income) : "—"} />
-            </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <SummaryRow label="EBITDA" value={fin.ebitda != null ? `${formatCurrency(fin.ebitda)}${fin.ebitda_margin != null ? ` (${fin.ebitda_margin}%)` : ""}` : "—"} />
-              <SummaryRow label="Monthly debt service" value={fin.monthly_debt_service != null ? formatCurrency(fin.monthly_debt_service) : "—"} />
-              <SummaryRow label="Annual debt service" value={fin.annual_debt_service != null ? formatCurrency(fin.annual_debt_service) : "—"} />
-            </Grid>
-          </Grid>
-
-          <Box sx={{ mt: 2, p: 1.5, borderRadius: 2, bgcolor: "#f0f7ff", border: "1px solid #bfdbfe" }}>
-            <Typography fontSize={12.5} color="#1d4ed8" fontWeight={700}>
-              DSCR = serviceable income (revenue × industry income factor) ÷ annual debt service
-            </Typography>
-          </Box>
-        </Panel>
-      )}
 
       {/* Credit kiting detection */}
       {kiting.score != null && (

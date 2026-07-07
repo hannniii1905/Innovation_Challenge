@@ -46,6 +46,7 @@ from src.api.schemas import (
 
 from src.api.acra_client import lookup_company, request_keyman_approval
 from src.mock_data.company_profiles import COMPANY_PROFILES
+from src.mock_data.property_data import lookup_property
 from src.api.session_store import Session as OCRSession
 from src.api.session_store import SessionStore
 from src.credit_kiting import CreditKitingDetector
@@ -184,6 +185,29 @@ def _build_underwriting_summary(app_record, result: dict) -> dict:
         "reason": bl.get("reason", ""),
     }
 
+    # --- Financial indicators computed from bank statement (matches seed_demo format) ---
+    ratios = result.get("financial_ratios") or {}
+    financials = {
+        "annualised_revenue": ratios.get("annualised_revenue"),
+        "dscr": ratios.get("dscr"),
+        "ebitda": ratios.get("ebitda"),
+        "ebitda_margin": ratios.get("ebitda_margin"),
+        "tnw": ratios.get("tnw"),
+        "industry": ratios.get("industry"),
+        "industry_income_factor": ratios.get("industry_income_factor"),
+        "serviceable_income": ratios.get("serviceable_income"),
+        "monthly_debt_service": ratios.get("monthly_debt_service"),
+        "annual_debt_service": ratios.get("annual_debt_service"),
+        "mue": ratios.get("mue"),
+        "fcc": ratios.get("fcc"),
+        "existing_debt": ratios.get("existing_debt"),
+        "existing_debt_items": ratios.get("existing_debt_items") or [],
+    }
+    credit_kiting = {
+        "score": ratios.get("credit_kiting_score", 0),
+        "findings": ratios.get("credit_kiting_findings") or [],
+    }
+
     # --- Credit Flash Model: probability of default + approved limit ---
     risk_model = _run_credit_flash_model(
         app_record, bank_ocr, credit_bureau, litigation, aml
@@ -196,6 +220,8 @@ def _build_underwriting_summary(app_record, result: dict) -> dict:
         "litigation": litigation,
         "aml": aml,
         "risk_model": risk_model,
+        "financials": financials,
+        "credit_kiting": credit_kiting,
     }
 
 
@@ -364,6 +390,14 @@ async def submit_client_application(
             import traceback
 
             traceback.print_exc()
+
+        # Persist computed financial indicators on the application record.
+        ratios = result.get("financial_ratios") or {}
+        application.annualised_revenue = ratios.get("annualised_revenue")
+        application.dscr = ratios.get("dscr")
+        application.existing_debt = ratios.get("existing_debt")
+        application.existing_debt_items = ratios.get("existing_debt_items") or []
+        application.credit_kiting_score = ratios.get("credit_kiting_score")
 
         # Derive the decision from the coherent Credit Flash evidence bundle
         # (the legacy engine hardcodes DSCR=0 and would flag every case).
@@ -1222,3 +1256,22 @@ async def get_results(session_id: str) -> ResultsResponse:
         stage=session.stage,
         report=session.report,
     )
+
+
+# --------------------------------------------------------------------------- #
+# Property / Satellite-map lookup (mock)
+# --------------------------------------------------------------------------- #
+
+
+@app.get("/api/property/lookup")
+async def property_lookup(address: str = ""):
+    """Return mock property details (coordinates, owner, land tenure) for a
+    given registered address. Returns 404 if the address is not recognised."""
+    if not address:
+        raise HTTPException(status_code=400, detail="address query parameter is required.")
+
+    record = lookup_property(address)
+    if record is None:
+        raise HTTPException(status_code=404, detail="No property record found for this address.")
+
+    return record

@@ -10,6 +10,7 @@ import LoanApplication from "./pages/LoanApplication";
 import SupportingDocuments from "./pages/SupportingDocuments";
 import InitialAssessment from "./pages/InitialAssessment";
 import CreditApproverDashboard from "./pages/CreditApproverDashboard";
+import CreditApproverHistory from "./pages/CreditApproverHistory";
 import CreditDecisionWorkbench from "./pages/CreditDecisionWorkbench";
 import TamperingDetailsPage from "./pages/TamperingDetailsPage";
 import LitigationDetailsPage from "./pages/LitigationDetailsPage";
@@ -193,6 +194,20 @@ export default function App() {
             setScreen("creditDecision");
           }}
           decidedApplications={decidedApplications}
+          onViewHistory={() => setScreen("creditHistory")}
+        />
+      );
+      break;
+
+    case "creditHistory":
+      page = (
+        <CreditApproverHistory
+          decidedApplications={decidedApplications}
+          openApplication={(app) => {
+            setSelectedApproverApplication(app);
+            setScreen("creditDecision");
+          }}
+          goBack={() => setScreen("creditApprover")}
         />
       );
       break;

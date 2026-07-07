@@ -337,6 +337,19 @@ export async function acraLookup(uen) {
  * submitted by a non-keyman applicant. Non-blocking for the demo.
  * @param {{uen: string, applicantName?: string, applicantEmail?: string}} params
  */
+export async function lookupProperty(address) {
+  const response = await fetch(
+    `${API_BASE}/api/property/lookup?address=${encodeURIComponent(address)}`
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || "Property lookup failed.");
+  }
+
+  return response.json();
+}
+
 export async function requestKeymanApproval({ uen, applicantName, applicantEmail }) {
   const form = new FormData();
   form.append("uen", uen);

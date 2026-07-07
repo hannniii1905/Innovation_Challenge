@@ -684,7 +684,7 @@ export default function SingpassLogin({
                   "Full Name",
                   "Date of Birth",
                   "Nationality & Residential Status",
-                  "Registered Address",
+                  "Residential Address",
                   "Contact Details (Mobile & Email)",
                 ].map((item) => (
                   <Typography key={item} sx={{ py: 0.6, fontSize: 15, borderBottom: "1px solid #f1f5f9" }}>

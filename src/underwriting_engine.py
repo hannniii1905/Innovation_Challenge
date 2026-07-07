@@ -1,5 +1,6 @@
-from html import parser
 import logging
+import re
+from datetime import datetime
 from sqlalchemy.orm import Session
 from src.database import StagedApplication
 from src.api.singpass_client import MockSingpassClient
@@ -11,6 +12,7 @@ from src.document_router import DocumentRouter
 from src.ocr_engine import OCREngine
 from src.loan_detector import LoanDetector
 from src.fraud_detector import FraudDetector
+from src.credit_kiting import CreditKitingDetector
 from src.parsers.iras_noa_parser import IrasNoaParser
 
 
@@ -25,6 +27,26 @@ BLACKLISTED_INDUSTRIES = [
 BLACKLISTED_COMPANIES = [
     "ABC Scam Pte Ltd"
 ]
+
+INDUSTRY_INCOME_FACTORS = {
+    "Manufacturing": 0.20,
+    "Construction": 0.15,
+    "Retail": 0.10,
+    "Wholesale Trade": 0.12,
+    "Wholesale": 0.12,
+    "Services": 0.25,
+    "Technology": 0.30,
+    "Food & Beverage": 0.10,
+    "Healthcare": 0.25,
+    "Education": 0.20,
+    "Transportation": 0.15,
+    "Real Estate": 0.20,
+    "Agriculture": 0.12,
+    "Energy": 0.18,
+    "Financial Services": 0.30,
+    "Insurance": 0.25,
+    "Hospitality": 0.12,
+}
     
 
 class UnderwritingEngine:
@@ -58,6 +80,8 @@ class UnderwritingEngine:
         loan_result = {}
 
         bank_type = None
+        statement_period = None
+        credit_kiting_findings = []
         from src.document_router import DocumentRouter
         if app_record.bank_statement_path:
             try:
@@ -89,6 +113,10 @@ class UnderwritingEngine:
                         for item in suspicious_credits
                     )
 
+                credit_kiting_findings = CreditKitingDetector().detect(
+                    transactions, statement_period
+                )
+
             except Exception as e:
                 logger.error(str(e))
                 warnings.append(str(e))
@@ -101,6 +129,8 @@ class UnderwritingEngine:
             "detected_loans_count": detected_loans_count,
             "has_fraud_tampering": has_fraud_tampering,
             "suspicious_credits": suspicious_credits,
+            "statement_period": statement_period,
+            "credit_kiting_findings": credit_kiting_findings,
         }
    
     def _analyse_income_statement(self, app_record):
@@ -167,13 +197,156 @@ class UnderwritingEngine:
             "reason": ""
         }
 
-    def _calculate_financial_ratios(self, app_record):
+    def _calculate_financial_ratios(self, app_record, bank_result, income_result):
+
+        raw_credits = float(bank_result.get("raw_credits_total", 0) or 0)
+        loan_result = bank_result.get("loan_result") or {}
+        loan_repayments = loan_result.get("repayments") or []
+        statement_period = bank_result.get("statement_period")
+        industry = (app_record.industry or "").strip()
+
+        # --- coverage days from statement period ---
+        coverage_days = self._parse_coverage_days(statement_period)
+
+        # --- annualised revenue ---
+        income_revenue = float(income_result.get("revenue", 0) or 0)
+        if income_revenue > 0:
+            annualised_revenue = round(income_revenue, 2)
+        elif coverage_days > 0 and raw_credits > 0:
+            annualised_revenue = round(raw_credits / coverage_days * 365, 2)
+        else:
+            annualised_revenue = round(raw_credits, 2)
+
+        # --- existing debt ---
+        recurring_deductions = self._find_recurring_deductions(loan_repayments, coverage_days)
+        existing_debt = round(recurring_deductions.get("annualised", 0), 2)
+        existing_debt_items = recurring_deductions.get("items", [])
+
+        # --- DSCR ---
+        factor = INDUSTRY_INCOME_FACTORS.get(industry, 0.15)
+        serviceable_income = annualised_revenue * factor
+
+        tenure_months = int(app_record.loan_tenure_months or 12)
+        new_annual_instalment = (
+            float(app_record.requested_quantum or 0) / max(tenure_months, 1) * 12
+        )
+        total_debt_service = existing_debt + new_annual_instalment
+        dscr = round(serviceable_income / total_debt_service, 2) if total_debt_service > 0 else 0.0
+
+        # --- ebitda / tnw from income statement ---
+        ebitda = income_result.get("ebitda")
+        tnw = income_result.get("tnw")
+        ebitda_margin = None
+        if ebitda and annualised_revenue > 0:
+            ebitda_margin = round(ebitda / annualised_revenue * 100, 1)
+
+        # --- monthly debt service (detected from bank statement) ---
+        monthly_debt_service = round(existing_debt / 12, 2) if existing_debt > 0 else 0.0
+
+        # --- MUE: max on-us clean exposure (~2 months turnover) ---
+        mue = round(annualised_revenue / 6, 2) if annualised_revenue > 0 else None
+
+        # --- credit kiting score ---
+        ck_findings = bank_result.get("credit_kiting_findings") or []
+        credit_kiting_score = self._calculate_credit_kiting_score(ck_findings)
+
         return {
-            "dscr": 0,
-            "fcc": 0,
-            "mue": 0,
-            "tue": 0
+            "annualised_revenue": annualised_revenue,
+            "dscr": dscr,
+            "ebitda": ebitda,
+            "ebitda_margin": ebitda_margin,
+            "tnw": tnw,
+            "industry": industry,
+            "industry_income_factor": factor,
+            "serviceable_income": round(serviceable_income, 2),
+            "monthly_debt_service": monthly_debt_service,
+            "annual_debt_service": round(total_debt_service, 2),
+            "mue": mue,
+            "fcc": None,
+            "existing_debt": existing_debt,
+            "existing_debt_items": existing_debt_items,
+            "credit_kiting_score": credit_kiting_score,
+            "credit_kiting_findings": [
+                {
+                    "pattern": f.pattern,
+                    "risk_level": f.risk_level,
+                    "explanation": f.explanation,
+                    "amounts": [round(t.amount, 2) for t in f.related_transactions],
+                }
+                for f in ck_findings
+            ],
         }
+
+    @staticmethod
+    def _parse_coverage_days(statement_period):
+        if not statement_period:
+            return 30
+        dates = re.findall(r"(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})", statement_period)
+        if len(dates) < 2:
+            return 30
+        months = {
+            "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+            "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+            "january": 1, "february": 2, "march": 3, "april": 4, "june": 6,
+            "july": 7, "august": 8, "september": 9, "october": 10,
+            "november": 11, "december": 12,
+        }
+        try:
+            _, m1, y1 = dates[0]
+            d2, m2, y2 = dates[-1]
+            m1 = months.get(m1.lower(), 1)
+            m2 = months.get(m2.lower(), 1)
+            start = datetime(int(y1), m1, 1)
+            end = datetime(int(y2), m2, int(d2))
+            days = (end - start).days
+            return max(days, 1)
+        except Exception:
+            return 30
+
+    @staticmethod
+    def _find_recurring_deductions(loan_repayments, coverage_days):
+        annualised = 0.0
+        items = []
+
+        if not loan_repayments:
+            return {"annualised": 0.0, "items": []}
+
+        amount_groups = {}
+        for lr in loan_repayments:
+            amt = round(lr.transaction.amount, 2)
+            amount_groups.setdefault(amt, []).append(lr)
+
+        for amt, repayments in amount_groups.items():
+            count = len(repayments)
+            description = repayments[0].transaction.description or ""
+            loan_type = repayments[0].loan_type or ""
+            entry = {
+                "amount": amt,
+                "count": count,
+                "description": description,
+                "loan_type": loan_type,
+            }
+            items.append(entry)
+            if count >= 2:
+                annualised += amt * 12
+            elif coverage_days > 0:
+                annualised += (amt * count) / coverage_days * 365
+            else:
+                annualised += amt * count
+
+        return {"annualised": annualised, "items": items}
+
+    @staticmethod
+    def _calculate_credit_kiting_score(findings):
+        score = 0
+        for f in findings:
+            if f.risk_level == "high":
+                score += 35
+            elif f.risk_level == "medium":
+                score += 20
+            elif f.risk_level == "low":
+                score += 10
+        return min(score, 100)
 
     def _make_credit_decision(
         self,
@@ -256,7 +429,7 @@ class UnderwritingEngine:
         litigation_result = self._perform_litigation_checks(app_record)
         bureau_result = self._perform_credit_bureau_checks(app_record)
         blacklist_result = self._perform_blacklist_checks(app_record)
-        ratio_result = self._calculate_financial_ratios(app_record)
+        ratio_result = self._calculate_financial_ratios(app_record, bank_result, income_result)
         decision = self._make_credit_decision(
             app_record,
             bank_result,
@@ -281,179 +454,3 @@ class UnderwritingEngine:
             "financial_ratios": ratio_result,
             "decision": decision
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# class UnderwritingEngine:
-#     def __init__(self, db: Session):
-#         self.db = db
-#         self.singpass_client = MockSingpassClient()
-#         self.baseline_pd = 0.08  # Baseline industry risk floor of 8%
-
-
-
-#     def execute_evaluation(self, application_id: int) -> dict:
-#         """
-#         Executes the 4-Stage enterprise underwriting credit framework loop.
-#         Processes database files, checks cross-references, and calculates lending limits.
-#         """
-#         print("\n========== UNDERWRITING STARTED ==========")
-#         print("Application ID:", application_id)
-
-#         from src.document_router import DocumentRouter
-#         logger.info(f"Executing automated credit appraisal for Application ID: {application_id}")
-        
-#         # 1. Ingestion: Retrieve the persistent tracking ledger record
-#         app_record = self.db.query(StagedApplication).filter(StagedApplication.id == application_id).first()
-#         if not app_record:
-#             raise ValueError(f"Application ledger record not found for ID: {application_id}")
-#         # In underwriting_engine.py
-#         logger.info(f"File path being processed: {app_record.file_path}")
-#         # 2. Extract Document Data arrays using OCR stack
-#         warnings = []
-#         raw_credits_total = 0.0
-#         flagged_kiting_volume = 0.0
-#         detected_loans_count = 0
-#         has_fraud_tampering = False
-
-#         if app_record.bank_statement_path:
-#             try:
-#                 # Fire existing file system parsers
-#                 engine = OCREngine(app_record.bank_statement_path)
-#                 pages = engine.extract()
-#                 text = "\n".join(pages)
-                
-#                 router = DocumentRouter(pages)
-#                 bank_type = router.identify()
-#                 parser_class = router.get_parser_class()
-#                 parser = parser_class()
-                
-#                 transactions = parser.extract_transactions(text)
-#                 statement_period = parser.identify_statement_period(text)
-
-#                 print("\n========== UNDERWRITING ==========")
-#                 print("Transaction type:", type(transactions[0]))
-#                 for tx in transactions:
-#                     print(tx)
-#                     print("type =", type(tx))
-#                 print("=================================\n")
-
-#                 # Calculate basic financial parameters from transactions array
-#                 for tx in transactions:
-#                     if tx["transaction_type"] == "credit":
-#                         raw_credits_total += tx["amount"]
-                
-#                 # Call existing Risk & Fraud modules
-#                 loan_result = LoanDetector().detect(transactions)
-#                 detected_loans_count = loan_result.get("count", 0)
-                
-#                 suspicious_credits = FraudDetector().analyze(transactions, statement_period)
-#                 # If fraud detector isolates high-risk patterns, calculate the kiting volume
-#                 if len(suspicious_credits) > 0:
-#                     has_fraud_tampering = True
-#                     flagged_kiting_volume = sum(
-#                                                     item.transaction.amount
-#                                                     for item in suspicious_credits
-#                                                 )
-                    
-#             except Exception as e:
-#                 logger.error(f"OCR Pipeline processing breakdown: {str(e)}")
-#                 warnings.append(f"Document parsing error: {str(e)}")
-
-#         # 3. Connect to Experian Bureau API (Live External Verification Check)
-#         experian_client = ExperianBureauClient()
-#         bureau_response = experian_client.fetch_corporate_bureau_data(app_record.uen)
-#         bureau_data = bureau_response.get("bureau_data", {})
-        
-#         # Extract operational variables from the Experian payload
-#         detected_acra_charges = bureau_data.get("corporate_charges", [])
-#         has_active_acra_charges = len(detected_acra_charges) > 0
-
-#         # 4. The Cross-Check Scorecard Framework & Math Matrix
-#         # Initial Baseline Setup
-#         baseline_pd = 0.08
-#         integrity_penalty = 0.0
-#         kiting_penalty = 0.0
-#         fraud_penalty = 0.0
-
-#         # Rule A: The Honesty Cross-Check (Pre-Questionnaire vs Experian Bureau Data)
-#         customer_declared_nil = app_record.declared_loans.lower() in ['nil', '0', 'none', 'no']
-#         has_active_acra_charges = len(detected_acra_charges) > 0
-
-#         if customer_declared_nil and has_active_acra_charges:
-#             integrity_penalty = 0.25  # Honesty breach adds +25%
-
-#         # Rule B: Circular Fund Flows Check
-#         if flagged_kiting_volume > 0:
-#             kiting_penalty = 0.30     # Kiting flags add +30%
-
-#         # Rule C: Document Tampering Flags
-#         if has_fraud_tampering:
-#             fraud_penalty = 0.20      # Tampering alerts add +20%
-
-#         # Matrix Aggregation (Capped at 99%)
-#         final_pd = min(0.99, baseline_pd + integrity_penalty + kiting_penalty + fraud_penalty)
-
-#         # 5. Sizing Rule Engine (Cash Turnover Sanitization)
-#         # Deducting fake money loops from raw incoming transactions
-#         true_adjusted_revenue = max(0.0, raw_credits_total - flagged_kiting_volume)
-        
-#         # Safe monthly/annual exposure allocation bracket limit set to 15% of true revenue
-#         max_systemic_capacity = true_adjusted_revenue * 0.15
-#         requested_amount = app_record.requested_quantum
-
-#         # Decision Gate Matrix
-#         if final_pd > 0.45 or true_adjusted_revenue <= 0:
-#             decision = "DECLINE"
-#             recommended_quantum = 0.0
-#             justification = "Application hard declined by rule engine due to extreme credit volatility or artificial cash generation profiles."
-#         elif requested_amount <= max_systemic_capacity:
-#             decision = "APPROVE"
-#             recommended_quantum = requested_amount
-#             justification = f"Approved matching client request of ${requested_amount:,.2f}. Entirely within safe systemic tolerance parameters."
-#         else:
-#             decision = "refer_to_CA" # Counter-offer state trigger
-#             recommended_quantum = max_systemic_capacity
-#             justification = f"Counter-offer proposed. Customer requested ${requested_amount:,.2f} which exceeds verified safe 15% operating exposure limit."
-
-#         # Update database application status lifecycle flag
-#         app_record.status = "EVALUATED"
-#         self.db.commit()
-
-#         # Flattened structural payload package matching ResultsDashboard.jsx expectation matrix
-#         return {
-#             "document_type": "bank_statement",
-#             "bank": bank_type,
-#             "company_name": app_record.company_name,
-#             "evaluation_status": decision,
-#             "probability_of_default": round(final_pd * 100, 2),
-#             "integrity_check": "FAILED" if integrity_penalty > 0 else "PASSED",
-#             "kiting_volume": flagged_kiting_volume,
-#             "total_credits": raw_credits_total,
-#             "true_adjusted_turnover": true_adjusted_revenue,
-#             "requested_quantum": requested_amount,
-#             "max_system_cap": max_systemic_capacity,
-#             "recommended_offer": recommended_quantum,
-#             "justification": justification,
-#             "engine_warnings": warnings,
-#             "loan_repayments": loan_result,
-#             "suspicious_credits": {
-#                 "count": len(suspicious_credits),
-#                 "transactions": suspicious_credits
-#             }
-#         }

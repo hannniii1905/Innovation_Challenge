@@ -16,9 +16,8 @@ import {
 } from "@mui/material";
 import { getApproverApplications, deleteApplication } from "../api/client";
 
-export default function CreditApproverDashboard({ openApplication, backToClient, decidedApplications }) {
+export default function CreditApproverDashboard({ openApplication, onViewHistory, backToClient, decidedApplications }) {
   const [applications, setApplications] = useState([]);
-  const [historyApplications, setHistoryApplications] = useState([]);
   const [summary, setSummary] = useState({
     total_applications: 0,
     approved_percentage: 0,
@@ -31,14 +30,10 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
   useEffect(() => {
     async function loadApplications() {
       try {
-        const [allData, historyData] = await Promise.all([
-          getApproverApplications(),
-          getApproverApplications(true),
-        ]);
+        const allData = await getApproverApplications();
 
         setSummary(allData.summary || {});
         setApplications(allData.applications || []);
-        setHistoryApplications(historyData.applications || []);
       } catch (err) {
         setError(err.message || "Unable to load applications.");
       } finally {
@@ -60,23 +55,11 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
     );
   }, [filter, applications, decidedIds]);
 
-  const allHistory = useMemo(() => {
-    const map = new Map();
-    for (const app of historyApplications) {
-      map.set(app.application_id, { ...app, approverDecision: app.approver_decision });
-    }
-    for (const app of decidedApplications || []) {
-      map.set(app.application_id, app);
-    }
-    return Array.from(map.values());
-  }, [historyApplications, decidedApplications]);
-
   const handleDelete = async (appId) => {
     if (!window.confirm("Delete this application from the queue?")) return;
     try {
       await deleteApplication(appId);
       setApplications((prev) => prev.filter((a) => a.application_id !== appId));
-      setHistoryApplications((prev) => prev.filter((a) => a.application_id !== appId));
     } catch (err) {
       setError(err.message || "Failed to delete application.");
     }
@@ -273,6 +256,16 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
         >
             Auto-Approved
         </Button>
+
+        <Box sx={{ flex: 1 }} />
+
+        <Button
+            variant="outlined"
+            onClick={onViewHistory}
+            sx={{ borderRadius: 3, fontWeight: 800, color: "#005EB8", borderColor: "#005EB8" }}
+        >
+            View History
+        </Button>
         </Stack>
           {loading && (
             <Box sx={{ py: 8, textAlign: "center" }}>
@@ -364,85 +357,7 @@ export default function CreditApproverDashboard({ openApplication, backToClient,
           )}
         </Paper>
 
-        {allHistory.length > 0 && (
-          <Paper
-            elevation={0}
-            sx={{
-              p: 4,
-              borderRadius: 4,
-              mt: 3,
-              border: "1px solid #e5e7eb",
-              boxShadow: "0 12px 28px rgba(15,23,42,.08)",
-            }}
-          >
-            <Typography sx={{ fontSize: 22, fontWeight: 800, mb: 3 }}>
-              History
-            </Typography>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 800 }}>Reference</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Company</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>UEN</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Requested Amount</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Decision</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }} align="right">
-                    Action
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {allHistory.map((app) => (
-                  <TableRow key={app.application_id}>
-                    <TableCell>{app.reference_number}</TableCell>
-                    <TableCell>
-                      <Typography fontWeight={700}>{app.company_name}</Typography>
-                    </TableCell>
-                    <TableCell>{app.uen}</TableCell>
-                    <TableCell>{formatCurrency(app.requested_quantum)}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={formatDecision(app.approverDecision)}
-                        color={
-                          app.approverDecision === "APPROVED"
-                            ? "success"
-                            : app.approverDecision === "REJECTED"
-                            ? "error"
-                            : "warning"
-                        }
-                        size="small"
-                        sx={{ fontWeight: 700 }}
-                      />
-                    </TableCell>
-                    <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        sx={{
-                          borderRadius: 2,
-                          fontWeight: 700,
-                          background: "linear-gradient(90deg, #005EB8 0%, #0072CE 100%)",
-                        }}
-                        onClick={() => openApplication(app)}
-                      >
-                        Open Review
-                      </Button>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        color="error"
-                        sx={{ ml: 1, borderRadius: 2, fontWeight: 700 }}
-                        onClick={() => handleDelete(app.application_id)}
-                      >
-                        Delete
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Paper>
-        )}
+
       </Box>
     </Box>
   );

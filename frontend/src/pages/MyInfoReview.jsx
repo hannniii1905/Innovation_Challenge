@@ -17,6 +17,7 @@ import {
   Alert,
 } from "@mui/material"; 
 import PortalShell from "../components/PortalShell";
+import PropertyMapCard from "../components/PropertyMapCard";
 import { uob } from "../theme";
 
 function ageFromDob(dob) {
@@ -178,7 +179,7 @@ export default function MyInfoReview({ application, setApplication, next, back, 
                 <Field label="Mobile" value={person.mobile} />
                 <Field label="Email" value={person.email} />
               </Box>
-              <Field label="Registered Address" value={person.registeredAddress} />
+              <Field label="Residential Address" value={person.registeredAddress} />
             </SectionCard>
           ) : (
             <SectionCard title="Applicant identity" source="Not via Singpass">
@@ -205,6 +206,10 @@ export default function MyInfoReview({ application, setApplication, next, back, 
             <Field label="Status of property" value={"Owned"} />
           {/* need edit */}
           </SectionCard>
+
+          <Box sx={{ gridColumn: { md: "1 / -1" } }}>
+            <PropertyMapCard address={business.registeredAddress} />
+          </Box>
         </Box>
 
         {/* Keymen / personal guarantee */}
