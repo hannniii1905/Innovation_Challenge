@@ -203,9 +203,12 @@ def _build_underwriting_summary(app_record, result: dict) -> dict:
         "existing_debt": ratios.get("existing_debt"),
         "existing_debt_items": ratios.get("existing_debt_items") or [],
     }
+    bank_data = result.get("bank") or {}
     credit_kiting = {
         "score": ratios.get("credit_kiting_score", 0),
         "findings": ratios.get("credit_kiting_findings") or [],
+        "flagged": (ratios.get("credit_kiting_score", 0) or 0) > 0,
+        "flagged_volume": round(float(bank_data.get("flagged_kiting_volume", 0) or 0), 2),
     }
 
     # --- Credit Flash Model: probability of default + approved limit ---
