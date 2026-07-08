@@ -158,9 +158,9 @@ export default function InitialAssessment({
 
   if (recommendation === "APPROVE" || recommendation === "APPROVED") {
     icon = <div style={{ fontSize: 80 }}>✅</div>;
-    title = "Preliminarily Approved";
+    title = "Automatically Approved";
     subtitle =
-      "Congratulations! Based on our initial automated assessment, your application has been preliminarily approved.\n\nYour application is now pending a final review by one of our Credit Approvers before the facility can be formally approved.";
+      "Congratulations! Based on our initial automated assessment, your application has been automatically approved.\n\nYour application is now pending a final review by one of our Credit Approvers before the facility can be formally approved.";
     chipColor = "success";
   } else {
     icon = <div style={{ fontSize: 80 }}>🟡</div>;

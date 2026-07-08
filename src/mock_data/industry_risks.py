@@ -7,7 +7,7 @@ INDUSTRY_CATEGORIES = [
         "sector": "Technology — Software & IT Services",
         "risk_level": "Moderate",
         "growth": "high",
-        "grants": "strong government digitalisation initiatives (Smart Nation, NDI) and enterprise cloud adoption",
+        "grants": "Strong government digitalisation initiatives (Smart Nation, NDI) and enterprise cloud adoption",
         "pressures": [
             "the competitive talent market and rising salary costs for engineers",
             "the pace of technology cycles requiring continuous R&D investment",

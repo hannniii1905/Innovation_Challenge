@@ -24,6 +24,7 @@ from typing import List, Optional, Tuple
 
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from src.database import init_db, get_db, StagedApplication
@@ -429,8 +430,9 @@ async def submit_client_application(
         else:
             ai_recommendation = "APPROVED"
             review_category = "APPROVED"
-            app_status = "PENDING"
+            app_status = "APPROVED"
             reason = "Clean bureau grade and low probability of default. Auto-approved within risk tolerance."
+            application.approver_decision = "APPROVED"
 
         application.system_decision = ai_recommendation
         application.system_reason = reason
@@ -663,7 +665,44 @@ def get_approver_application(application_id: int, db: Session = Depends(get_db))
         "personal_guarantors": app_record.personal_guarantors_json or [],
         "pg_coverage": app_record.pg_coverage,
         "underwriting": app_record.underwriting_json or {},
+        "files": {
+            "bank_statement": os.path.basename(app_record.bank_statement_path) if app_record.bank_statement_path else None,
+            "income_statement": os.path.basename(app_record.income_statement_path) if app_record.income_statement_path else None,
+            "financials": os.path.basename(app_record.financials_path) if app_record.financials_path else None,
+            "ic": os.path.basename(app_record.ic_path) if app_record.ic_path else None,
+        },
     }
+
+
+DOC_TYPE_COLUMN = {
+    "bank_statement": "bank_statement_path",
+    "income_statement": "income_statement_path",
+    "financials": "financials_path",
+    "ic": "ic_path",
+}
+
+
+@app.get("/approver/applications/{application_id}/files/{document_type}")
+def get_application_file(application_id: int, document_type: str, db: Session = Depends(get_db)):
+    app_record = (
+        db.query(StagedApplication)
+        .filter(StagedApplication.id == application_id)
+        .first()
+    )
+    if not app_record:
+        raise HTTPException(status_code=404, detail="Application not found.")
+
+    col = DOC_TYPE_COLUMN.get(document_type)
+    if not col:
+        raise HTTPException(status_code=400, detail=f"Unknown document type: {document_type}")
+
+    file_path = getattr(app_record, col, None)
+    if not file_path or not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="File not found.")
+
+    return FileResponse(file_path, filename=os.path.basename(file_path))
+
+
 @app.post("/approver/applications/{application_id}/decision")
 def submit_approver_decision(
     application_id: int,

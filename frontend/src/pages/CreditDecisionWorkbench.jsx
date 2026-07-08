@@ -20,6 +20,7 @@ import {
 import {
   getApproverApplication,
   submitApproverDecision,
+  getApplicationFileUrl,
 } from "../api/client";
 
 
@@ -99,6 +100,9 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
 
   const uw = application?.underwriting || {};
   const fin = uw.financials || {};
+  const singpass = application?.singpass_profile || {};
+  const propertyOwnership = singpass.propertyOwnership;
+  const rentAmount = singpass.rentAmount;
 
   if (loading) {
     return (
@@ -144,7 +148,7 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
 
       <Box sx={{ maxWidth: 1250, mx: "auto", p: 4 }}>
         <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: "1px solid #e5e7eb", boxShadow: "0 12px 28px rgba(15,23,42,.08)", mb: 4 }}>
-          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={3}>
+          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems="flex-start" spacing={3}>
             <Box>
               <Typography sx={{ fontSize: 24, fontWeight: 800 }}>
                 {application.company_name}
@@ -154,37 +158,26 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
               </Typography>
             </Box>
 
-            <Box sx={{ textAlign: { xs: "left", md: "right" } }}>
-              <Typography color="text.secondary" sx={{ fontSize: 13, fontWeight: 700 }}>
-                AI Recommendation
-              </Typography>
-              <Chip label={decisionLabel} color={decisionColor} sx={{ mt: 1, fontWeight: 800 }} />
-            </Box>
+            <Stack direction="row" spacing={4} alignItems="center" sx={{ whiteSpace: "nowrap", pt: 0.3 }}>
+              <Box>
+                <Typography color="text.secondary" sx={{ fontSize: 15, fontWeight: 700, display: "inline", mr: 1 }}>
+                  AI Recommendation:
+                </Typography>
+                <Chip label={decisionLabel} color={decisionColor} sx={{ fontWeight: 800, fontSize: 14 }} />
+              </Box>
+              {propertyOwnership && (
+                <Box>
+                  <Typography color="text.secondary" sx={{ fontSize: 15, fontWeight: 700, display: "inline", mr: 1 }}>
+                    Business Premises:
+                  </Typography>
+                  <Chip
+                    label={propertyOwnership === "owned" ? "Owned by Company" : `Rented – S$${Number(rentAmount || 0).toLocaleString()} / month`}
+                    sx={{ fontWeight: 800, bgcolor: "#dbeafe", color: "#1d4ed8", fontSize: 14 }}
+                  />
+                </Box>
+              )}
+            </Stack>
           </Stack>
-
-          <Divider sx={{ my: 4 }} />
-
-          <Grid container spacing={3}>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Metric label="Requested Amount" value={formatCurrency(application.requested_quantum)} />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Metric label="Approved Limit" value={formatCurrency(application.recommended_amount)} />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Metric
-                label="Probability of Default"
-                value={
-                  application.underwriting?.risk_model?.pd_percent != null
-                    ? `${application.underwriting.risk_model.pd_percent}%`
-                    : "-"
-                }
-              />
-            </Grid>
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Metric label="Current Status" value={application.status || "PENDING"} />
-            </Grid>
-          </Grid>
         </Paper>
 
         <EvidenceSection application={application} formatCurrency={formatCurrency} onViewTampering={onViewTampering} onViewLitigation={onViewLitigation} />
@@ -241,7 +234,41 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
             <Panel title="Financial Indicators">
               <Stack spacing={1.6}>
                 <SummaryRow label="Annualised Revenue" value={fin.annualised_revenue != null ? formatCurrency(fin.annualised_revenue) : formatCurrency(application.annualised_revenue)} />
-                <SummaryRow label="DSCR" value={fin.dscr != null ? fin.dscr.toFixed(2) : application.dscr ?? "-"} />
+                <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", columnGap: 3, alignItems: "center" }}>
+                  <Typography color="text.secondary">DSCR</Typography>
+                  <Typography
+                    fontWeight={700}
+                    textAlign="right"
+                    sx={{
+                      color:
+                        fin.dscr >= 2.0
+                          ? "#15803d"
+                          : fin.dscr >= 1.5
+                          ? "#1d4ed8"
+                          : fin.dscr >= 1.2
+                          ? "#b45309"
+                          : fin.dscr >= 1.0
+                          ? "#b91c1c"
+                          : "#991b1b",
+                      bgcolor:
+                        fin.dscr >= 2.0
+                          ? "#dcfce7"
+                          : fin.dscr >= 1.5
+                          ? "#eff6ff"
+                          : fin.dscr >= 1.2
+                          ? "#fef3c7"
+                          : fin.dscr >= 1.0
+                          ? "#fee2e2"
+                          : "#fef2f2",
+                      px: 1.5,
+                      py: 0.3,
+                      borderRadius: 1.5,
+                      fontSize: 17,
+                    }}
+                  >
+                    {fin.dscr != null ? fin.dscr.toFixed(2) : application.dscr ?? "-"}
+                  </Typography>
+                </Box>
                 <SummaryRow label="Existing Debt" value={application.existing_debt != null ? formatCurrency(application.existing_debt) : "—"} />
                 <SummaryRow label="Credit Kiting Score" value={application.credit_kiting_score != null ? `${application.credit_kiting_score}/100` : "—"} />
                 <SummaryRow label="Industry" value={application.industry || "-"} />
@@ -315,19 +342,6 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
           </Grid>
         </Grid>
       </Box>
-    </Box>
-  );
-}
-
-function Metric({ label, value }) {
-  return (
-    <Box sx={{ p: 2.5, borderRadius: 3, bgcolor: "#f8fafc", border: "1px solid #e5e7eb" }}>
-      <Typography sx={{ fontSize: 12, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: ".06em" }}>
-        {label}
-      </Typography>
-      <Typography sx={{ mt: 0.8, fontSize: 20, fontWeight: 800 }}>
-        {value}
-      </Typography>
     </Box>
   );
 }
@@ -414,9 +428,6 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
   const pd = rm.pd_percent;
   const band = rm.rating_band;
 
-  const singpass = application.singpass_profile || {};
-  const propertyOwnership = singpass.propertyOwnership;
-  const rentAmount = singpass.rentAmount;
   const bandColor =
     band === "Low" || band === "Moderate"
       ? { bg: "#dcfce7", fg: "#15803d", bar: "#16a34a" }
@@ -890,19 +901,50 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
         </Panel>
       )}
 
-      {propertyOwnership && (
-        <Panel title="Business Premises">
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Chip
-              label={propertyOwnership === "owned" ? "Owned by Company" : "Rented"}
-              size="small"
-              sx={{ fontWeight: 800, bgcolor: "#dbeafe", color: "#1d4ed8" }}
-            />
-            {propertyOwnership === "rented" && rentAmount && (
-              <Typography fontWeight={700}>
-                S${Number(rentAmount).toLocaleString()} / month
-              </Typography>
-            )}
+      {application?.files && Object.values(application.files).some(Boolean) && (
+        <Panel title="Uploaded Documents">
+          <Stack spacing={1.5}>
+            {[
+              { key: "bank_statement", label: "Corporate Bank Statement" },
+              { key: "income_statement", label: "IRAS Income Statement" },
+              { key: "financials", label: "Company Financials" },
+              { key: "ic", label: "NRIC / ID Copy" },
+            ].map((doc) => {
+              const filename = application.files[doc.key];
+              if (!filename) return null;
+              return (
+                <Box
+                  key={doc.key}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    p: 1.5,
+                    borderRadius: 2,
+                    bgcolor: "#f8fafc",
+                    border: "1px solid #e5e7eb",
+                  }}
+                >
+                  <Box>
+                    <Typography fontWeight={700} fontSize={14}>
+                      {doc.label}
+                    </Typography>
+                    <Typography fontSize={12} color="text.secondary">
+                      {filename}
+                    </Typography>
+                  </Box>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    href={getApplicationFileUrl(application.application_id, doc.key)}
+                    target="_blank"
+                    sx={{ borderRadius: 2, textTransform: "none", fontWeight: 700 }}
+                  >
+                    Open
+                  </Button>
+                </Box>
+              );
+            })}
           </Stack>
         </Panel>
       )}

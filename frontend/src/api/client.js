@@ -278,6 +278,10 @@ export async function getApproverApplication(applicationId) {
   return response.json();
 }
 
+export function getApplicationFileUrl(applicationId, documentType) {
+  return `${API_BASE}/approver/applications/${applicationId}/files/${documentType}`;
+}
+
 export async function submitApproverDecision(
   applicationId,
   decision,

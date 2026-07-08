@@ -47,6 +47,8 @@ INDUSTRY_INCOME_FACTORS = {
     "Insurance": 0.25,
     "Hospitality": 0.12,
 }
+
+INTEREST_RATE = 0.0775  # indicative p.a.
     
 
 class UnderwritingEngine:
@@ -227,9 +229,9 @@ class UnderwritingEngine:
         serviceable_income = annualised_revenue * factor
 
         tenure_months = int(app_record.loan_tenure_months or 12)
-        new_annual_instalment = (
-            float(app_record.requested_quantum or 0) / max(tenure_months, 1) * 12
-        )
+        annual_principal = float(app_record.requested_quantum or 0) / max(tenure_months / 12, 1)
+        annual_interest = float(app_record.requested_quantum or 0) * INTEREST_RATE
+        new_annual_instalment = annual_principal + annual_interest
         total_debt_service = existing_debt + new_annual_instalment
         dscr = round(serviceable_income / total_debt_service, 2) if total_debt_service > 0 else 0.0
 

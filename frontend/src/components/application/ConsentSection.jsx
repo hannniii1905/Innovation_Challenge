@@ -20,6 +20,11 @@ import { QRCode } from "react-qr-code";
 
 export default function ConsentSection({ application, setApplication }) {
   const consent = application.consent || {};
+  const profile = application.profile || {};
+  const keymen = profile.keymen || [];
+  const primaryKeyman = keymen.length > 0
+    ? [...keymen].sort((a, b) => (b.shareholding || 0) - (a.shareholding || 0))[0]
+    : null;
   const [showPopup, setShowPopup] = useState(false);
   const [screen, setScreen] = useState("qr");
   const refCode = useMemo(() => String(Math.floor(1000 + Math.random() * 9000)), []);
@@ -141,6 +146,7 @@ export default function ConsentSection({ application, setApplication }) {
                     control={
                       <Checkbox
                         checked={consent[item.field] || false}
+                        disabled={singpassSigned}
                         onChange={(e) => update(item.field, e.target.checked)}
                       />
                     }
@@ -341,7 +347,7 @@ export default function ConsentSection({ application, setApplication }) {
                     <Person sx={{ fontSize: 48, color: "#64748b", mb: 0.5 }} />
                     <Box sx={{ textAlign: "center" }}>
                       <Typography sx={{ fontWeight: "bold !important", fontSize: 16, color: "#0f172a" }}>
-                        Tan Ah Kow
+                        {primaryKeyman?.name || application.applicant?.name || "Signing Party"}
                       </Typography>
                       <Typography sx={{ fontSize: "11px", color: "#94a3b8" }}>
                         Personal
@@ -405,7 +411,7 @@ export default function ConsentSection({ application, setApplication }) {
                       From
                     </Typography>
                     <Typography sx={{ fontWeight: "bold !important", fontSize: 14, color: "#0f172a" }}>
-                      {application.company_name || "NEXUS INNOVATION PTE. LTD."}
+                      {profile.companyName || application.company_name || "NEXUS INNOVATION PTE. LTD."}
                     </Typography>
                     <Typography fontSize={13} color="text.secondary" sx={{ mt: 0.5 }}>
                       Date: {new Date().toLocaleDateString("en-SG", { day: "numeric", month: "long", year: "numeric" })}

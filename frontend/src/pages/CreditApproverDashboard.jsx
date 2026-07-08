@@ -248,15 +248,6 @@ export default function CreditApproverDashboard({ openApplication, onViewHistory
             Reject Recommended
         </Button>
 
-        <Button
-            color="success"
-            variant={filter === "APPROVED" ? "contained" : "outlined"}
-            onClick={() => setFilter("APPROVED")}
-            sx={{ borderRadius: 3, fontWeight: 800 }}
-        >
-            Auto-Approved
-        </Button>
-
         <Box sx={{ flex: 1 }} />
 
         <Button
