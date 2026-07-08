@@ -183,7 +183,7 @@ export default function DocumentUploader({
                     icon="🏦"
                     title="Corporate Bank Statement"
                     field="bankStatement"
-                    helper="Upload your latest corporate bank statement."
+                    helper="Upload the latest 6 months of corporate bank statement."
                     required
                   />
                 </Grid>
@@ -218,7 +218,7 @@ export default function DocumentUploader({
                 icon="📊"
                 title="Company Financials"
                 field="financials"
-                helper="Upload management accounts or audited financials."
+                helper="Upload the latest 2 years of management accounts or audited financials."
               />
             </Grid>
 
@@ -227,7 +227,7 @@ export default function DocumentUploader({
                 icon="📄"
                 title="IRAS Income Statement"
                 field="incomeStatement"
-                helper="Upload your latest income or tax supporting document."
+                helper="Upload the latest 2 years of income or tax supporting document."
               />
             </Grid>
           </Grid>

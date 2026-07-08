@@ -112,7 +112,7 @@ export default function MyInfoReview({ application, setApplication, next, back, 
   const meetsCoverage = coverage >= PG_MIN_COVERAGE;
 
   // The logged-in person (MyInfo Person) — the first director for a keyman login.
-  const person = viaSingpass ? rankedKeymen[0] : null;
+  const person = rankedKeymen[0] || null;
   const personAge = person ? ageFromDob(person.dob) : null;
 
   const handleContinue = () => {
@@ -145,14 +145,14 @@ export default function MyInfoReview({ application, setApplication, next, back, 
           }}
         >
           <Typography sx={{ fontSize: 13, fontWeight: 800, opacity: 0.9 }}>
-            {viaSingpass ? "RETRIEVED VIA SINGPASS · MYINFO" : "RETRIEVED VIA ACRA"}
+            {"RETRIEVED VIA SINGPASS / ACRA"}
           </Typography>
           <Typography sx={{ fontSize: 26, fontWeight: 900, mt: 0.5, letterSpacing: "-0.02em" }}>
             Here's what we retrieved
           </Typography>
           <Typography sx={{ opacity: 0.92, mt: 0.5 }}>
             Review the information pulled on your behalf. We'll use this to
-            pre-fill your application — no manual typing needed.
+            pre-fill your application — no manual filling needed.
           </Typography>
         </Paper>
 
@@ -163,33 +163,25 @@ export default function MyInfoReview({ application, setApplication, next, back, 
             gap: 3,
           }}
         >
+        
           {/* Personal (MyInfo Person) */}
-          {viaSingpass && person ? (
-            <SectionCard title="Your Singpass profile" source="MyInfo Person">
-              <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 3 }}>
-                <Field label="Name" value={person.name} />
-                <Field label="NRIC / FIN" value={person.nric} />
-                <Field label="Date of Birth" value={person.dob} />
-                <Field
-                  label="Age"
-                  value={personAge != null ? `${personAge} years` : "—"}
-                />
-                <Field label="Nationality" value={person.nationality} />
-                <Field label="Residential Status" value={person.residentialStatus} />
-                <Field label="Mobile" value={person.mobile} />
-                <Field label="Email" value={person.email} />
-              </Box>
-              <Field label="Residential Address" value={person.registeredAddress} />
-            </SectionCard>
-          ) : (
-            <SectionCard title="Applicant identity" source="Not via Singpass">
-              <Typography color="text.secondary" sx={{ py: 2 }}>
-                This company was retrieved by UEN via ACRA, so no verified
-                personal Singpass profile was pulled. Identity is confirmed
-                through the keyman approval step instead.
-              </Typography>
-            </SectionCard>
-          )}
+          <SectionCard title="Your Singpass profile" source="MyInfo Person">
+            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 3 }}>
+              <Field label="Name" value={person?.name} />
+              <Field label="NRIC / FIN" value={person?.nric} />
+              <Field label="Date of Birth" value={person?.dob} />
+              <Field
+                label="Age"
+                value={personAge != null ? `${personAge} years` : "—"}
+              />
+              <Field label="Nationality" value={person?.nationality} />
+              <Field label="Residential Status" value={person?.residentialStatus} />
+              <Field label="Mobile" value={person?.mobile} />
+              <Field label="Email" value={person?.email} />
+            </Box>
+            <Field label="Residential Address" value={person?.registeredAddress} />
+          </SectionCard>
+          
 
           {/* Business (MyInfo Business) */}
           <SectionCard title="Business profile" source="MyInfo Business">

@@ -14,9 +14,9 @@ const NAVY = "#0a1f3c";
 const UOB_BLUE = "#1d4ed8";
 
 const MIN_AMOUNT = 30000;
-const MAX_AMOUNT = 800000;
+const MAX_AMOUNT = 350000;
 const AMOUNT_STEP = 10000;
-const INTEREST_RATE = 7.75; // indicative rate, matches UOB calculator
+const INTEREST_RATE = 10.88; // indicative rate, matches UOB calculator
 
 const TENURES = [
   { label: "1 year", months: 12 },
@@ -122,8 +122,7 @@ export default function LoanCalculator({ application, setApplication }) {
               letterSpacing: "-0.01em",
             }}
           >
-            Let's begin! Enter a loan amount, and enjoy a speedy application by
-            applying with Singpass.
+            Plan your business loan with the loan calculator.
           </Typography>
         </Box>
 

@@ -251,28 +251,6 @@ export default function LoanLandingPage({ application, next, back }) {
                 Resume application
               </Button>
             </Stack>
-
-            <Paper
-              elevation={0}
-              sx={{
-                mt: 4,
-                p: 2.5,
-                borderRadius: 2,
-                border: "1px solid #e5e7eb",
-                bgcolor: "#f8fafc",
-                maxWidth: 560,
-              }}
-            >
-              <Typography sx={{ fontSize: 13, color: "#64748b", mb: 0.5 }}>
-                Selected demo applicant
-              </Typography>
-              <Typography sx={{ fontWeight: 800 }}>
-                {profile.companyName}
-              </Typography>
-              <Typography color="text.secondary" sx={{ fontSize: 14 }}>
-                UEN: {profile.uen}
-              </Typography>
-            </Paper>
           </Box>
 
           {/* Hero image-style card */}
