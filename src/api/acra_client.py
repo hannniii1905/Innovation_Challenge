@@ -95,6 +95,7 @@ def lookup_company(uen: str) -> Dict:
             "ssic_code": profile.get("ssic_code"),
             "ssic_description": profile.get("ssic_description"),
             "entity_status": "Live Company",
+            "registered_address": profile.get("registered_address"),
             "keymen": keymen,
         }
 

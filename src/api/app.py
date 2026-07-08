@@ -47,6 +47,7 @@ from src.api.schemas import (
 from src.api.acra_client import lookup_company, request_keyman_approval
 from src.mock_data.company_profiles import COMPANY_PROFILES
 from src.mock_data.property_data import lookup_property
+from src.mock_data.industry_risks import analyze_industry
 from src.api.session_store import Session as OCRSession
 from src.api.session_store import SessionStore
 from src.credit_kiting import CreditKitingDetector
@@ -225,6 +226,7 @@ def _build_underwriting_summary(app_record, result: dict) -> dict:
         "risk_model": risk_model,
         "financials": financials,
         "credit_kiting": credit_kiting,
+        "industry_analysis": analyze_industry(app_record.industry),
     }
 
 

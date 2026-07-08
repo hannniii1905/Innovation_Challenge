@@ -9,8 +9,13 @@ import {
   Stack,
   Chip,
   CircularProgress,
+  FormControl,
+  FormControlLabel,
+  Radio,
+  RadioGroup,
 } from "@mui/material";
 import PortalShell from "../components/PortalShell";
+import PropertyMapCard from "../components/PropertyMapCard";
 import { acraLookup } from "../api/client";
 
 export default function UenLookup({ application, setApplication, next, back, goHome }) {
@@ -22,6 +27,8 @@ export default function UenLookup({ application, setApplication, next, back, goH
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [record, setRecord] = useState(null);
+  const [addressSame, setAddressSame] = useState("yes");
+  const [operatingAddress, setOperatingAddress] = useState("");
 
   const handleLookup = async () => {
     if (!uen.trim()) {
@@ -33,6 +40,8 @@ export default function UenLookup({ application, setApplication, next, back, goH
     try {
       const res = await acraLookup(uen.trim());
       setRecord(res);
+      setAddressSame("yes");
+      setOperatingAddress("");
     } catch (err) {
       setError(err.message || "ACRA lookup failed.");
     } finally {
@@ -43,6 +52,11 @@ export default function UenLookup({ application, setApplication, next, back, goH
   const handleContinue = () => {
     if (!record) return;
 
+    const resolvedAddress =
+      addressSame === "yes"
+        ? record.registered_address || ""
+        : operatingAddress.trim() || record.registered_address || "";
+
     const enrichedProfile = {
       ...profile,
       uen: record.uen,
@@ -50,6 +64,11 @@ export default function UenLookup({ application, setApplication, next, back, goH
       industry: record.ssic_description || profile.industry,
       incorporationDate: record.incorporation_date || profile.incorporationDate,
       directors: (record.keymen || []).map((k) => k.name),
+      businessInfo: {
+        ...profile.businessInfo,
+        registeredAddress: record.registered_address || "",
+        operatingAddress: resolvedAddress,
+      },
     };
 
     setApplication((prev) => ({
@@ -69,7 +88,6 @@ export default function UenLookup({ application, setApplication, next, back, goH
       },
     }));
 
-    // No verified identity via ACRA-by-UEN, so route through keyman approval.
     next();
   };
 
@@ -221,6 +239,55 @@ export default function UenLookup({ application, setApplication, next, back, goH
                 </Paper>
               ))}
             </Stack>
+
+            <Divider sx={{ my: 3 }} />
+
+            <Typography fontWeight={900} sx={{ mb: 1.5 }}>
+              Registered address (ACRA)
+            </Typography>
+            <Paper
+              variant="outlined"
+              sx={{ p: 2.5, borderRadius: 3, bgcolor: "#f8fafc", mb: 3 }}
+            >
+              <Typography fontWeight={700}>
+                {record.registered_address || "Not available"}
+              </Typography>
+            </Paper>
+
+            <Typography fontWeight={900} sx={{ mb: 1.5 }}>
+              Is your operating address the same as the registered address?
+            </Typography>
+            <FormControl component="fieldset" sx={{ mb: 2 }}>
+              <RadioGroup
+                row
+                value={addressSame}
+                onChange={(e) => setAddressSame(e.target.value)}
+              >
+                <FormControlLabel value="yes" control={<Radio />} label="Yes" />
+                <FormControlLabel value="no" control={<Radio />} label="No" />
+              </RadioGroup>
+            </FormControl>
+
+            {addressSame === "no" && (
+              <TextField
+                label="Operating address"
+                value={operatingAddress}
+                onChange={(e) => setOperatingAddress(e.target.value)}
+                fullWidth
+                multiline
+                rows={2}
+                placeholder="e.g. 1 Raffles Place, #20-01, Singapore 048616"
+                sx={{ mb: 3 }}
+              />
+            )}
+
+            <PropertyMapCard
+              address={
+                addressSame === "yes"
+                  ? record.registered_address
+                  : operatingAddress.trim() || record.registered_address
+              }
+            />
           </>
         )}
 
