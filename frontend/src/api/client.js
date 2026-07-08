@@ -150,9 +150,14 @@ export async function submitApplication(application) {
     JSON.stringify(application.declarations || {})
   );
 
+  const profileData = {
+    ...(application.singpass?.company || application.profile),
+    propertyOwnership: application.propertyOwnership || null,
+    rentAmount: application.rentAmount || null,
+  };
   formData.append(
     "singpass_profile_json",
-    JSON.stringify(application.singpass?.company || application.profile)
+    JSON.stringify(profileData)
   );
 
   formData.append(

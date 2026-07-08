@@ -13,6 +13,7 @@ COMPANY_PROFILES = {
         "incorporation_date": "2021-03-15",
         "ssic_code": "62011",
         "ssic_description": "Development of software and applications",
+        "registered_address": "71 Ayer Rajah Crescent, #03-12, Singapore 139951",
         "directors": [
             "Alex Tan Wei Liang",
             "Sarah Lim Xiu Qi"
@@ -38,6 +39,7 @@ COMPANY_PROFILES = {
         "incorporation_date": "2018-07-22",
         "ssic_code": "47112",
         "ssic_description": "Supermarkets and Department Stores",
+        "registered_address": "3 Tampines Central 1, #05-08, Singapore 529540",
         "directors": [
             "Adam Low",
             "Mary Ong"
@@ -69,6 +71,7 @@ COMPANY_PROFILES = {
         "incorporation_date": "2020-10-09",
         "ssic_code": "52291",
         "ssic_description": "Freight Forwarding Services",
+        "registered_address": "8 Changi South Lane, #02-01, Singapore 486113",
         "directors": [
             "Michael Ong",
             "Daniel Goh"

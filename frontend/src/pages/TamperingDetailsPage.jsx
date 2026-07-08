@@ -60,8 +60,8 @@ export default function TamperingDetailsPage({ bankOcr, companyName, referenceNu
 
       <Box sx={{ maxWidth: 1250, mx: "auto", p: 4 }}>
         <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: "1px solid #e5e7eb", boxShadow: "0 12px 28px rgba(15,23,42,.08)", mb: 4 }}>
-          <Stack direction="row" spacing={4} alignItems="center" flexWrap="wrap" useFlexGap>
-            <Box>
+          <Stack direction="row" spacing={4} alignItems="flex-start" flexWrap="wrap" useFlexGap>
+            <Box sx={{ minWidth: 180 }}>
               <Typography color="text.secondary" fontSize={13} fontWeight={700}>
                 Statement Integrity
               </Typography>
@@ -70,7 +70,7 @@ export default function TamperingDetailsPage({ bankOcr, companyName, referenceNu
                 sx={{ mt: 0.5, fontWeight: 800, bgcolor: bankOcr?.has_fraud_tampering ? "#fee2e2" : "#dcfce7", color: bankOcr?.has_fraud_tampering ? "#b91c1c" : "#15803d" }}
               />
             </Box>
-            <Box>
+            <Box sx={{ minWidth: 180 }}>
               <Typography color="text.secondary" fontSize={13} fontWeight={700}>
                 Suspicious Credit Volume
               </Typography>
@@ -78,7 +78,7 @@ export default function TamperingDetailsPage({ bankOcr, companyName, referenceNu
                 {bankOcr?.flagged_kiting_volume != null ? `$${Number(bankOcr.flagged_kiting_volume).toLocaleString()}` : "-"}
               </Typography>
             </Box>
-            <Box>
+            <Box sx={{ minWidth: 180 }}>
               <Typography color="text.secondary" fontSize={13} fontWeight={700}>
                 {credits.length} Credit{credits.length !== 1 ? "s" : ""} Flagged
               </Typography>
@@ -88,7 +88,7 @@ export default function TamperingDetailsPage({ bankOcr, companyName, referenceNu
                   : "-"}
               </Typography>
             </Box>
-            <Box>
+            <Box sx={{ minWidth: 180 }}>
               <Typography color="text.secondary" fontSize={13} fontWeight={700}>
                 Detection Engine
               </Typography>

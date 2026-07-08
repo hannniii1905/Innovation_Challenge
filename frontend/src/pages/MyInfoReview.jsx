@@ -15,6 +15,11 @@ import {
   TableRow,
   LinearProgress,
   Alert,
+  TextField,
+  FormControl,
+  FormControlLabel,
+  Radio,
+  RadioGroup,
 } from "@mui/material"; 
 import PortalShell from "../components/PortalShell";
 import PropertyMapCard from "../components/PropertyMapCard";
@@ -115,8 +120,16 @@ export default function MyInfoReview({ application, setApplication, next, back, 
   const person = rankedKeymen[0] || null;
   const personAge = person ? ageFromDob(person.dob) : null;
 
+  // Property ownership
+  const [propertyOwnership, setPropertyOwnership] = useState("owned");
+  const [rentAmount, setRentAmount] = useState("");
+
   const handleContinue = () => {
     if (!meetsCoverage) return;
+    if (propertyOwnership === "rented" && !rentAmount.trim()) {
+      alert("Please enter the monthly rent amount.");
+      return;
+    }
     const guarantors = rankedKeymen
       .filter((k) => selected.has(k.name))
       .map((k) => ({
@@ -128,6 +141,8 @@ export default function MyInfoReview({ application, setApplication, next, back, 
       ...prev,
       personalGuarantors: guarantors,
       pgCoverage: coverage,
+      propertyOwnership,
+      rentAmount: propertyOwnership === "rented" ? rentAmount.trim() : null,
     }));
     next();
   };
@@ -195,9 +210,73 @@ export default function MyInfoReview({ application, setApplication, next, back, 
             </Box>
             <Field label="Principal Activity (SSIC)" value={business.primarySsic} />
             <Field label="Registered Address" value={business.registeredAddress} />
-            <Field label="Status of property" value={"Owned"} />
-          {/* need edit */}
           </SectionCard>
+
+          <Box sx={{ gridColumn: { md: "1 / -1" } }}>
+            <SectionCard title="Property Ownership" source="MyInfo Business">
+              <FormControl component="fieldset">
+                <RadioGroup
+                  value={propertyOwnership}
+                  onChange={(e) => setPropertyOwnership(e.target.value)}
+                  sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
+                >
+                  <Box
+                    onClick={() => setPropertyOwnership("owned")}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      cursor: "pointer",
+                      border: "1.5px solid",
+                      borderColor: propertyOwnership === "owned" ? "#1d4ed8" : "#cbd5e1",
+                      borderRadius: 3,
+                      px: 3,
+                      py: 1.5,
+                    }}
+                  >
+                    <Radio checked={propertyOwnership === "owned"} />
+                    <Typography>Owned by Company</Typography>
+                  </Box>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      cursor: "pointer",
+                      border: "1.5px solid",
+                      borderColor: propertyOwnership === "rented" ? "#1d4ed8" : "#cbd5e1",
+                      borderRadius: 3,
+                      px: 3,
+                      py: 1.5,
+                    }}
+                  >
+                    <Radio
+                      checked={propertyOwnership === "rented"}
+                      onClick={() => setPropertyOwnership("rented")}
+                    />
+                    <Typography>Rented</Typography>
+                    <TextField
+                      size="small"
+                      placeholder="Monthly rent"
+                      value={rentAmount}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "");
+                        setRentAmount(val);
+                        setPropertyOwnership("rented");
+                      }}
+                      onClick={() => setPropertyOwnership("rented")}
+                      sx={{ width: 160 }}
+                      slotProps={{
+                        input: {
+                          startAdornment: <Typography sx={{ mr: 0.5, color: "text.secondary" }}>S$</Typography>,
+                        },
+                      }}
+                    />
+                  </Box>
+                </RadioGroup>
+              </FormControl>
+            </SectionCard>
+          </Box>
 
           <Box sx={{ gridColumn: { md: "1 / -1" } }}>
             <PropertyMapCard address={business.registeredAddress} />

@@ -41,10 +41,18 @@ export default function LoanApplication({ application, setApplication, next, bac
       alert("Please complete all declaration and consent items before submitting.");
       return false;
     }
+    if (!consent.singpassSigned) {
+      alert("Please sign the application via Singpass before submitting.");
+      return false;
+    }
     return true;
   };
 
   const handleNext = () => {
+    if (step === 0 && !application.loanPurpose) {
+      alert("Please select a loan purpose.");
+      return;
+    }
     if (step === 1 && !validateDeclarations()) return;
     if (step === 2 && !validateDocuments()) return;
     if (step === 3) {

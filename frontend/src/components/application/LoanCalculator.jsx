@@ -6,6 +6,11 @@ import {
   Box,
   Button,
   Stack,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
+  FormHelperText,
 } from "@mui/material";
 import { useMemo, useEffect } from "react";
 
@@ -237,6 +242,54 @@ export default function LoanCalculator({ application, setApplication }) {
                 </Button>
               );
             })}
+          </Box>
+
+          {/* Loan Purpose */}
+          <Box sx={{ mt: 6, mb: 1 }}>
+            <Typography sx={{ fontWeight: 800, color: "#0f172a", mb: 2 }}>
+              Loan Purpose <Box component="span" sx={{ color: "#ef4444" }}>*</Box>
+            </Typography>
+            <FormControl required>
+              <RadioGroup
+                value={application.loanPurpose || ""}
+                onChange={(e) =>
+                  setApplication((prev) => ({
+                    ...prev,
+                    loanPurpose: e.target.value,
+                  }))
+                }
+                sx={{ display: "flex", flexDirection: "row", gap: 2, justifyContent: "center" }}
+              >
+                <FormControlLabel
+                  value="Working Capital"
+                  control={<Radio />}
+                  label="Working Capital Requirements"
+                  sx={{
+                    border: "1.5px solid",
+                    borderColor: application.loanPurpose === "Working Capital" ? "#1d4ed8" : "#cbd5e1",
+                    borderRadius: 3,
+                    px: 3,
+                    py: 1.5,
+                    m: 0,
+                    width: 260,
+                  }}
+                />
+                <FormControlLabel
+                  value="Business Expansion"
+                  control={<Radio />}
+                  label="Business Expansion Requirements"
+                  sx={{
+                    border: "1.5px solid",
+                    borderColor: application.loanPurpose === "Business Expansion" ? "#1d4ed8" : "#cbd5e1",
+                    borderRadius: 3,
+                    px: 3,
+                    py: 1.5,
+                    m: 0,
+                    width: 260,
+                  }}
+                />
+              </RadioGroup>
+            </FormControl>
           </Box>
 
           {/* Divider + instalment */}

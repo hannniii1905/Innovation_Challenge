@@ -64,6 +64,16 @@ PROPERTY_RECORDS = [
         "owner_info": "HDB leasehold flat. Individual unit is privately owned via leasehold title."
     },
     {
+        "address": "1 Raffles Place, #20-01, Singapore 048616",
+        "lat": 1.2841,
+        "lng": 103.8512,
+        "building_name": "One Raffles Place",
+        "building_owner": "One Raffles Place Management Pte Ltd (Private)",
+        "property_type": "Commercial / Office",
+        "land_tenure": "99-year leasehold from 2000",
+        "owner_info": "Privately-owned commercial strata office tower. One Raffles Place is a landmark Grade A office development in the heart of Singapore's CBD."
+    },
+    {
         "address": "Ayer Rajah Crescent, #03-12, Singapore 139951",
         "lat": 1.2969,
         "lng": 103.7874,

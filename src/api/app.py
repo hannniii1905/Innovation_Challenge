@@ -47,6 +47,7 @@ from src.api.schemas import (
 from src.api.acra_client import lookup_company, request_keyman_approval
 from src.mock_data.company_profiles import COMPANY_PROFILES
 from src.mock_data.property_data import lookup_property
+from src.mock_data.industry_risks import analyze_industry
 from src.api.session_store import Session as OCRSession
 from src.api.session_store import SessionStore
 from src.credit_kiting import CreditKitingDetector
@@ -203,9 +204,12 @@ def _build_underwriting_summary(app_record, result: dict) -> dict:
         "existing_debt": ratios.get("existing_debt"),
         "existing_debt_items": ratios.get("existing_debt_items") or [],
     }
+    bank_data = result.get("bank") or {}
     credit_kiting = {
         "score": ratios.get("credit_kiting_score", 0),
         "findings": ratios.get("credit_kiting_findings") or [],
+        "flagged": (ratios.get("credit_kiting_score", 0) or 0) > 0,
+        "flagged_volume": round(float(bank_data.get("flagged_kiting_volume", 0) or 0), 2),
     }
 
     # --- Credit Flash Model: probability of default + approved limit ---
@@ -222,6 +226,7 @@ def _build_underwriting_summary(app_record, result: dict) -> dict:
         "risk_model": risk_model,
         "financials": financials,
         "credit_kiting": credit_kiting,
+        "industry_analysis": analyze_industry(app_record.industry),
     }
 
 

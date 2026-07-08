@@ -413,6 +413,10 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
   const rm = uw.risk_model || {};
   const pd = rm.pd_percent;
   const band = rm.rating_band;
+
+  const singpass = application.singpass_profile || {};
+  const propertyOwnership = singpass.propertyOwnership;
+  const rentAmount = singpass.rentAmount;
   const bandColor =
     band === "Low" || band === "Moderate"
       ? { bg: "#dcfce7", fg: "#15803d", bar: "#16a34a" }
@@ -821,6 +825,87 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
           </Panel>
         </Grid>
       </Grid>
+
+      {uw.industry_analysis && (
+        <Panel title="AI Industry Analysis">
+          <Stack spacing={2}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Typography fontWeight={800}>{uw.industry_analysis.sector}</Typography>
+              <Chip
+                label={`${uw.industry_analysis.risk_level} risk`}
+                size="small"
+                sx={{
+                  fontWeight: 800,
+                  bgcolor:
+                    uw.industry_analysis.risk_level === "Low"
+                      ? "#dcfce7"
+                      : uw.industry_analysis.risk_level === "Moderate"
+                      ? "#fef3c7"
+                      : "#fee2e2",
+                  color:
+                    uw.industry_analysis.risk_level === "Low"
+                      ? "#15803d"
+                      : uw.industry_analysis.risk_level === "Moderate"
+                      ? "#b45309"
+                      : "#b91c1c",
+                }}
+              />
+            </Stack>
+
+            <Typography color="text.secondary" sx={{ lineHeight: 1.7 }}>
+              {uw.industry_analysis.summary}
+            </Typography>
+
+            <Box>
+              <Typography fontWeight={700} sx={{ mb: 1, fontSize: 14 }}>
+                Key risks identified
+              </Typography>
+              <Stack spacing={1}>
+                {uw.industry_analysis.key_risks.map((risk, i) => (
+                  <Box
+                    key={i}
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 2,
+                      bgcolor: "#fef2f2",
+                      border: "1px solid #fecaca",
+                    }}
+                  >
+                    <Typography fontSize={13} fontWeight={600} color="#b91c1c">
+                      ⚠ {risk}
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
+            </Box>
+
+            <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: "#f0f7ff", border: "1px solid #bfdbfe" }}>
+              <Typography fontSize={13} fontWeight={700} color="#1d4ed8">
+                Outlook: {uw.industry_analysis.outlook}
+              </Typography>
+            </Box>
+
+
+          </Stack>
+        </Panel>
+      )}
+
+      {propertyOwnership && (
+        <Panel title="Business Premises">
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Chip
+              label={propertyOwnership === "owned" ? "Owned by Company" : "Rented"}
+              size="small"
+              sx={{ fontWeight: 800, bgcolor: "#dbeafe", color: "#1d4ed8" }}
+            />
+            {propertyOwnership === "rented" && rentAmount && (
+              <Typography fontWeight={700}>
+                S${Number(rentAmount).toLocaleString()} / month
+              </Typography>
+            )}
+          </Stack>
+        </Panel>
+      )}
     </>
   );
 }
