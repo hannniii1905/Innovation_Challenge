@@ -19,4 +19,4 @@ __pycache__/
 *$py.class
 .venv/
 venv/
-.env
+.envuploaded_applications/

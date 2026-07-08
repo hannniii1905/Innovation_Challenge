@@ -411,7 +411,10 @@ export default function ConsentSection({ application, setApplication }) {
                       From
                     </Typography>
                     <Typography sx={{ fontWeight: "bold !important", fontSize: 14, color: "#0f172a" }}>
-                      {profile.companyName || application.company_name || "NEXUS INNOVATION PTE. LTD."}
+                          {application?.profile?.companyName ||
+                          application?.singpass?.company?.companyName ||
+                          application?.company_name ||
+                          "Selected Company"}
                     </Typography>
                     <Typography fontSize={13} color="text.secondary" sx={{ mt: 0.5 }}>
                       Date: {new Date().toLocaleDateString("en-SG", { day: "numeric", month: "long", year: "numeric" })}

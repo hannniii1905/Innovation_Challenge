@@ -25,7 +25,7 @@ export default function LoanApplication({ application, setApplication, next, bac
   const validateDeclarations = () => {
     const d = application.declarations || {};
     if (!d.positiveEBITDA || !d.positiveTNW || !d.existingLoans || !d.recentDefault) {
-      alert("Please answer all 4 declaration questions before proceeding.");
+      alert("Please answer all declaration questions before proceeding.");
       return false;
     }
     if (d.existingLoans === "yes" && !d.existingLoanDetails?.trim()) {

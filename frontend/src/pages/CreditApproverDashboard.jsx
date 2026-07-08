@@ -331,15 +331,7 @@ export default function CreditApproverDashboard({ openApplication, onViewHistory
                       >
                         Open Review
                       </Button>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        color="error"
-                        sx={{ ml: 1, borderRadius: 2, fontWeight: 700 }}
-                        onClick={() => handleDelete(app.application_id)}
-                      >
-                        Delete
-                      </Button>
+                
                     </TableCell>
                   </TableRow>
                 ))}

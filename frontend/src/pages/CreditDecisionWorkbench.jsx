@@ -280,12 +280,7 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
                 <SummaryRow label="Serviceable income" value={fin.serviceable_income != null ? formatCurrency(fin.serviceable_income) : "—"} />
                 <SummaryRow label="Monthly debt service" value={fin.monthly_debt_service != null ? formatCurrency(fin.monthly_debt_service) : "—"} />
                 <SummaryRow label="Annual debt service" value={fin.annual_debt_service != null ? formatCurrency(fin.annual_debt_service) : "—"} />
-                <Box sx={{ mt: 1.5, p: 1.5, borderRadius: 2, bgcolor: "#f0f7ff", border: "1px solid #bfdbfe" }}>
-                  <Typography fontSize={12.5} color="#1d4ed8" fontWeight={700}>
-                    DSCR = serviceable income (revenue × industry income factor) ÷ annual debt service
-                  </Typography>
-                </Box>
-              </Stack>
+              </Stack> 
             </Panel>
 
             <Panel title="Approver Action">
@@ -440,144 +435,389 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
       {/* Credit Flash Model — PD + approved limit */}
       {rm.pd_percent != null && (
         <Panel title={`${rm.model_name || "Credit Risk Model"} — Probability of Default`}>
-          <Grid container spacing={3} alignItems="center">
-            <Grid size={{ xs: 12, md: 5 }}>
-              <Stack direction="row" alignItems="baseline" spacing={1.5}>
-                <Typography sx={{ fontSize: 52, fontWeight: 900, color: bandColor.fg, lineHeight: 1 }}>
-                  {pd}%
-                </Typography>
-                <Chip
-                  label={`${band} risk`}
-                  sx={{ fontWeight: 800, bgcolor: bandColor.bg, color: bandColor.fg }}
-                />
-              </Stack>
-              <Typography color="text.secondary" fontSize={13} sx={{ mt: 0.5 }}>
-                12-month probability of default · {rm.model_name} {rm.model_version || ""}
-              </Typography>
-              <LinearProgress
-                variant="determinate"
-                value={Math.min(100, Number(pd) || 0)}
+          <Grid container spacing={3.5} alignItems="stretch">
+            <Grid size={{ xs: 12, md: 5.5 }}>
+              <Box
                 sx={{
-                  mt: 1.5,
-                  height: 10,
-                  borderRadius: 99,
-                  bgcolor: "#e5e7eb",
-                  "& .MuiLinearProgress-bar": { bgcolor: bandColor.bar },
+                  height: "100%",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
                 }}
-              />
+              >
+                <Stack direction="row" alignItems="center" spacing={1.5}>
+                  <Typography
+                    sx={{
+                      fontSize: 58,
+                      fontWeight: 950,
+                      color: bandColor.fg,
+                      lineHeight: 1,
+                      letterSpacing: "-0.05em",
+                    }}
+                  >
+                    {pd}%
+                  </Typography>
+
+                  <Chip
+                    label={`${band} risk`}
+                    sx={{
+                      fontWeight: 900,
+                      bgcolor: bandColor.bg,
+                      color: bandColor.fg,
+                      px: 1,
+                    }}
+                  />
+                </Stack>
+
+                <Typography color="text.secondary" fontSize={14} sx={{ mt: 1 }}>
+                  12-month probability of default · {rm.model_name} {rm.model_version || ""}
+                </Typography>
+
+                {/* KEEPING YOUR ORIGINAL COLOURED BAR */}
+                <LinearProgress
+                  variant="determinate"
+                  value={Math.min(100, Number(pd) || 0)}
+                  sx={{
+                    mt: 2,
+                    height: 10,
+                    borderRadius: 99,
+                    bgcolor: "#e5e7eb",
+                    "& .MuiLinearProgress-bar": { bgcolor: bandColor.bar },
+                  }}
+                />
+              </Box>
             </Grid>
 
             <Grid size={{ xs: 12, md: 3 }}>
-              <Box sx={{ p: 2.5, borderRadius: 3, bgcolor: "#f0f7ff", border: "1px solid #bfdbfe" }}>
-                <Typography sx={{ fontSize: 12, fontWeight: 800, color: "#1d4ed8", textTransform: "uppercase", letterSpacing: ".06em" }}>
+              <Box
+                sx={{
+                  height: "100%",
+                  p: 3,
+                  borderRadius: 4,
+                  bgcolor: "#f8fbff",
+                  border: "1px solid #dbeafe",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    fontWeight: 900,
+                    color: "#1d4ed8",
+                    textTransform: "uppercase",
+                    letterSpacing: ".08em",
+                  }}
+                >
                   Model approved limit
                 </Typography>
-                <Typography sx={{ mt: 0.8, fontSize: 26, fontWeight: 900 }}>
+
+                <Typography sx={{ mt: 1, fontSize: 32, fontWeight: 950, color: "#0f172a" }}>
                   {formatCurrency(rm.approved_limit)}
                 </Typography>
-                <Typography fontSize={12} color="text.secondary" sx={{ mt: 0.5 }}>
-                  Requested {formatCurrency(rm.requested_amount)}
+
+                <Divider sx={{ my: 1.5 }} />
+
+                <Typography fontSize={13} color="text.secondary">
+                  Requested
+                </Typography>
+                <Typography fontSize={18} fontWeight={850} color="#0f172a">
+                  {formatCurrency(rm.requested_amount)}
                 </Typography>
               </Box>
             </Grid>
 
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Typography fontWeight={800} fontSize={13} sx={{ mb: 1 }}>
-                Key PD drivers
-              </Typography>
-              {rm.drivers && rm.drivers.length > 0 ? (
-                <Stack spacing={0.8}>
-                  {rm.drivers.map((d, i) => (
-                    <Typography key={i} fontSize={13} color="text.secondary">
-                      • {d}
-                    </Typography>
-                  ))}
-                </Stack>
-              ) : (
-                <Typography fontSize={13} color="text.secondary">
-                  No adverse drivers — baseline bureau grade only.
+            <Grid size={{ xs: 12, md: 3.5 }}>
+              <Box
+                sx={{
+                  height: "100%",
+                  p: 3,
+                  borderRadius: 4,
+                  bgcolor: "#ffffff",
+                  border: "1px solid #e5e7eb",
+                }}
+              >
+                <Typography fontWeight={900} fontSize={15} sx={{ mb: 1.5, color: "#0f172a" }}>
+                  Key PD drivers
                 </Typography>
-              )}
+
+                {rm.drivers && rm.drivers.length > 0 ? (
+                  <Stack spacing={1.2}>
+                    {rm.drivers.map((d, i) => (
+                      <Box
+                        key={i}
+                        sx={{
+                          display: "flex",
+                          gap: 1.2,
+                          alignItems: "flex-start",
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 7,
+                            height: 7,
+                            borderRadius: "50%",
+                            bgcolor: bandColor.fg,
+                            mt: "7px",
+                            flexShrink: 0,
+                          }}
+                        />
+                        <Typography fontSize={14} color="#334155" fontWeight={650}>
+                          {d}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Typography fontSize={14} color="text.secondary">
+                    No adverse drivers — baseline bureau grade only.
+                  </Typography>
+                )}
+              </Box>
             </Grid>
           </Grid>
         </Panel>
       )}
 
-      {/* Bank OCR + CBS */}
-      <Grid container spacing={3} sx={{ mb: 1 }}>
-        <Grid size={{ xs: 12, md: 7 }}>
-          <Panel title="Bank Statement — OCR Extraction">
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 6, md: 4 }}>
-                <SummaryRow label="Detected bank" value={bank.bank || "—"} />
-              </Grid>
-              <Grid size={{ xs: 6, md: 4 }}>
-                <SummaryRow
-                  label="Total credits"
-                  value={bank.total_credits != null ? formatCurrency(bank.total_credits) : "—"}
-                />
-              </Grid>
-              <Grid size={{ xs: 6, md: 4 }}>
-                <SummaryRow label="Loan repayments detected" value={bank.detected_loans ?? "—"} />
-              </Grid>
-            </Grid>
-            <Divider sx={{ my: 2 }} />
-            <Stack direction="row" spacing={3} alignItems="center" flexWrap="wrap" useFlexGap>
-              <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                <Typography color="text.secondary">Suspicious credit-kiting volume:</Typography>
-                <Typography fontWeight={800}>
-                  {formatCurrency(bank.flagged_kiting_volume || 0)}
-                </Typography>
-              </Box>
-              <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                <Typography color="text.secondary">Statement integrity:</Typography>
-                {bank.has_fraud_tampering ? (
-                  <Button
-                    size="small"
-                    variant="contained"
-                    sx={{
-                      borderRadius: 2,
-                      fontWeight: 800,
-                      textTransform: "none",
-                      px: 2,
-                      py: 0.8,
-                      bgcolor: "#dc2626",
-                      "&:hover": { bgcolor: "#b91c1c" },
-                      boxShadow: "0 2px 8px rgba(220,38,38,.3)",
-                    }}
-                    endIcon={<Typography sx={{ fontSize: 16, lineHeight: 1 }}>→</Typography>}
-                    onClick={() => onViewTampering?.(application)}
-                  >
-                    Tampering Flagged
-                  </Button>
-                ) : (
-                  <Chip
-                    size="small"
-                    label="No tampering"
-                    sx={{ fontWeight: 800, bgcolor: "#dcfce7", color: "#15803d" }}
-                  />
-                )}
-              </Box>
-            </Stack>
-          </Panel>
-        </Grid>
 
-        <Grid size={{ xs: 12, md: 5 }}>
-          <Panel title="Credit Bureau (CBS) Rating">
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Box>
-                <Typography color="text.secondary" fontSize={13} fontWeight={700}>
-                  Risk grade
-                </Typography>
-                <Typography sx={{ fontSize: 36, fontWeight: 900, mt: 0.5 }}>
-                  {cbs.grade || "—"}
-                </Typography>
-              </Box>
-              <PassChip passed={!!cbs.passed} passLabel="Pass" failLabel="Adverse" />
-            </Stack>
-          </Panel>
-        </Grid>
+
+
+
+    <Panel title="Bank Statement — OCR Extraction">
+      <Grid container spacing={2.2}>
+        {[
+          {
+            label: "Detected bank",
+            value: bank.bank || "—",
+          },
+          {
+            label: "Total credits",
+            value: bank.total_credits != null ? formatCurrency(bank.total_credits) : "—",
+          },
+          {
+            label: "Loan repayments detected",
+            value: bank.detected_loans ?? "—",
+          },
+        ].map((item) => (
+          <Grid key={item.label} size={{ xs: 12, md: 4 }}>
+            <Box
+              sx={{
+                p: 2.5,
+                borderRadius: 3.5,
+                bgcolor: "#ffffff",
+                border: "1px solid #e5e7eb",
+                height: "100%",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  fontWeight: 750,
+                  color: "#64748b",
+                  mb: 1,
+                }}
+              >
+                {item.label}
+              </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: 26,
+                  fontWeight: 950,
+                  color: "#0f172a",
+                  letterSpacing: "-0.03em",
+                }}
+              >
+                {item.value}
+              </Typography>
+            </Box>
+          </Grid>
+        ))}
       </Grid>
+
+      <Box
+        sx={{
+          mt: 2.5,
+          p: 0,
+          borderRadius: 4,
+          overflow: "hidden",
+          border: `1px solid ${
+            bank.has_fraud_tampering || kiting.flagged ? "#fecaca" : "#bbf7d0"
+          }`,
+          bgcolor: bank.has_fraud_tampering || kiting.flagged ? "#fff7f7" : "#f0fdf4",
+        }}
+      >
+        <Grid container>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <Box sx={{ p: 2.8 }}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: "#64748b",
+                  mb: 0.8,
+                }}
+              >
+                Credit-kiting risk score
+              </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: 26,
+                  fontWeight: 950,
+                  color: kiting.flagged ? "#b91c1c" : "#15803d",
+                  letterSpacing: "-0.03em",
+                }}
+              >
+                {kiting.score != null ? `${kiting.score}/100` : "—"}
+              </Typography>
+            </Box>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 3 }}>
+            <Box
+              sx={{
+                p: 2.8,
+                height: "100%",
+                borderLeft: { xs: "none", md: "1px solid #fecaca" },
+                borderTop: { xs: "1px solid #fecaca", md: "none" },
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: "#64748b",
+                  mb: 0.8,
+                }}
+              >
+                Suspicious credit-kiting volume
+              </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: 26,
+                  fontWeight: 950,
+                  color: bank.flagged_kiting_volume > 0 ? "#b91c1c" : "#15803d",
+                  letterSpacing: "-0.03em",
+                }}
+              >
+                {formatCurrency(bank.flagged_kiting_volume || kiting.flagged_volume || 0)}
+              </Typography>
+            </Box>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 3 }}>
+            <Box
+              sx={{
+                p: 2.8,
+                height: "100%",
+                borderLeft: { xs: "none", md: "1px solid #fecaca" },
+                borderTop: { xs: "1px solid #fecaca", md: "none" },
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: "#64748b",
+                  mb: 0.8,
+                }}
+              >
+                Statement integrity
+              </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: 20,
+                  fontWeight: 950,
+                  color: bank.has_fraud_tampering ? "#b91c1c" : "#15803d",
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                {bank.has_fraud_tampering ? "Tampering flagged" : "No tampering detected"}
+              </Typography>
+            </Box>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 3 }}>
+            <Box
+              sx={{
+                p: 2.8,
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: { xs: "flex-start", md: "flex-end" },
+              }}
+            >
+              {bank.has_fraud_tampering ? (
+                <Button
+                  variant="contained"
+                  sx={{
+                    borderRadius: 3,
+                    fontWeight: 900,
+                    textTransform: "none",
+                    px: 3,
+                    py: 1.15,
+                    bgcolor: "#dc2626",
+                    "&:hover": { bgcolor: "#b91c1c" },
+                    boxShadow: "0 8px 18px rgba(220,38,38,.22)",
+                    whiteSpace: "nowrap",
+                  }}
+                  onClick={() => onViewTampering?.(application)}
+                >
+                  View details →
+                </Button>
+              ) : (
+                <Chip
+                  label={kiting.flagged ? "Kiting flagged" : "Verified"}
+                  sx={{
+                    fontWeight: 900,
+                    bgcolor: kiting.flagged ? "#fee2e2" : "#dcfce7",
+                    color: kiting.flagged ? "#b91c1c" : "#15803d",
+                  }}
+                />
+              )}
+            </Box>
+          </Grid>
+        </Grid>
+      </Box>
+
+      {kiting.patterns && kiting.patterns.length > 0 && (
+        <Box sx={{ mt: 2.5 }}>
+          <Typography sx={{ fontSize: 14, fontWeight: 900, mb: 1.5, color: "#0f172a" }}>
+            Flagged credit-kiting patterns from OCR
+          </Typography>
+
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>Pattern</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>Counterparty</TableCell>
+                <TableCell sx={{ fontWeight: 800 }} align="right">
+                  Amount
+                </TableCell>
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {kiting.patterns.map((p, i) => (
+                <TableRow key={i}>
+                  <TableCell>{p.date}</TableCell>
+                  <TableCell>{p.description}</TableCell>
+                  <TableCell>{p.counterparty}</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700 }}>
+                    {formatCurrency(p.amount)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
+      )}
+    </Panel>
 
       {/* ACRA shareholders & personal guarantee */}
       <Panel title="ACRA Shareholders & Personal Guarantee">
@@ -674,7 +914,7 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
         )}
       </Panel>
 
-      {/* Credit kiting detection */}
+      {/* Credit kiting detection
       {kiting.score != null && (
         <Panel title="Credit-Kiting Detection">
           <Stack direction="row" spacing={3} alignItems="center" sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
@@ -719,7 +959,7 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
             </Table>
           )}
         </Panel>
-      )}
+      )} */}
 
       {/* Existing debt detection */}
       {debt.recurring_deductions && debt.recurring_deductions.length > 0 && (

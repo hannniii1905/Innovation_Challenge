@@ -161,10 +161,10 @@ export default function AdditionalDeclarations({ application, setApplication }) 
 
 const SanctionsCriteriaList = () => {
   const items = [
-    "Sanctioned Parties",
-    "National / Resident",
-    "Registered / Operated / Located",
-    "IDD Prefix",
+    "- Sanctioned Parties",
+    "- National / Resident",
+    "- Registered / Operated / Located",
+    "- IDD Prefix",
   ];
 
   return (
