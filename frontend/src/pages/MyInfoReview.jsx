@@ -221,43 +221,69 @@ export default function MyInfoReview({ application, setApplication, next, back, 
           </SectionCard>
 
           <Box sx={{ gridColumn: { md: "1 / -1" } }}>
-            <Paper sx={{ p: 3.5, borderRadius: 4, boxShadow: "0 10px 24px rgba(15,23,42,.06)" }}>
-              <Typography sx={{ fontWeight: "bold", mb: 1.5 }}>
-                Property Ownership
-              </Typography>
+            <SectionCard title="Property Ownership" source="MyInfo Business">
               <FormControl component="fieldset">
                 <RadioGroup
                   value={propertyOwnership}
                   onChange={(e) => setPropertyOwnership(e.target.value)}
+                  sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
                 >
-                  <FormControlLabel
-                    value="owned"
-                    control={<Radio />}
-                    label="Owned by Company"
-                  />
-                  <FormControlLabel
-                    value="rented"
-                    control={<Radio />}
-                    label={
-                      <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
-                        <Typography sx={{ fontSize: "1rem" }}>Rented (Monthly) S$</Typography>
-                        <TextField
-                          size="small"
-                          placeholder="0.00"
-                          value={rentAmount}
-                          onChange={(e) => {
-                            setRentAmount(e.target.value);
-                            setPropertyOwnership("rented");
-                          }}
-                          onClick={() => setPropertyOwnership("rented")}
-                          sx={{ width: 140 }}
-                        />
-                      </Box>
-                    }
-                  />
+                  <Box
+                    onClick={() => setPropertyOwnership("owned")}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      cursor: "pointer",
+                      border: "1.5px solid",
+                      borderColor: propertyOwnership === "owned" ? "#1d4ed8" : "#cbd5e1",
+                      borderRadius: 3,
+                      px: 3,
+                      py: 1.5,
+                    }}
+                  >
+                    <Radio checked={propertyOwnership === "owned"} />
+                    <Typography>Owned by Company</Typography>
+                  </Box>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      cursor: "pointer",
+                      border: "1.5px solid",
+                      borderColor: propertyOwnership === "rented" ? "#1d4ed8" : "#cbd5e1",
+                      borderRadius: 3,
+                      px: 3,
+                      py: 1.5,
+                    }}
+                  >
+                    <Radio
+                      checked={propertyOwnership === "rented"}
+                      onClick={() => setPropertyOwnership("rented")}
+                    />
+                    <Typography>Rented</Typography>
+                    <TextField
+                      size="small"
+                      placeholder="Monthly rent"
+                      value={rentAmount}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "");
+                        setRentAmount(val);
+                        setPropertyOwnership("rented");
+                      }}
+                      onClick={() => setPropertyOwnership("rented")}
+                      sx={{ width: 160 }}
+                      slotProps={{
+                        input: {
+                          startAdornment: <Typography sx={{ mr: 0.5, color: "text.secondary" }}>S$</Typography>,
+                        },
+                      }}
+                    />
+                  </Box>
                 </RadioGroup>
               </FormControl>
-            </Paper>
+            </SectionCard>
           </Box>
 
           <Box sx={{ gridColumn: { md: "1 / -1" } }}>
