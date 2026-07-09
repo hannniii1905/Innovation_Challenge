@@ -13,10 +13,13 @@ import {
   Divider,
 } from "@mui/material";
 
+import LightKycPanel from "../components/LightKycPanel";
+
 export default function RiskFlagDetailsPage({ flag, application, back, goHome }) {
   const uw = application?.underwriting || {};
   const bank = uw.bank_ocr || {};
   const aml = uw.aml || {};
+  const lightKyc = uw.light_kyc || {};
   const pgs = application?.personal_guarantors || [];
   const pgCoverage = Number(application?.pg_coverage ?? 0);
 
@@ -42,12 +45,34 @@ export default function RiskFlagDetailsPage({ flag, application, back, goHome })
       </Box>
 
       <Box sx={{ maxWidth: 1250, mx: "auto", p: 4 }}>
-        <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: "1px solid #e5e7eb", boxShadow: "0 12px 28px rgba(15,23,42,.08)", mb: 4 }}>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Typography sx={{ fontSize: 20, fontWeight: 800 }}>{flag}</Typography>
-            <Chip label="Risk Flag" size="small" sx={{ fontWeight: 800, bgcolor: "#fee2e2", color: "#b91c1c" }} />
-          </Stack>
-        </Paper>
+        {!(
+          flag === "Light KYC review required" ||
+          flag?.startsWith("Light KYC:")
+        ) && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 4,
+              borderRadius: 4,
+              border: "1px solid #e5e7eb",
+              boxShadow: "0 12px 28px rgba(15,23,42,.08)",
+              mb: 4,
+            }}
+          >
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Typography sx={{ fontSize: 20, fontWeight: 800 }}>{flag}</Typography>
+              <Chip
+                label="Risk Flag"
+                size="small"
+                sx={{
+                  fontWeight: 800,
+                  bgcolor: "#fee2e2",
+                  color: "#b91c1c",
+                }}
+              />
+            </Stack>
+          </Paper>
+        )}
 
         {flag === "Credit-kiting patterns detected" && (
           <KitingSection bank={bank} />
@@ -57,11 +82,16 @@ export default function RiskFlagDetailsPage({ flag, application, back, goHome })
           <PGSection pgs={pgs} pgCoverage={pgCoverage} flag={flag} />
         )}
 
-        {flag === "AML / blacklist hit" && (
-          <AMLInfoSection aml={aml} />
+        {(flag === "Light KYC review required" || flag?.startsWith("Light KYC:")) && (
+          <LightKycPanel lightKyc={lightKyc} aml={aml} />
         )}
 
-        {!["Credit-kiting patterns detected", "PG shareholding coverage below 50%", "A personal guarantor is 70 or older", "AML / blacklist hit"].includes(flag) && (
+        {![
+          "Credit-kiting patterns detected",
+          "PG shareholding coverage below 50%",
+          "A personal guarantor is 70 or older",
+          "Light KYC review required",
+        ].includes(flag) && !flag?.startsWith("Light KYC:") && (
           <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: "1px solid #e5e7eb", textAlign: "center" }}>
             <Typography color="text.secondary">
               This risk flag was raised by the automated assessment engine. Refer to the relevant evidence section in the workbench for detailed context.
@@ -253,48 +283,5 @@ function PGSection({ pgs, pgCoverage, flag }) {
         </Paper>
       )}
     </>
-  );
-}
-
-function AMLInfoSection({ aml }) {
-  return (
-    <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: "1px solid #e5e7eb", boxShadow: "0 10px 24px rgba(15,23,42,.06)" }}>
-      <Typography sx={{ fontSize: 18, fontWeight: 800, mb: 3 }}>
-        AML / Sanctions & Blacklist Screening
-      </Typography>
-      <Stack direction="row" spacing={4} flexWrap="wrap" useFlexGap sx={{ mb: 3 }}>
-        <Box>
-          <Typography color="text.secondary" fontSize={13} fontWeight={700}>
-            Screening Result
-          </Typography>
-          <Chip
-            label={aml.passed ? "Clear" : "Hit"}
-            sx={{ mt: 0.5, fontWeight: 800, bgcolor: aml.passed ? "#dcfce7" : "#fee2e2", color: aml.passed ? "#15803d" : "#b91c1c" }}
-          />
-        </Box>
-      </Stack>
-      {!aml.passed && aml.reason && (
-        <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#fef2f2", border: "1px solid #fecaca" }}>
-          <Typography fontWeight={700} color="#b91c1c" sx={{ mb: 1 }}>
-            Screening Details
-          </Typography>
-          <Typography color="text.secondary" sx={{ lineHeight: 1.8 }}>
-            {aml.reason}
-          </Typography>
-        </Box>
-      )}
-      {aml.passed && (
-        <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#f0fdf4", border: "1px solid #bbf7d0" }}>
-          <Typography color="#15803d" fontWeight={700}>
-            No adverse AML, sanctions, or blacklist hits detected for the company or its key individuals.
-          </Typography>
-        </Box>
-      )}
-      <Box sx={{ mt: 2, p: 2, borderRadius: 2, bgcolor: "#f8fafc", border: "1px solid #e5e7eb" }}>
-        <Typography fontSize={13} color="text.secondary">
-          The AML screening checks the applicant entity and its directors against sanctions lists, adverse media, and internal blacklist records. A "Hit" may result in automatic decline or require enhanced due diligence.
-        </Typography>
-      </Box>
-    </Paper>
   );
 }

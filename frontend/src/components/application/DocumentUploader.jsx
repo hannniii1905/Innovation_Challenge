@@ -215,15 +215,6 @@ export default function DocumentUploader({
 
             <Grid size={{ xs: 12, md: 4 }}>
               <UploadBox
-                icon="📊"
-                title="Company Financials"
-                field="financials"
-                helper="Upload the latest 2 years of management accounts or audited financials."
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, md: 4 }}>
-              <UploadBox
                 icon="📄"
                 title="IRAS Income Statement"
                 field="incomeStatement"

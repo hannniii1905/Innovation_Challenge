@@ -57,6 +57,7 @@ from src.document_router import (
     DocumentRouter,
     UnsupportedDocumentError,
 )
+from src.mock_data.light_kyc import run_light_kyc
 
 from src.fraud_detector import FraudDetector
 from src.loan_detector import LoanDetector
@@ -180,13 +181,19 @@ def _build_underwriting_summary(app_record, result: dict) -> dict:
         "passed": not (lit_count > 0 or adverse),
     }
 
-    # --- AML / sanctions & blacklist screening (from engine) ---
-    bl = result.get("blacklist") or {}
-    aml = {
-        "passed": not bool(bl.get("blocked", False)),
-        "reason": bl.get("reason", ""),
-    }
+    # --- Light KYC screening: AML, CIF blacklist, industry blacklist, on-us/off-us ---
+    light_kyc = run_light_kyc(app_record)
+    aml_check = next(
+        (check for check in light_kyc.get("checks", []) if check.get("key") == "aml"),
+        {"passed": True, "reason": ""},
+    )
 
+    # Keep this legacy `aml` object so existing risk-flag pages and PD logic continue
+    # working, while the workbench renders the fuller `light_kyc` object.
+    aml = {
+        "passed": bool(aml_check.get("passed", True)),
+        "reason": aml_check.get("reason", ""),
+    }
     # --- Financial indicators computed from bank statement (matches seed_demo format) ---
     ratios = result.get("financial_ratios") or {}
     financials = {
@@ -215,7 +222,7 @@ def _build_underwriting_summary(app_record, result: dict) -> dict:
 
     # --- Credit Flash Model: probability of default + approved limit ---
     risk_model = _run_credit_flash_model(
-        app_record, bank_ocr, credit_bureau, litigation, aml
+        app_record, bank_ocr, credit_bureau, litigation, light_kyc
     )
 
     return {
@@ -224,6 +231,7 @@ def _build_underwriting_summary(app_record, result: dict) -> dict:
         "acra": acra,
         "litigation": litigation,
         "aml": aml,
+        "light_kyc": light_kyc,
         "risk_model": risk_model,
         "financials": financials,
         "credit_kiting": credit_kiting,
@@ -237,36 +245,63 @@ _GRADE_PD = {
     "FF": 18.0, "GG": 25.0, "HH": 40.0, "HX": 55.0, "HZ": 70.0,
 }
 
+_CUE_SCORE_BY_UEN = {
+    "202188341M": 9,
+    "201844192K": 11,
+    "202012345R": 14,
+}
 
-def _run_credit_flash_model(app_record, bank_ocr, credit_bureau, litigation, aml) -> dict:
-    """A lightweight 'Credit Flash' PD model + limit recommendation (demo).
 
-    Produces a probability of default from the credit bureau grade adjusted for
-    behavioural/risk signals, and an indicative approved limit.
-    """
+def _mock_cue_score(app_record) -> int:
+    uen = str(getattr(app_record, "uen", "") or "").strip().upper()
+
+    if uen in _CUE_SCORE_BY_UEN:
+        return _CUE_SCORE_BY_UEN[uen]
+
+    # fallback for any extra demo application
+    app_id = int(getattr(app_record, "id", 0) or 0)
+    return [10, 12, 14][app_id % 3]
+
+
+def _run_credit_flash_model(app_record, bank_ocr, credit_bureau, litigation, light_kyc) -> dict:
+    """A lightweight 'Credit Flash' PD model + limit recommendation (demo)."""
     grade = credit_bureau.get("grade")
     pd = _GRADE_PD.get(grade, 10.0)
 
     reasons = []
+
     if bank_ocr.get("flagged_kiting_volume", 0) > 0:
         pd += 8.0
         reasons.append("Credit-kiting patterns detected")
+
     if bank_ocr.get("has_fraud_tampering"):
         pd += 10.0
         reasons.append("Bank statement integrity flag")
+
     if litigation.get("high_risk"):
         pd += 6.0
         reasons.append("Outstanding litigation / charges")
-    if not aml.get("passed", True):
+
+    failed_light_kyc_checks = light_kyc.get("failed_checks") or [
+        check for check in light_kyc.get("checks", [])
+        if check.get("passed") is False
+    ]
+
+    if failed_light_kyc_checks:
         pd += 20.0
-        reasons.append("AML / blacklist hit")
+
+        for check in failed_light_kyc_checks:
+            label = check.get("label") or "Screening"
+            reasons.append(f"Light KYC: {label} review required")
 
     pg_coverage = float(app_record.pg_coverage or 0)
+
     if pg_coverage < 50:
         pd += 4.0
         reasons.append("PG shareholding coverage below 50%")
 
     pgs = app_record.personal_guarantors_json or []
+
     if any((p.get("age") or 0) >= 70 for p in pgs):
         pd += 5.0
         reasons.append("A personal guarantor is 70 or older")
@@ -282,15 +317,22 @@ def _run_credit_flash_model(app_record, bank_ocr, credit_bureau, litigation, aml
     else:
         band = "High"
 
-    # Indicative approved limit.
     requested = float(app_record.requested_quantum or 0)
-    hard_fail = (not aml.get("passed", True)) or (not credit_bureau.get("passed", True))
+
+    hard_fail = (
+        bool(failed_light_kyc_checks)
+        or not credit_bureau.get("passed", True)
+    )
+
+    cue_score = _mock_cue_score(app_record)
+    cue_passed = cue_score <= 12
+
     if hard_fail:
         approved_limit = 0.0
     elif pd <= 15:
         approved_limit = requested
     elif pd <= 30:
-        approved_limit = round(requested * 0.6 / 1000) * 1000  # counter-offer
+        approved_limit = round(requested * 0.6 / 1000) * 1000
     else:
         approved_limit = 0.0
 
@@ -302,8 +344,10 @@ def _run_credit_flash_model(app_record, bank_ocr, credit_bureau, litigation, aml
         "approved_limit": approved_limit,
         "requested_amount": requested,
         "drivers": reasons,
+        "cue_score": cue_score,
+        "cue_passed": cue_passed,
+        "cue_threshold": 12,
     }
-
 
 def _save_upload(app_folder: str, upload: Optional[UploadFile]) -> Optional[str]:
     """Persist an uploaded file into the application folder.
@@ -409,13 +453,14 @@ async def submit_client_application(
         # (the legacy engine hardcodes DSCR=0 and would flag every case).
         uw = application.underwriting_json or {}
         cb = uw.get("credit_bureau", {})
+        light_kyc_res = uw.get("light_kyc", {})
         aml_res = uw.get("aml", {})
         lit = uw.get("litigation", {})
         rm = uw.get("risk_model", {})
         pd = rm.get("pd_percent", 10)
         drivers = rm.get("drivers", []) or []
         cbs_ok = cb.get("passed", True)
-        aml_ok = aml_res.get("passed", True)
+        aml_ok = light_kyc_res.get("passed", aml_res.get("passed", True))
 
         if not cbs_ok or not aml_ok or pd > 30:
             ai_recommendation = "NEEDS_FURTHER_REVIEW"
@@ -581,7 +626,8 @@ def list_approver_applications(
         if system_decision == "APPROVED":
             review_category = "APPROVED"
         elif (
-            "blacklist" in risk_text
+            "light kyc" in risk_text
+            or "blacklist" in risk_text
             or "sanction" in risk_text
             or "fraud" in risk_text
             or "decline" in risk_text

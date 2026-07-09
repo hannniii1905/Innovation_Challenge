@@ -23,6 +23,7 @@ import {
   getApplicationFileUrl,
 } from "../api/client";
 
+import LightKycPanel from "../components/LightKycPanel";
 
 export default function CreditDecisionWorkbench({ applicationSummary, back, onDecision, onViewTampering, onViewLitigation, onViewRiskFlag, goHome }) {
   const [application, setApplication] = useState(null);
@@ -194,6 +195,7 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
               {application.risk_flags && application.risk_flags.length > 0 ? (
                 <Stack spacing={1.5}>
                   {application.risk_flags.map((flag, index) => {
+                    const displayFlag = flag === "AML / blacklist hit" ? "Light KYC review required" : flag;
                     const flagLower = flag.toLowerCase();
                     const isTampering = flagLower.includes("bank statement integrity") || flagLower.includes("tampering");
                     const isLitigation = flagLower.includes("litigation") || flagLower.includes("charge");
@@ -205,7 +207,7 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
                         onClick={() => {
                           if (isTampering) onViewTampering?.(application);
                           else if (isLitigation) onViewLitigation?.(application);
-                          else onViewRiskFlag?.(flag, application);
+                          else onViewRiskFlag?.(displayFlag, application);
                         }}
                         sx={{
                           p: 2,
@@ -218,7 +220,7 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
                         }}
                       >
                         <Typography fontWeight={700} color="#b91c1c" textAlign="left">
-                          ⚠️ {flag}
+                          ⚠️ {displayFlag}
                         </Typography>
                       </Button>
                     );
@@ -408,6 +410,7 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
   const acra = uw.acra || {};
   const litigation = uw.litigation || {};
   const aml = uw.aml || {};
+  const lightKyc = uw.light_kyc || {};
 
   const pgs = application.personal_guarantors || [];
   const pgCoverage = Number(application.pg_coverage ?? 0);
@@ -528,54 +531,69 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
               </Box>
             </Grid>
 
-            <Grid size={{ xs: 12, md: 3.5 }}>
-              <Box
+          <Grid size={{ xs: 12, md: 3.5 }}>
+            <Box
+              sx={{
+                height: "100%",
+                p: 3,
+                borderRadius: 4,
+                bgcolor: rm.cue_passed ? "#f0fdf4" : "#fff7ed",
+                border: `1px solid ${rm.cue_passed ? "#bbf7d0" : "#fed7aa"}`,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
+              <Typography
                 sx={{
-                  height: "100%",
-                  p: 3,
-                  borderRadius: 4,
-                  bgcolor: "#ffffff",
-                  border: "1px solid #e5e7eb",
+                  fontSize: 12,
+                  fontWeight: 900,
+                  color: rm.cue_passed ? "#047857" : "#c2410c",
+                  textTransform: "uppercase",
+                  letterSpacing: ".08em",
                 }}
               >
-                <Typography fontWeight={900} fontSize={15} sx={{ mb: 1.5, color: "#0f172a" }}>
-                  Key PD drivers
+                CUE Score
+              </Typography>
+
+              <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mt: 1 }}>
+                <Typography
+                  sx={{
+                    fontSize: 46,
+                    fontWeight: 950,
+                    color: rm.cue_passed ? "#047857" : "#c2410c",
+                    lineHeight: 1,
+                    letterSpacing: "-0.05em",
+                  }}
+                >
+                  {rm.cue_score ?? "—"}
                 </Typography>
 
-                {rm.drivers && rm.drivers.length > 0 ? (
-                  <Stack spacing={1.2}>
-                    {rm.drivers.map((d, i) => (
-                      <Box
-                        key={i}
-                        sx={{
-                          display: "flex",
-                          gap: 1.2,
-                          alignItems: "flex-start",
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: 7,
-                            height: 7,
-                            borderRadius: "50%",
-                            bgcolor: bandColor.fg,
-                            mt: "7px",
-                            flexShrink: 0,
-                          }}
-                        />
-                        <Typography fontSize={14} color="#334155" fontWeight={650}>
-                          {d}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Stack>
-                ) : (
-                  <Typography fontSize={14} color="text.secondary">
-                    No adverse drivers — baseline bureau grade only.
-                  </Typography>
-                )}
-              </Box>
-            </Grid>
+                <Typography fontSize={15} fontWeight={800} color="text.secondary">
+                  / 20
+                </Typography>
+              </Stack>
+
+              <Chip
+                label={rm.cue_passed ? "Good" : "Review"}
+                size="small"
+                sx={{
+                  mt: 1.4,
+                  width: "fit-content",
+                  fontWeight: 900,
+                  bgcolor: rm.cue_passed ? "#dcfce7" : "#ffedd5",
+                  color: rm.cue_passed ? "#15803d" : "#c2410c",
+                  border: `1px solid ${rm.cue_passed ? "#bbf7d0" : "#fed7aa"}`,
+                }}
+              />
+
+              <Divider sx={{ my: 1.6 }} />
+
+              <Typography fontSize={13} color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                Good threshold: 12 and below. Higher CUE scores require additional credit review.
+              </Typography>
+            </Box>
+          </Grid>
           </Grid>
         </Panel>
       )}
@@ -1020,17 +1038,7 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
 
       <Grid container spacing={3}>
         <Grid size={{ xs: 12, md: 6 }}>
-          <Panel title="AML / Sanctions & Blacklist Screening">
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography color="text.secondary">Company & keymen screening</Typography>
-              <PassChip passed={!!aml.passed} passLabel="Clear" failLabel="Hit" />
-            </Stack>
-            {!aml.passed && aml.reason && (
-              <Typography color="error" sx={{ mt: 1.5 }} fontWeight={700}>
-                {aml.reason}
-              </Typography>
-            )}
-          </Panel>
+          <LightKycPanel application={application} lightKyc={lightKyc} aml={aml} />
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
