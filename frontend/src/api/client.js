@@ -195,7 +195,9 @@ export async function submitApplication(application) {
 
   // Bank statement is mandatory; supporting docs are optional and may be
   // uploaded later, so only append the ones that are present.
-  formData.append("bank_statement", application.uploads.bankStatement);
+  (application.uploads.bankStatements || []).forEach((statement) => {
+    formData.append("bank_statements", statement.file);
+  });
   if (application.uploads.incomeStatement) {
     formData.append("income_statement", application.uploads.incomeStatement);
   }
@@ -403,3 +405,113 @@ export async function requestKeymanApproval({ uen, applicantName, applicantEmail
   });
   return handle(response);
 }
+
+// detect the period of a bank statement PDF by sending it to the backend for analysis.
+export async function detectBankStatementPeriod(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(
+    "http://localhost:8000/api/bank-statements/detect-period",
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    console.error("Statement-period API error:", payload);
+
+    const detail = payload?.detail;
+
+    let message = "Unable to detect the bank statement period.";
+
+    if (typeof detail === "string") {
+      message = detail;
+    } else if (detail?.message) {
+      message = detail.message;
+    } else if (detail) {
+      message = JSON.stringify(detail);
+    }
+
+    throw new Error(message);
+  }
+
+  return payload;
+}
+
+const toMonthIndex = (year, month) => Number(year) * 12 + Number(month) - 1;
+
+const getMonthLabel = (monthIndex) => {
+  const date = new Date(
+    Math.floor(monthIndex / 12),
+    monthIndex % 12,
+    1
+  );
+
+  return date.toLocaleDateString("en-SG", {
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const detectPeriods = async (filesToAdd, startingIndex) => {
+  await Promise.all(
+    filesToAdd.map(async (file, fileIndex) => {
+      const targetIndex = startingIndex + fileIndex;
+
+      try {
+        const result = await detectBankStatementPeriod(statement.file);
+
+        setApplication((previous) => {
+          const statements = [
+            ...(previous.uploads?.bankStatements || []),
+          ];
+
+          statements[targetIndex] = {
+            ...statements[targetIndex],
+            month: result.statement_period?.month,
+            year: result.statement_period?.year,
+            periodLabel:
+              result.statement_period?.label ||
+              "Statement period not detected",
+            status: result.statement_period?.detected
+              ? "detected"
+              : "failed",
+          };
+
+          return {
+            ...previous,
+            uploads: {
+              ...previous.uploads,
+              bankStatements: statements,
+            },
+          };
+        });
+      } catch {
+        setApplication((previous) => {
+          const statements = [
+            ...(previous.uploads?.bankStatements || []),
+          ];
+
+          statements[targetIndex] = {
+            ...statements[targetIndex],
+            periodLabel: "Unable to detect statement period",
+            status: "failed",
+          };
+
+          return {
+            ...previous,
+            uploads: {
+              ...previous.uploads,
+              bankStatements: statements,
+            },
+          };
+        });
+      }
+    })
+  );
+};
+

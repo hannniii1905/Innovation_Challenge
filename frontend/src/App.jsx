@@ -42,7 +42,7 @@ export default function App() {
       industry: "",
     },
     uploads: {
-      bankStatement: null,
+      bankStatement: [],
       incomeStatement: null,
       ic: null,
       financials: null,

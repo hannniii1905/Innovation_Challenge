@@ -400,6 +400,197 @@ def _save_upload(app_folder: str, upload: Optional[UploadFile]) -> Optional[str]
         shutil.copyfileobj(upload.file, f)
     return dest
 
+@app.post("/api/bank-statements/detect-period")
+async def detect_bank_statement_period(
+    file: UploadFile = File(...),
+):
+    """Detect the month and year covered by an uploaded bank statement."""
+
+    filename = file.filename or ""
+
+    if not filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF bank statements are supported.",
+        )
+
+    pdf_bytes = await file.read()
+
+    if not pdf_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail="The uploaded PDF is empty.",
+        )
+
+    tmp_path: Optional[str] = None
+
+    try:
+        with tempfile.NamedTemporaryFile(
+            suffix=".pdf",
+            delete=False,
+        ) as tmp:
+            tmp.write(pdf_bytes)
+            tmp_path = tmp.name
+
+        pages = OCREngine(tmp_path).extract()
+
+        router = DocumentRouter(pages)
+        document_type = router.identify()
+
+        if document_type == DOCUMENT_TYPE_IRAS_NOA:
+            raise HTTPException(
+                status_code=400,
+                detail="The uploaded document is not a bank statement.",
+            )
+
+        text = "\n".join(pages)
+        parser = router.get_parser_class()()
+        statement_period = parser.identify_statement_period(text)
+
+        print("STATEMENT PERIOD RESULT:", statement_period)
+        print("STATEMENT PERIOD TYPE:", type(statement_period))
+
+        start_date = None
+        end_date = None
+
+        if isinstance(statement_period, dict):
+            start_date = (
+                statement_period.get("start_date")
+                or statement_period.get("start")
+            )
+            end_date = (
+                statement_period.get("end_date")
+                or statement_period.get("end")
+            )
+
+        elif isinstance(statement_period, (list, tuple)):
+            if len(statement_period) >= 2:
+                start_date = statement_period[0]
+                end_date = statement_period[1]
+            elif len(statement_period) == 1:
+                start_date = statement_period[0]
+
+        else:
+            start_date = statement_period
+
+        if isinstance(start_date, str) and end_date is None:
+            import re
+
+            range_parts = re.split(
+                r"\s+(?:-|–|—|TO)\s+",
+                start_date.strip().upper(),
+                maxsplit=1,
+            )
+
+            if len(range_parts) == 2:
+                start_date = range_parts[0].strip()
+                end_date = range_parts[1].strip()
+                
+        reference_date = end_date or start_date
+
+        if reference_date is None:
+            return {
+                "filename": filename,
+                "bank": document_type,
+                "statement_period": {
+                    "detected": False,
+                    "month": None,
+                    "year": None,
+                    "label": "Statement period not detected",
+                    "start_date": None,
+                    "end_date": None,
+                },
+            }
+
+
+        if isinstance(reference_date, str):
+            from datetime import datetime
+            import re
+
+            cleaned_date = reference_date.strip().upper()
+
+            # Handles ranges such as:
+            # "01 JUN 2026 - 15 JUN 2026"
+            # "01 MAY 2026 TO 31 MAY 2026"
+            # "01/05/2026 - 31/05/2026"
+            date_parts = re.split(
+                r"\s+(?:-|–|—|TO)\s+",
+                cleaned_date,
+                maxsplit=1,
+            )
+
+            # Use the end date when a range is detected.
+            date_to_parse = date_parts[-1].strip()
+
+            parsed_date = None
+
+            for date_format in (
+                "%Y-%m-%d",
+                "%d/%m/%Y",
+                "%d-%m-%Y",
+                "%d %b %Y",
+                "%d %B %Y",
+                "%b %Y",
+                "%B %Y",
+            ):
+                try:
+                    parsed_date = datetime.strptime(
+                        date_to_parse,
+                        date_format,
+                    )
+                    break
+                except ValueError:
+                    continue
+
+            if parsed_date is None:
+                raise ValueError(
+                    f"Unsupported statement period date: {reference_date}"
+                )
+
+            reference_date = parsed_date
+
+        month = reference_date.month
+        year = reference_date.year
+
+        import calendar
+
+        return {
+            "filename": filename,
+            "bank": document_type,
+            "statement_period": {
+                "detected": True,
+                "month": month,
+                "year": year,
+                "label": f"{calendar.month_name[month]} {year}",
+                "start_date": (
+                    start_date.isoformat()
+                    if hasattr(start_date, "isoformat")
+                    else start_date
+                ),
+                "end_date": (
+                    end_date.isoformat()
+                    if hasattr(end_date, "isoformat")
+                    else end_date
+                ),
+            },
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as error:
+        import traceback
+
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unable to detect statement period: {error}",
+        )
+
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 @app.post("/client/submit")
 async def submit_client_application(

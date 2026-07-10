@@ -40,6 +40,7 @@ export default function SupportingDocuments({
     setSaving(true);
     try {
       const res = await uploadSupportingDocuments(applicationId, {
+        bankStatements: application.uploads.bankStatements || [],
         financials: application.uploads.financials,
       });
       setOnFile(res.documents);
@@ -80,22 +81,45 @@ export default function SupportingDocuments({
           </Stack>
 
           {onFile && (
-            <Box sx={{ mt: 3, display: "flex", flexWrap: "wrap", gap: 1 }}>
-              {[
-                ["Bank statement", onFile.bank_statement],
-                ["Financials", onFile.financials],
-              ].map(([label, name]) => (
+            <Box sx={{ mt: 3 }}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: "#64748b",
+                  mb: 1,
+                }}
+              >
+                Documents on file
+              </Typography>
+
+              <Stack direction="row" flexWrap="wrap" gap={1}>
                 <Chip
-                  key={label}
                   size="small"
-                  label={`${label}: ${name ? "on file" : "not provided"}`}
+                  label={`Bank statements: ${
+                    onFile.bank_statements?.length || 0
+                  } / 6 uploaded`}
                   sx={{
                     fontWeight: 700,
-                    bgcolor: name ? "#dcfce7" : "#f1f5f9",
-                    color: name ? "#15803d" : "#64748b",
+                    bgcolor:
+                      onFile.bank_statements?.length > 0 ? "#dcfce7" : "#f1f5f9",
+                    color:
+                      onFile.bank_statements?.length > 0 ? "#15803d" : "#64748b",
                   }}
                 />
-              ))}
+
+                <Chip
+                  size="small"
+                  label={`Financials: ${
+                    onFile.financials ? "on file" : "not provided"
+                  }`}
+                  sx={{
+                    fontWeight: 700,
+                    bgcolor: onFile.financials ? "#dcfce7" : "#f1f5f9",
+                    color: onFile.financials ? "#15803d" : "#64748b",
+                  }}
+                />
+              </Stack>
             </Box>
           )}
         </Paper>
