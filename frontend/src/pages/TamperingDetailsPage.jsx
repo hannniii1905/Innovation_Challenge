@@ -99,42 +99,6 @@ export default function TamperingDetailsPage({ bankOcr, companyName, referenceNu
           </Stack>
         </Paper>
 
-        {totalCredits > 0 && (
-          <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: "1px solid #e5e7eb", boxShadow: "0 10px 24px rgba(15,23,42,.06)", mb: 4 }}>
-            <Typography sx={{ fontSize: 18, fontWeight: 800, mb: 3 }}>
-              Impact on Assessed Turnover
-            </Typography>
-            <Stack spacing={2}>
-              <Box>
-                <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                  <Typography fontSize={14} color="text.secondary">Total statement credits:</Typography>
-                  <Typography fontWeight={800}>${Number(totalCredits).toLocaleString()}</Typography>
-                </Stack>
-                <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                  <Typography fontSize={14} color="text.secondary">Flagged suspicious volume: </Typography>
-                  <Typography fontWeight={800} color="#b91c1c">-${Number(bankOcr?.flagged_kiting_volume || 0).toLocaleString()}</Typography>
-                </Stack>
-                <Divider sx={{ my: 1 }} />
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography fontSize={14} fontWeight={700}>True adjusted turnover:</Typography>
-                  <Typography fontWeight={900} color="#15803d">
-                    ${Number(totalCredits - (bankOcr?.flagged_kiting_volume || 0)).toLocaleString()}
-                  </Typography>
-                </Stack>
-              </Box>
-              <LinearProgress
-                variant="determinate"
-                value={Math.min(100, ((bankOcr?.flagged_kiting_volume || 0) / totalCredits) * 100)}
-                sx={{ height: 10, borderRadius: 99, bgcolor: "#e5e7eb", "& .MuiLinearProgress-bar": { bgcolor: "#dc2626" } }}
-              />
-              <Typography fontSize={13} color="text.secondary">
-                {(bankOcr?.flagged_kiting_volume || 0) > 0
-                  ? `${((bankOcr?.flagged_kiting_volume / totalCredits) * 100).toFixed(1)}% of total credits are flagged as potentially inflated — this volume is subtracted from assessed turnover.`
-                  : "No credit volume was flagged."}
-              </Typography>
-            </Stack>
-          </Paper>
-        )}
 
         {credits.length > 0 ? (
           <Stack spacing={3}>

@@ -123,12 +123,44 @@ def _build_underwriting_summary(app_record, result: dict) -> dict:
     # --- Bank statement OCR (sanitized; drop non-serializable objects) ---
     bank = result.get("bank") or {}
     raw_credits = bank.get("suspicious_credits") or []
+    transactions = bank.get("transactions") or []
+
+    def get_transaction_type(tx):
+        if isinstance(tx, dict):
+            return str(
+                tx.get("transaction_type")
+                or tx.get("type")
+                or ""
+            ).strip().lower()
+
+        return str(
+            getattr(tx, "transaction_type", None)
+            or getattr(tx, "type", "")
+        ).strip().lower()
+
+
+    credit_transaction_count = sum(
+        1
+        for tx in transactions
+        if get_transaction_type(tx) == "credit"
+    )
+
+    debit_transaction_count = sum(
+        1
+        for tx in transactions
+        if get_transaction_type(tx) == "debit"
+    )
+
+    total_transaction_count = len(transactions)
     bank_ocr = {
         "bank": bank.get("bank"),
         "total_credits": round(float(bank.get("raw_credits_total", 0) or 0), 2),
         "flagged_kiting_volume": round(float(bank.get("flagged_kiting_volume", 0) or 0), 2),
         "detected_loans": bank.get("detected_loans_count", 0),
         "has_fraud_tampering": bool(bank.get("has_fraud_tampering", False)),
+        "total_transaction_count": total_transaction_count,
+        "credit_transaction_count": credit_transaction_count,
+        "debit_transaction_count": debit_transaction_count,        
         "suspicious_credits": [
             {
                 "date": sc.transaction.date,
@@ -270,13 +302,17 @@ def _run_credit_flash_model(app_record, bank_ocr, credit_bureau, litigation, lig
 
     reasons = []
 
-    if bank_ocr.get("flagged_kiting_volume", 0) > 0:
-        pd += 8.0
-        reasons.append("Credit-kiting patterns detected")
+    has_kiting = bank_ocr.get("flagged_kiting_volume", 0) > 0
+    has_integrity_issue = bank_ocr.get("has_fraud_tampering", False)
 
-    if bank_ocr.get("has_fraud_tampering"):
+    if has_kiting:
+        pd += 8.0
+
+    if has_integrity_issue:
         pd += 10.0
-        reasons.append("Bank statement integrity flag")
+
+    if has_kiting or has_integrity_issue:
+        reasons.append("Credit-kiting detected")
 
     if litigation.get("high_risk"):
         pd += 6.0
@@ -714,10 +750,28 @@ def get_approver_application(application_id: int, db: Session = Depends(get_db))
         db.query(StagedApplication)
         .filter(StagedApplication.id == application_id)
         .first()
+        
     )
 
     if not app_record:
         raise HTTPException(status_code=404, detail="Application not found.")
+    
+    profile = _profile_by_uen(app_record.uen) or {}
+    singpass = app_record.singpass_profile_json or {}
+
+    person = (
+        singpass.get("person")
+        or singpass.get("applicant")
+        or singpass.get("personal")
+        or {}
+    )
+
+    profile_directors = (
+        profile.get("directors")
+        or profile.get("keymen")
+        or singpass.get("keymen")
+        or []
+    )
 
     return {
         "application_id": app_record.id,
@@ -748,6 +802,37 @@ def get_approver_application(application_id: int, db: Session = Depends(get_db))
             "income_statement": os.path.basename(app_record.income_statement_path) if app_record.income_statement_path else None,
             "financials": os.path.basename(app_record.financials_path) if app_record.financials_path else None,
             "ic": os.path.basename(app_record.ic_path) if app_record.ic_path else None,
+        },
+        "company_profile": {
+            "company_name": (
+                profile.get("company_name")
+                or profile.get("companyName")
+                or app_record.company_name
+            ),
+            "uen": profile.get("uen") or app_record.uen,
+            "industry": profile.get("industry") or app_record.industry,
+            "incorporation_date": (
+                profile.get("incorporation_date")
+                or profile.get("incorporationDate")
+                or singpass.get("incorporationDate")
+            ),
+            "company_status": profile.get("company_status") or "Live Company",
+            "directors": profile_directors,
+            "mobile": (
+                person.get("mobile")
+                or singpass.get("mobile")
+                or profile.get("mobile")
+                or profile.get("contact_mobile")
+                or (profile.get("contact") or {}).get("mobile")
+            ),
+
+            "email": (
+                person.get("email")
+                or singpass.get("email")
+                or profile.get("email")
+                or profile.get("contact_email")
+                or (profile.get("contact") or {}).get("email")
+            ),
         },
     }
 

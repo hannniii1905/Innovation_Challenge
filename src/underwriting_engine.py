@@ -133,6 +133,7 @@ class UnderwritingEngine:
             "suspicious_credits": suspicious_credits,
             "statement_period": statement_period,
             "credit_kiting_findings": credit_kiting_findings,
+            "transactions": transactions,
         }
    
     def _analyse_income_statement(self, app_record):

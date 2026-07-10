@@ -105,7 +105,47 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
   const singpass = application?.singpass_profile || {};
   const propertyOwnership = singpass.propertyOwnership;
   const rentAmount = singpass.rentAmount;
+  const companyProfile = application?.company_profile || {};
+  const profileDirectors =
+    companyProfile.directors ||
+    singpass.keymen ||
+    application?.personal_guarantors ||
+    [];
 
+  const directorNames = profileDirectors
+    .map((director) =>
+      typeof director === "string"
+        ? director
+        : director?.name || director?.fullName
+    )
+    .filter(Boolean);
+
+
+  const incorporationDate =
+    companyProfile.incorporation_date ||
+    uw.acra?.registration_date ||
+    singpass.incorporationDate ||
+    "—";
+
+  const displayRiskFlags = [
+    ...new Set(
+      (application?.risk_flags || []).map((flag) => {
+        if (
+          flag === "Credit-kiting patterns detected" ||
+          flag === "Bank statement integrity flag"
+        ) {
+          return "Credit-kiting detected";
+        }
+
+        if (flag === "AML / blacklist hit") {
+          return "Light KYC review required";
+        }
+
+        return flag;
+      })
+    ),
+  ];
+  
   if (loading) {
     return (
       <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", bgcolor: "#f6f8fc" }}>
@@ -149,209 +189,595 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
       </Box>
 
       <Box sx={{ maxWidth: 1250, mx: "auto", p: 4 }}>
-        <Paper elevation={0} sx={{ p: 4, borderRadius: 4, border: "1px solid #e5e7eb", boxShadow: "0 12px 28px rgba(15,23,42,.08)", mb: 4 }}>
-          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems="flex-start" spacing={3}>
-            <Box>
-              <Typography sx={{ fontSize: 24, fontWeight: 800 }}>
-                {application.company_name}
-              </Typography>
-              <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-                {application.reference_number} · UEN {application.uen}
-              </Typography>
-            </Box>
-
-            <Stack direction="row" spacing={4} alignItems="center" sx={{ whiteSpace: "nowrap", pt: 0.3 }}>
-              <Box>
-                <Typography color="text.secondary" sx={{ fontSize: 15, fontWeight: 700, display: "inline", mr: 1 }}>
-                  AI Recommendation:
-                </Typography>
-                <Chip label={decisionLabel} color={decisionColor} sx={{ fontWeight: 800, fontSize: 14 }} />
-              </Box>
-              {propertyOwnership && (
-                <Box>
-                  <Typography color="text.secondary" sx={{ fontSize: 15, fontWeight: 700, display: "inline", mr: 1 }}>
-                    Business Premises:
-                  </Typography>
-                  <Chip
-                    label={propertyOwnership === "owned" ? "Owned by Company" : `Rented – S$${Number(rentAmount || 0).toLocaleString()} / month`}
-                    sx={{ fontWeight: 800, bgcolor: "#dbeafe", color: "#1d4ed8", fontSize: 14 }}
-                  />
-                </Box>
-              )}
-            </Stack>
-          </Stack>
-        </Paper>
+        <CompanyOverview
+          application={application}
+          companyProfile={companyProfile}
+          directorNames={directorNames}
+          incorporationDate={incorporationDate}
+          decisionLabel={decisionLabel}
+          decisionColor={decisionColor}
+          propertyOwnership={propertyOwnership}
+          rentAmount={rentAmount}
+        />        
 
         <EvidenceSection application={application} formatCurrency={formatCurrency} onViewTampering={onViewTampering} onViewLitigation={onViewLitigation} />
 
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 7 }}>
-            <Panel title="AI Decision Rationale">
-              <Typography color="text.secondary" sx={{ lineHeight: 1.8 }}>
-                {application.system_reason}
-              </Typography>
-            </Panel>
+        <FinalAssessmentSummary
+          application={application}
+          displayRiskFlags={displayRiskFlags}
+          onViewTampering={onViewTampering}
+          onViewLitigation={onViewLitigation}
+          onViewRiskFlag={onViewRiskFlag}
+        />
 
-            <Panel title="Risk Flags">
-              {application.risk_flags && application.risk_flags.length > 0 ? (
-                <Stack spacing={1.5}>
-                  {application.risk_flags.map((flag, index) => {
-                    const displayFlag = flag === "AML / blacklist hit" ? "Light KYC review required" : flag;
-                    const flagLower = flag.toLowerCase();
-                    const isTampering = flagLower.includes("bank statement integrity") || flagLower.includes("tampering");
-                    const isLitigation = flagLower.includes("litigation") || flagLower.includes("charge");
-                    return (
-                      <Button
-                        key={index}
-                        fullWidth
-                        variant="outlined"
-                        onClick={() => {
-                          if (isTampering) onViewTampering?.(application);
-                          else if (isLitigation) onViewLitigation?.(application);
-                          else onViewRiskFlag?.(displayFlag, application);
-                        }}
-                        sx={{
-                          p: 2,
-                          borderRadius: 3,
-                          justifyContent: "flex-start",
-                          textTransform: "none",
-                          borderColor: "#fecaca",
-                          bgcolor: "#fef2f2",
-                          "&:hover": { bgcolor: "#fee2e2", borderColor: "#fca5a5" },
-                        }}
-                      >
-                        <Typography fontWeight={700} color="#b91c1c" textAlign="left">
-                          ⚠️ {displayFlag}
-                        </Typography>
-                      </Button>
-                    );
-                  })}
-                </Stack>
-              ) : (
-                <Typography color="text.secondary">No material risk flags surfaced by the automated assessment.</Typography>
-              )}
-            </Panel>
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 5 }}>
-            <Panel title="Financial Indicators">
-              <Stack spacing={1.6}>
-                <SummaryRow label="Annualised Revenue" value={fin.annualised_revenue != null ? formatCurrency(fin.annualised_revenue) : formatCurrency(application.annualised_revenue)} />
-                <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", columnGap: 3, alignItems: "center" }}>
-                  <Typography color="text.secondary">DSCR</Typography>
-                  <Typography
-                    fontWeight={700}
-                    textAlign="right"
-                    sx={{
-                      color:
-                        fin.dscr >= 2.0
-                          ? "#15803d"
-                          : fin.dscr >= 1.5
-                          ? "#1d4ed8"
-                          : fin.dscr >= 1.2
-                          ? "#b45309"
-                          : fin.dscr >= 1.0
-                          ? "#b91c1c"
-                          : "#991b1b",
-                      bgcolor:
-                        fin.dscr >= 2.0
-                          ? "#dcfce7"
-                          : fin.dscr >= 1.5
-                          ? "#eff6ff"
-                          : fin.dscr >= 1.2
-                          ? "#fef3c7"
-                          : fin.dscr >= 1.0
-                          ? "#fee2e2"
-                          : "#fef2f2",
-                      px: 1.5,
-                      py: 0.3,
-                      borderRadius: 1.5,
-                      fontSize: 17,
-                    }}
-                  >
-                    {fin.dscr != null ? fin.dscr.toFixed(2) : application.dscr ?? "-"}
-                  </Typography>
-                </Box>
-                <SummaryRow label="Existing Debt" value={application.existing_debt != null ? formatCurrency(application.existing_debt) : "—"} />
-                <SummaryRow label="Credit Kiting Score" value={application.credit_kiting_score != null ? `${application.credit_kiting_score}/100` : "—"} />
-                <SummaryRow label="Industry" value={application.industry || "-"} />
-                <Divider sx={{ my: 1 }} />
-                <SummaryRow label="MUE" value={fin.mue != null ? formatCurrency(fin.mue) : "—"} />
-                <SummaryRow label="FCC (avg closing balance)" value={fin.fcc != null ? formatCurrency(fin.fcc) : "—"} />
-                <SummaryRow label="Tangible Net Worth" value={fin.tnw != null ? formatCurrency(fin.tnw) : "—"} />
-                <SummaryRow label="EBITDA" value={fin.ebitda != null ? `${formatCurrency(fin.ebitda)}${fin.ebitda_margin != null ? ` (${fin.ebitda_margin}%)` : ""}` : "—"} />
-                <SummaryRow label="Serviceable income" value={fin.serviceable_income != null ? formatCurrency(fin.serviceable_income) : "—"} />
-                <SummaryRow label="Monthly debt service" value={fin.monthly_debt_service != null ? formatCurrency(fin.monthly_debt_service) : "—"} />
-                <SummaryRow label="Annual debt service" value={fin.annual_debt_service != null ? formatCurrency(fin.annual_debt_service) : "—"} />
-              </Stack> 
-            </Panel>
-
-            <Panel title="Approver Action">
-              <Typography color="text.secondary" sx={{ mb: 3 }}>
-                Final decision must be confirmed by a Credit Approver.
-              </Typography>
-
-              <TextField
-                fullWidth
-                multiline
-                minRows={3}
-                label="Approver Notes"
-                placeholder="Add rationale, conditions, or follow-up instructions."
-                value={approverNotes}
-                onChange={(e) => setApproverNotes(e.target.value)}
-                sx={{ mb: 3 }}
-              />
-
-              <Stack spacing={1.5}>
-                <Button
-                  variant="contained"
-                  color="success"
-                  fullWidth
-                  disabled={decisionLoading}
-                  sx={{ borderRadius: 3, fontWeight: 800 }}
-                  onClick={() => handleDecision("APPROVED")}
-                >
-                  Approve
-                </Button>
-
-                <Button
-                  variant="contained"
-                  color="warning"
-                  fullWidth
-                  disabled={decisionLoading}
-                  sx={{ borderRadius: 3, fontWeight: 800 }}
-                  onClick={() => handleDecision("SUBJECT TO APPROVAL")}
-                >
-                  Counter-offer / Subject to Approval
-                </Button>
-
-                <Button
-                  variant="contained"
-                  color="error"
-                  fullWidth
-                  disabled={decisionLoading}
-                  sx={{ borderRadius: 3, fontWeight: 800 }}
-                  onClick={() => handleDecision("REJECTED")}
-                >
-                  Reject
-                </Button>
-              </Stack>
-            </Panel>
-          </Grid>
-        </Grid>
+        <ApproverActionPanel
+          application={application}
+          approverNotes={approverNotes}
+          setApproverNotes={setApproverNotes}
+          decisionLoading={decisionLoading}
+          handleDecision={handleDecision}
+        />
       </Box>
     </Box>
   );
 }
 
+function ApproverActionPanel({
+  application,
+  approverNotes,
+  setApproverNotes,
+  decisionLoading,
+  handleDecision,
+}) {
+  return (
+    <Panel title="Approver Action">
+      <Grid container spacing={3} alignItems="flex-start">
+        <Grid size={{ xs: 12, md: 7 }}>
+          <Typography color="text.secondary" sx={{ mb: 2 }}>
+            Record the final credit decision after reviewing the evidence and
+            automated recommendation.
+          </Typography>
+
+          <TextField
+            fullWidth
+            multiline
+            minRows={4}
+            label="Approver Notes"
+            placeholder="Add rationale, conditions, or follow-up instructions."
+            value={approverNotes}
+            onChange={(event) => setApproverNotes(event.target.value)}
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 5 }}>
+          <Stack spacing={1.3}>
+            <Button
+              variant="contained"
+              color="success"
+              fullWidth
+              disabled={decisionLoading}
+              sx={{ borderRadius: 3, fontWeight: 850, py: 1.2 }}
+              onClick={() => handleDecision("APPROVED")}
+            >
+              Approve
+            </Button>
+
+            <Button
+              variant="contained"
+              color="warning"
+              fullWidth
+              disabled={decisionLoading}
+              sx={{ borderRadius: 3, fontWeight: 850, py: 1.2 }}
+              onClick={() => handleDecision("SUBJECT TO APPROVAL")}
+            >
+              Counter-offer / Subject to Approval
+            </Button>
+
+            <Button
+              variant="contained"
+              color="error"
+              fullWidth
+              disabled={decisionLoading}
+              sx={{ borderRadius: 3, fontWeight: 850, py: 1.2 }}
+              onClick={() => handleDecision("REJECTED")}
+            >
+              Reject
+            </Button>
+          </Stack>
+        </Grid>
+      </Grid>
+    </Panel>
+  );
+}
+
+function FinalAssessmentSummary({
+  application,
+  displayRiskFlags,
+  onViewTampering,
+  onViewLitigation,
+  onViewRiskFlag,
+}) {
+  return (
+    <Panel title="Final Assessment Summary">
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 7 }}>
+          <Typography
+            sx={{
+              fontSize: 12,
+              fontWeight: 900,
+              color: "#64748b",
+              textTransform: "uppercase",
+              letterSpacing: ".06em",
+              mb: 1,
+            }}
+          >
+            AI Decision Rationale
+          </Typography>
+
+          <Typography
+            color="text.secondary"
+            sx={{
+              lineHeight: 1.8,
+              fontSize: 14,
+            }}
+          >
+            {application.system_reason}
+          </Typography>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 5 }}>
+          <Typography
+            sx={{
+              fontSize: 12,
+              fontWeight: 900,
+              color: "#64748b",
+              textTransform: "uppercase",
+              letterSpacing: ".06em",
+              mb: 1,
+            }}
+          >
+            Key Risk Flags
+          </Typography>
+
+          {displayRiskFlags.length > 0 ? (
+            <Stack spacing={1}>
+              {displayRiskFlags.map((flag, index) => {
+                const flagLower = flag.toLowerCase();
+
+                const isCreditKiting =
+                  flagLower.includes("credit-kiting") ||
+                  flagLower.includes("bank statement integrity");
+
+                const isLitigation =
+                  flagLower.includes("litigation") ||
+                  flagLower.includes("charge");
+
+                return (
+                  <Button
+                    key={`${flag}-${index}`}
+                    fullWidth
+                    variant="outlined"
+                    onClick={() => {
+                      if (isCreditKiting) {
+                        onViewTampering?.(application);
+                      } else if (isLitigation) {
+                        onViewLitigation?.(application);
+                      } else {
+                        onViewRiskFlag?.(flag, application);
+                      }
+                    }}
+                    sx={{
+                      p: 1.35,
+                      borderRadius: 2.5,
+                      justifyContent: "flex-start",
+                      textTransform: "none",
+                      borderColor: "#fecaca",
+                      bgcolor: "#fffafa",
+                      "&:hover": {
+                        bgcolor: "#fef2f2",
+                        borderColor: "#fca5a5",
+                      },
+                    }}
+                  >
+                    <Typography
+                      fontSize={13}
+                      fontWeight={800}
+                      color="#b91c1c"
+                      textAlign="left"
+                    >
+                      ⚠ {flag}
+                    </Typography>
+                  </Button>
+                );
+              })}
+            </Stack>
+          ) : (
+            <Box
+              sx={{
+                p: 1.8,
+                borderRadius: 2.5,
+                bgcolor: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+              }}
+            >
+              <Typography fontSize={13} fontWeight={800} color="#15803d">
+                No material risk flags identified.
+              </Typography>
+            </Box>
+          )}
+        </Grid>
+      </Grid>
+    </Panel>
+  );
+}
+
 function Panel({ title, children }) {
   return (
-    <Paper elevation={0} sx={{ p: 3.5, borderRadius: 4, border: "1px solid #e5e7eb", boxShadow: "0 10px 24px rgba(15,23,42,.06)", mb: 3 }}>
-      <Typography sx={{ fontSize: 18, fontWeight: 800, mb: 2 }}>
-        {title}
-      </Typography>
+    <Paper
+      elevation={0}
+      sx={{
+        p: 3.5,
+        borderRadius: 4,
+        border: "1px solid #e5e7eb",
+        boxShadow: "0 10px 24px rgba(15,23,42,.06)",
+        mb: 3,
+        width: "100%",
+      }}
+    >
+      {title && (
+        <Typography sx={{ fontSize: 18, fontWeight: 800, mb: 2 }}>
+          {title}
+        </Typography>
+      )}
+
       {children}
     </Paper>
+  );
+}
+function CompanyOverview({
+  application,
+  companyProfile,
+  directorNames,
+  directorContacts,
+  incorporationDate,
+  decisionLabel,
+  decisionColor,
+  propertyOwnership,
+  rentAmount,
+}) {
+  const documents = [
+    { key: "bank_statement", label: "Corporate Bank Statement" },
+    { key: "income_statement", label: "IRAS Income Statement" },
+    { key: "financials", label: "Company Financials" },
+    { key: "ic", label: "NRIC / ID Copy" },
+  ].filter((doc) => application?.files?.[doc.key]);
+
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        p: 4,
+        borderRadius: 4,
+        border: "1px solid #e5e7eb",
+        boxShadow: "0 12px 28px rgba(15,23,42,.08)",
+        mb: 4,
+      }}
+    >
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", md: "flex-start" }}
+        spacing={3}
+      >
+        <Box>
+          <Typography
+            sx={{
+              fontSize: 24,
+              fontWeight: 900,
+              color: "#0f172a",
+              letterSpacing: "-0.025em",
+            }}
+          >
+            {application.company_name}
+          </Typography>
+
+          <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+            {application.reference_number} · UEN {application.uen}
+          </Typography>
+        </Box>
+
+        <Stack
+          direction="row"
+          spacing={1.2}
+          flexWrap="wrap"
+          useFlexGap
+          justifyContent={{ xs: "flex-start", md: "flex-end" }}
+        >
+          <Chip
+            label={decisionLabel}
+            color={decisionColor}
+            sx={{ fontWeight: 850 }}
+          />
+
+        </Stack>
+      </Stack>
+
+      <Divider sx={{ my: 3 }} />
+
+      <Grid container spacing={1.6}>
+        {[
+          {
+            label: "Industry",
+            value: companyProfile.industry || application.industry || "—",
+            size: { xs: 12, md: 4 },
+          },
+          {
+            label: "Incorporation Date",
+            value: incorporationDate,
+            size: { xs: 12, sm: 6, md: 2.5 },
+          },
+          {
+            label: "Company Status",
+            value: companyProfile.company_status || "Live Company",
+            size: { xs: 12, sm: 6, md: 2.5 },
+          },
+          {
+            label: "Requested Amount",
+            value: `$${Number(
+              application.requested_quantum || 0
+            ).toLocaleString()}`,
+            size: { xs: 12, sm: 6, md: 3 },
+          },
+          {
+            label: "Business Premises",
+            value:
+              propertyOwnership === "owned"
+                ? "Owned by company"
+                : propertyOwnership === "rented"
+                ? `Rented · S$${Number(rentAmount || 0).toLocaleString()} per month`
+                : "—",
+            size: { xs: 12, sm: 6, md: 3 },
+          },
+          {
+            label: "Directors",
+            value:
+              directorNames.length > 0
+                ? directorNames.join(", ")
+                : "No director information available",
+            size: { xs: 12, md: 9 },
+          },
+        ].map((item) => (
+          <Grid key={item.label} size={item.size}>
+            <CompanyField label={item.label} value={item.value} />
+          </Grid>
+        ))}
+      </Grid>
+
+
+
+      {documents.length > 0 && (
+        <>
+          <Divider sx={{ my: 3 }} />
+
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+            alignItems={{ xs: "flex-start", sm: "center" }}
+            spacing={1}
+            sx={{ mb: 1.8 }}
+          >
+            <Box>
+              <Typography sx={{ fontSize: 16, fontWeight: 900, color: "#0f172a" }}>
+                Supporting Documents
+              </Typography>
+
+              <Typography
+                fontSize={13}
+                color="text.secondary"
+                sx={{ mt: 0.4 }}
+              >
+                Documents submitted with this application.
+              </Typography>
+            </Box>
+
+            <Chip
+              label={`${documents.length} uploaded`}
+              size="small"
+              sx={{
+                fontWeight: 850,
+                bgcolor: "#eff6ff",
+                color: "#1d4ed8",
+                border: "1px solid #bfdbfe",
+              }}
+            />
+          </Stack>
+
+          <Grid container spacing={1.4}>
+            {documents.map((doc) => (
+              <Grid key={doc.key} size={{ xs: 12, sm: 6, md: 4 }}>
+                <Box
+                  sx={{
+                    p: 1.8,
+                    height: "100%",
+                    minHeight: 88,
+                    borderRadius: 3,
+                    bgcolor: "#ffffff",
+                    border: "1px solid #dbe3ee",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 1.5,
+                  }}
+                >
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography
+                      sx={{
+                        fontSize: 14,
+                        fontWeight: 850,
+                        color: "#0f172a",
+                      }}
+                    >
+                      {doc.label}
+                    </Typography>
+
+                    <Typography
+                      fontSize={12}
+                      color="text.secondary"
+                      noWrap
+                      sx={{ mt: 0.4 }}
+                    >
+                      {application.files[doc.key]}
+                    </Typography>
+                  </Box>
+
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    href={getApplicationFileUrl(
+                      application.application_id,
+                      doc.key
+                    )}
+                    target="_blank"
+                    sx={{
+                      flexShrink: 0,
+                      borderRadius: 2.5,
+                      textTransform: "none",
+                      fontWeight: 850,
+                    }}
+                  >
+                    Open
+                  </Button>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        </>
+      )}
+    </Paper>
+  );
+}
+
+function CompanyField({ label, value }) {
+  return (
+    <Box
+      sx={{
+        p: 2,
+        height: "100%",
+        minHeight: 92,
+        borderRadius: 3,
+        bgcolor: "#f8fafc",
+        border: "1px solid #e5e7eb",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+      }}
+    >
+      <Typography
+        sx={{
+          fontSize: 11,
+          fontWeight: 900,
+          color: "#64748b",
+          textTransform: "uppercase",
+          letterSpacing: ".06em",
+          lineHeight: 1.2,
+        }}
+      >
+        {label}
+      </Typography>
+
+      <Typography
+        sx={{
+          mt: 0.8,
+          fontSize: 16,
+          fontWeight: 850,
+          color: "#0f172a",
+          lineHeight: 1.45,
+          overflowWrap: "anywhere",
+        }}
+      >
+        {value || "—"}
+      </Typography>
+    </Box>
+  );
+}
+
+function FinancialIndicatorsPanel({ application, fin, formatCurrency }) {
+  return (
+    <Panel title="Financial Indicators">
+      <Stack spacing={0.2}>
+        <SummaryRow
+          label="Annualised Revenue"
+          value={
+            fin.annualised_revenue != null
+              ? formatCurrency(fin.annualised_revenue)
+              : formatCurrency(application.annualised_revenue)
+          }
+        />
+
+        <SummaryRow
+          label="DSCR"
+          value={
+            fin.dscr != null
+              ? Number(fin.dscr).toFixed(2)
+              : application.dscr ?? "—"
+          }
+        />
+
+        <SummaryRow
+          label="Existing Debt"
+          value={
+            application.existing_debt != null
+              ? formatCurrency(application.existing_debt)
+              : "—"
+          }
+        />
+
+        <SummaryRow
+          label="Credit-kiting Score"
+          value={
+            application.credit_kiting_score != null
+              ? `${application.credit_kiting_score}/100`
+              : "—"
+          }
+        />
+
+        <SummaryRow
+          label="Tangible Net Worth"
+          value={fin.tnw != null ? formatCurrency(fin.tnw) : "—"}
+        />
+
+        <SummaryRow
+          label="EBITDA"
+          value={
+            fin.ebitda != null
+              ? `${formatCurrency(fin.ebitda)}${
+                  fin.ebitda_margin != null
+                    ? ` (${fin.ebitda_margin}%)`
+                    : ""
+                }`
+              : "—"
+          }
+        />
+
+        <SummaryRow
+          label="Serviceable Income"
+          value={
+            fin.serviceable_income != null
+              ? formatCurrency(fin.serviceable_income)
+              : "—"
+          }
+        />
+
+        <SummaryRow
+          label="Monthly Debt Service"
+          value={
+            fin.monthly_debt_service != null
+              ? formatCurrency(fin.monthly_debt_service)
+              : "—"
+          }
+        />
+      </Stack>
+    </Panel>
   );
 }
 
@@ -426,10 +852,32 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
   const fin = uw.financials || {};
   const kiting = uw.credit_kiting || {};
   const debt = uw.existing_debt || {};
+  const flaggedVolume = Number(
+    bank.flagged_kiting_volume ||
+      kiting.flagged_volume ||
+      0
+  );
+
+  const totalStatementCredits = Number(bank.total_credits || 0);
+
+  const trueAdjustedTurnover = Math.max(
+    0,
+    totalStatementCredits - flaggedVolume
+  );
+
+  const flaggedPercentage =
+    totalStatementCredits > 0
+      ? (flaggedVolume / totalStatementCredits) * 100
+      : 0;
 
   const rm = uw.risk_model || {};
   const pd = rm.pd_percent;
   const band = rm.rating_band;
+  const cueScore = Number(rm.cue_score ?? 14);
+  const cuePassed =
+    rm.cue_passed !== undefined
+      ? Boolean(rm.cue_passed)
+      : cueScore <= 12;
 
   const bandColor =
     band === "Low" || band === "Moderate"
@@ -496,107 +944,150 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
               </Box>
             </Grid>
 
-            <Grid size={{ xs: 12, md: 3 }}>
-              <Box
-                sx={{
-                  height: "100%",
-                  p: 3,
-                  borderRadius: 4,
-                  bgcolor: "#f8fbff",
-                  border: "1px solid #dbeafe",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                }}
-              >
-                <Typography
-                  sx={{
-                    fontSize: 12,
-                    fontWeight: 900,
-                    color: "#1d4ed8",
-                    textTransform: "uppercase",
-                    letterSpacing: ".08em",
-                  }}
-                >
-                  Model approved limit
-                </Typography>
-
-                <Typography sx={{ mt: 1, fontSize: 32, fontWeight: 950, color: "#0f172a" }}>
-                  {formatCurrency(rm.approved_limit)}
-                </Typography>
-
-                <Divider sx={{ my: 1.5 }} />
-
-                <Typography fontSize={13} color="text.secondary">
-                  Requested
-                </Typography>
-                <Typography fontSize={18} fontWeight={850} color="#0f172a">
-                  {formatCurrency(rm.requested_amount)}
-                </Typography>
-              </Box>
-            </Grid>
-
-          <Grid size={{ xs: 12, md: 3.5 }}>
+          <Grid size={{ xs: 12, md: 3 }}>
             <Box
               sx={{
                 height: "100%",
+                minHeight: 205,
                 p: 3,
                 borderRadius: 4,
-                bgcolor: rm.cue_passed ? "#f0fdf4" : "#fff7ed",
-                border: `1px solid ${rm.cue_passed ? "#bbf7d0" : "#fed7aa"}`,
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
+                bgcolor: cuePassed ? "#f0fdf4" : "#fff7ed",
+                border: `1px solid ${cuePassed ? "#bbf7d0" : "#fed7aa"}`,
+                display: "grid",
+                gridTemplateRows: "22px 52px 1px auto",
+                rowGap: 1.4,
               }}
             >
               <Typography
                 sx={{
                   fontSize: 12,
                   fontWeight: 900,
-                  color: rm.cue_passed ? "#047857" : "#c2410c",
+                  color: cuePassed ? "#047857" : "#c2410c",
                   textTransform: "uppercase",
                   letterSpacing: ".08em",
+                  lineHeight: "22px",
                 }}
               >
                 CUE Score
               </Typography>
 
-              <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mt: 1 }}>
+              <Stack
+                direction="row"
+                alignItems="center"
+                spacing={0.8}
+                sx={{ height: 52 }}
+              >
                 <Typography
                   sx={{
-                    fontSize: 46,
+                    fontSize: 34,
                     fontWeight: 950,
-                    color: rm.cue_passed ? "#047857" : "#c2410c",
+                    color: cuePassed ? "#047857" : "#c2410c",
                     lineHeight: 1,
-                    letterSpacing: "-0.05em",
+                    letterSpacing: "-0.04em",
                   }}
                 >
-                  {rm.cue_score ?? "—"}
+                  {cueScore}
                 </Typography>
 
-                <Typography fontSize={15} fontWeight={800} color="text.secondary">
+                <Typography
+                  sx={{
+                    fontSize: 16,
+                    fontWeight: 800,
+                    color: "#475569",
+                  }}
+                >
                   / 20
                 </Typography>
+
+                <Chip
+                  label={cuePassed ? "Pass" : "Review"}
+                  size="small"
+                  sx={{
+                    ml: "auto",
+                    height: 24,
+                    fontSize: 11,
+                    fontWeight: 900,
+                    bgcolor: cuePassed ? "#dcfce7" : "#ffedd5",
+                    color: cuePassed ? "#15803d" : "#c2410c",
+                    border: `1px solid ${cuePassed ? "#bbf7d0" : "#fed7aa"}`,
+                  }}
+                />
               </Stack>
 
-              <Chip
-                label={rm.cue_passed ? "Good" : "Review"}
-                size="small"
+              <Divider />
+
+              <Box>
+                <Typography
+                  fontSize={13}
+                  sx={{
+                    color: cuePassed ? "#047857" : "#c2410c",
+                    fontWeight: 750,
+                    lineHeight: 1.55,
+                  }}
+                >
+                  {cuePassed
+                    ? "CUE score passes the acceptable threshold."
+                    : "CUE score exceeds the acceptable threshold."}
+                </Typography>
+
+                <Typography fontSize={12} color="text.secondary" sx={{ mt: 0.5 }}>
+                  Passing threshold: 12 and below.
+                </Typography>
+              </Box>
+            </Box>
+          </Grid>
+          <Grid size={{ xs: 12, md: 3 }}>
+            <Box
+              sx={{
+                height: "100%",
+                minHeight: 205,
+                p: 3,
+                borderRadius: 4,
+                bgcolor: "#f8fbff",
+                border: "1px solid #dbeafe",
+                display: "grid",
+                gridTemplateRows: "22px 52px 1px auto",
+                rowGap: 1.4,
+              }}
+            >
+              <Typography
                 sx={{
-                  mt: 1.4,
-                  width: "fit-content",
+                  fontSize: 12,
                   fontWeight: 900,
-                  bgcolor: rm.cue_passed ? "#dcfce7" : "#ffedd5",
-                  color: rm.cue_passed ? "#15803d" : "#c2410c",
-                  border: `1px solid ${rm.cue_passed ? "#bbf7d0" : "#fed7aa"}`,
+                  color: "#1d4ed8",
+                  textTransform: "uppercase",
+                  letterSpacing: ".08em",
+                  lineHeight: "22px",
                 }}
-              />
-
-              <Divider sx={{ my: 1.6 }} />
-
-              <Typography fontSize={13} color="text.secondary" sx={{ lineHeight: 1.6 }}>
-                Good threshold: 12 and below. Higher CUE scores require additional credit review.
+              >
+                Model Approved Limit
               </Typography>
+
+              <Typography
+                sx={{
+                  fontSize: 34,
+                  fontWeight: 950,
+                  color: "#0f172a",
+                  lineHeight: 1,
+                  letterSpacing: "-0.04em",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                {formatCurrency(rm.approved_limit)}
+              </Typography>
+
+              <Divider />
+
+              <Box>
+                <Typography fontSize={13} color="text.secondary" sx={{ mb: 0.3 }}>
+                  Requested
+                </Typography>
+
+                <Typography fontSize={17} fontWeight={850} color="#0f172a">
+                  {formatCurrency(rm.requested_amount)}
+                </Typography>
+              </Box>
             </Box>
           </Grid>
           </Grid>
@@ -607,38 +1098,57 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
 
 
 
-    <Panel title="Bank Statement — OCR Extraction">
-      <Grid container spacing={2.2}>
+    <Panel title="Bank Statement Review">
+      <Typography
+        color="text.secondary"
+        sx={{ fontSize: 13, lineHeight: 1.6, mb: 2.5 }}
+      >
+        OCR-extracted statement data and automated checks for suspicious transaction
+        activity and document integrity.
+      </Typography>
+
+      {/* Statement summary */}
+      <Grid container spacing={1.5}>
         {[
           {
-            label: "Detected bank",
+            label: "Detected Bank",
             value: bank.bank || "—",
           },
           {
-            label: "Total credits",
-            value: bank.total_credits != null ? formatCurrency(bank.total_credits) : "—",
+            label: "Total Transactions",
+            value: bank.total_transaction_count ?? "—",
+            subtext:
+              bank.total_transaction_count != null
+                ? `${bank.credit_transaction_count ?? 0} credit · ${
+                    bank.debit_transaction_count ?? 0
+                  } debit`
+                : "",
           },
           {
-            label: "Loan repayments detected",
-            value: bank.detected_loans ?? "—",
+            label: "Total Credits",
+            value:
+              bank.total_credits != null
+                ? formatCurrency(bank.total_credits)
+                : "—",
           },
         ].map((item) => (
           <Grid key={item.label} size={{ xs: 12, md: 4 }}>
             <Box
               sx={{
-                p: 2.5,
-                borderRadius: 3.5,
+                p: 2.2,
+                height: "100%",
+                borderRadius: 3,
                 bgcolor: "#ffffff",
                 border: "1px solid #e5e7eb",
-                height: "100%",
               }}
             >
               <Typography
                 sx={{
-                  fontSize: 13,
-                  fontWeight: 750,
+                  fontSize: 11,
+                  fontWeight: 850,
                   color: "#64748b",
-                  mb: 1,
+                  textTransform: "uppercase",
+                  letterSpacing: ".05em",
                 }}
               >
                 {item.label}
@@ -646,200 +1156,233 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
 
               <Typography
                 sx={{
+                  mt: 0.65,
                   fontSize: 26,
                   fontWeight: 950,
                   color: "#0f172a",
-                  letterSpacing: "-0.03em",
+                  lineHeight: 1.1,
                 }}
               >
                 {item.value}
               </Typography>
+
+              {item.subtext && (
+                <Typography
+                  sx={{
+                    mt: 0.7,
+                    fontSize: 12.5,
+                    color: "#64748b",
+                    fontWeight: 700,
+                  }}
+                >
+                  {item.subtext}
+                </Typography>
+              )}
             </Box>
           </Grid>
         ))}
       </Grid>
 
-      <Box
-        sx={{
-          mt: 2.5,
-          p: 0,
-          borderRadius: 4,
-          overflow: "hidden",
-          border: `1px solid ${
-            bank.has_fraud_tampering || kiting.flagged ? "#fecaca" : "#bbf7d0"
-          }`,
-          bgcolor: bank.has_fraud_tampering || kiting.flagged ? "#fff7f7" : "#f0fdf4",
-        }}
-      >
-        <Grid container>
-          <Grid size={{ xs: 12, md: 3 }}>
-            <Box sx={{ p: 2.8 }}>
-              <Typography
-                sx={{
-                  fontSize: 13,
-                  fontWeight: 800,
-                  color: "#64748b",
-                  mb: 0.8,
-                }}
-              >
-                Credit-kiting risk score
-              </Typography>
+      {/* Credit-kiting assessment */}
+      <Box sx={{ mt: 3.2 }}>
+        <Typography
+          sx={{
+            fontSize: 15,
+            fontWeight: 900,
+            color: "#0f172a",
+            mb: 2,
+          }}
+        >
+          Credit-kiting Risk Assessment
+        </Typography>
 
-              <Typography
-                sx={{
-                  fontSize: 26,
-                  fontWeight: 950,
-                  color: kiting.flagged ? "#b91c1c" : "#15803d",
-                  letterSpacing: "-0.03em",
-                }}
-              >
-                {kiting.score != null ? `${kiting.score}/100` : "—"}
-              </Typography>
-            </Box>
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 3 }}>
-            <Box
+        <Grid container spacing={3} alignItems="center">
+          <Grid size={{ xs: 12, sm: 3 }}>
+            <Typography
               sx={{
-                p: 2.8,
-                height: "100%",
-                borderLeft: { xs: "none", md: "1px solid #fecaca" },
-                borderTop: { xs: "1px solid #fecaca", md: "none" },
+                fontSize: 11,
+                fontWeight: 900,
+                color: "#64748b",
+                textTransform: "uppercase",
+                letterSpacing: ".06em",
               }}
             >
-              <Typography
-                sx={{
-                  fontSize: 13,
-                  fontWeight: 800,
-                  color: "#64748b",
-                  mb: 0.8,
-                }}
-              >
-                Suspicious credit-kiting volume
-              </Typography>
+              Risk Score
+            </Typography>
 
-              <Typography
-                sx={{
-                  fontSize: 26,
-                  fontWeight: 950,
-                  color: bank.flagged_kiting_volume > 0 ? "#b91c1c" : "#15803d",
-                  letterSpacing: "-0.03em",
-                }}
-              >
-                {formatCurrency(bank.flagged_kiting_volume || kiting.flagged_volume || 0)}
-              </Typography>
-            </Box>
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 3 }}>
-            <Box
+            <Typography
               sx={{
-                p: 2.8,
-                height: "100%",
-                borderLeft: { xs: "none", md: "1px solid #fecaca" },
-                borderTop: { xs: "1px solid #fecaca", md: "none" },
+                mt: 0.55,
+                fontSize: 32,
+                fontWeight: 950,
+                color: kiting.flagged ? "#b91c1c" : "#15803d",
+                lineHeight: 1,
+                letterSpacing: "-0.04em",
               }}
             >
-              <Typography
-                sx={{
-                  fontSize: 13,
-                  fontWeight: 800,
-                  color: "#64748b",
-                  mb: 0.8,
-                }}
-              >
-                Statement integrity
-              </Typography>
-
-              <Typography
-                sx={{
-                  fontSize: 20,
-                  fontWeight: 950,
-                  color: bank.has_fraud_tampering ? "#b91c1c" : "#15803d",
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {bank.has_fraud_tampering ? "Tampering flagged" : "No tampering detected"}
-              </Typography>
-            </Box>
+              {kiting.score ?? 0}/100
+            </Typography>
           </Grid>
 
-          <Grid size={{ xs: 12, md: 3 }}>
-            <Box
+          <Grid size={{ xs: 12, sm: 3 }}>
+            <Typography
               sx={{
-                p: 2.8,
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: { xs: "flex-start", md: "flex-end" },
+                fontSize: 11,
+                fontWeight: 900,
+                color: "#64748b",
+                textTransform: "uppercase",
+                letterSpacing: ".06em",
               }}
             >
-              {bank.has_fraud_tampering ? (
-                <Button
-                  variant="contained"
-                  sx={{
-                    borderRadius: 3,
-                    fontWeight: 900,
-                    textTransform: "none",
-                    px: 3,
-                    py: 1.15,
-                    bgcolor: "#dc2626",
-                    "&:hover": { bgcolor: "#b91c1c" },
-                    boxShadow: "0 8px 18px rgba(220,38,38,.22)",
-                    whiteSpace: "nowrap",
-                  }}
-                  onClick={() => onViewTampering?.(application)}
-                >
-                  View details →
-                </Button>
-              ) : (
-                <Chip
-                  label={kiting.flagged ? "Kiting flagged" : "Verified"}
-                  sx={{
-                    fontWeight: 900,
-                    bgcolor: kiting.flagged ? "#fee2e2" : "#dcfce7",
-                    color: kiting.flagged ? "#b91c1c" : "#15803d",
-                  }}
-                />
-              )}
-            </Box>
+              Suspicious Credits Flagged
+            </Typography>
+
+            <Typography
+              sx={{
+                mt: 0.55,
+                fontSize: 26,
+                fontWeight: 950,
+                color: kiting.flagged ? "#b91c1c" : "#0f172a",
+                lineHeight: 1,
+                letterSpacing: "-0.03em",
+              }}
+            >
+              {bank.suspicious_credits?.length ?? 0}
+            </Typography>
+          </Grid>
+
+          <Grid
+            size={{ xs: 12, sm: 6 }}
+            sx={{
+              display: "flex",
+              justifyContent: { xs: "flex-start", sm: "flex-end" },
+              alignItems: "center",
+            }}
+          >
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => onViewTampering?.(application)}
+              sx={{
+                px: 2.2,
+                py: 0.85,
+                borderRadius: 2.5,
+                textTransform: "none",
+                fontWeight: 850,
+                color: "#b91c1c",
+                borderColor: "#fca5a5",
+                bgcolor: "#ffffff",
+                boxShadow: "none",
+                whiteSpace: "nowrap",
+                "&:hover": {
+                  bgcolor: "#fef2f2",
+                  borderColor: "#ef4444",
+                  boxShadow: "none",
+                },
+              }}
+            >
+              View details →
+            </Button>
           </Grid>
         </Grid>
-      </Box>
 
-      {kiting.patterns && kiting.patterns.length > 0 && (
-        <Box sx={{ mt: 2.5 }}>
-          <Typography sx={{ fontSize: 14, fontWeight: 900, mb: 1.5, color: "#0f172a" }}>
-            Flagged credit-kiting patterns from OCR
-          </Typography>
+        {/* Impact on assessed turnover */}
+        <Box
+          sx={{
+            mt: 2,
+            p: 2.4,
+            borderRadius: 3.5,
+            bgcolor: "#ffffff",
+            border: "1px solid #e5e7eb",
+            borderLeft: "4px solid #dc2626",
+            boxShadow: "0 8px 18px rgba(15,23,42,.04)",
+          }}
+        >
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+            alignItems={{ xs: "flex-start", sm: "flex-start" }}
+            spacing={2}
+            sx={{ mb: 2.3 }}
+          >
+            <Box>
+              <Typography
+                sx={{
+                  fontSize: 17,
+                  fontWeight: 900,
+                  color: "#0f172a",
+                }}
+              >
+                Impact on Assessed Turnover
+              </Typography>
 
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
-                <TableCell sx={{ fontWeight: 800 }}>Pattern</TableCell>
-                <TableCell sx={{ fontWeight: 800 }}>Counterparty</TableCell>
-                <TableCell sx={{ fontWeight: 800 }} align="right">
-                  Amount
-                </TableCell>
-              </TableRow>
-            </TableHead>
+              <Typography
+                fontSize={13}
+                color="text.secondary"
+                sx={{ mt: 0.65, lineHeight: 1.6 }}
+              >
+                Flagged suspicious credits are excluded from turnover used for credit assessment.
+              </Typography>
+            </Box>
 
-            <TableBody>
-              {kiting.patterns.map((p, i) => (
-                <TableRow key={i}>
-                  <TableCell>{p.date}</TableCell>
-                  <TableCell>{p.description}</TableCell>
-                  <TableCell>{p.counterparty}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>
-                    {formatCurrency(p.amount)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+           
+          </Stack>
+
+          <Grid container spacing={2.5}>
+            {[
+              {
+                label: "Total Statement Credits",
+                value: formatCurrency(totalStatementCredits),
+                color: "#0f172a",
+              },
+              {
+                label: "Less: Flagged Volume",
+                value: `−${formatCurrency(flaggedVolume)}`,
+                color: "#b91c1c",
+              },
+              {
+                label: "True Adjusted Turnover",
+                value: formatCurrency(trueAdjustedTurnover),
+                color: "#1d4ed8",
+              },
+            ].map((item) => (
+              <Grid key={item.label} size={{ xs: 12, sm: 4 }}>
+                <Box
+                  sx={{
+                    p: 1.6,
+                    borderRadius: 2.5,
+                    bgcolor: "#f8fafc",
+                    border: "1px solid #eef2f7",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontSize: 11,
+                      fontWeight: 850,
+                      color: "#64748b",
+                      textTransform: "uppercase",
+                      letterSpacing: ".05em",
+                    }}
+                  >
+                    {item.label}
+                  </Typography>
+
+                  <Typography
+                    sx={{
+                      mt: 0.45,
+                      fontSize: 21,
+                      fontWeight: 950,
+                      color: item.color,
+                    }}
+                  >
+                    {item.value}
+                  </Typography>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
         </Box>
-      )}
+      </Box>
     </Panel>
 
       {/* ACRA shareholders & personal guarantee */}
@@ -1031,53 +1574,6 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
         )}
       </Panel>
 
-      {/* Credit kiting detection
-      {kiting.score != null && (
-        <Panel title="Credit-Kiting Detection">
-          <Stack direction="row" spacing={3} alignItems="center" sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
-            <Box>
-              <Typography color="text.secondary" fontSize={13} fontWeight={700}>
-                Kiting risk score
-              </Typography>
-              <Typography sx={{ fontSize: 30, fontWeight: 900, color: kiting.flagged ? "#b91c1c" : "#15803d" }}>
-                {kiting.score}/100
-              </Typography>
-            </Box>
-            <Box>
-              <Typography color="text.secondary" fontSize={13} fontWeight={700}>
-                Flagged volume
-              </Typography>
-              <Typography sx={{ fontSize: 20, fontWeight: 800 }}>
-                {formatCurrency(kiting.flagged_volume || 0)}
-              </Typography>
-            </Box>
-            <PassChip passed={!kiting.flagged} passLabel="No kiting detected" failLabel="Kiting patterns flagged" />
-          </Stack>
-          {kiting.patterns && kiting.patterns.length > 0 && (
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Pattern</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Counterparty</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }} align="right">Amount</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {kiting.patterns.map((p, i) => (
-                  <TableRow key={i}>
-                    <TableCell>{p.date}</TableCell>
-                    <TableCell>{p.description}</TableCell>
-                    <TableCell>{p.counterparty}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(p.amount)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </Panel>
-      )} */}
-
       {/* Existing debt detection */}
       {debt.recurring_deductions && debt.recurring_deductions.length > 0 && (
         <Panel title="Existing Debt Detection — 6-Month Bank Statement Analysis">
@@ -1141,46 +1637,226 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <Panel title="Litigation Search">
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <Typography color="text.secondary" sx={{ mt: 0.3 }}>
-                Outstanding cases/charges: {litigation.count ?? 0}
-              </Typography>
-              {!litigation.passed ? (
-                <Button
-                  size="small"
-                  variant="contained"
+          <Panel title="">
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="flex-start"
+              spacing={2}
+              sx={{ mb: 2}}
+            >
+              <Box>
+                <Typography
                   sx={{
-                    borderRadius: 2,
-                    fontWeight: 800,
-                    textTransform: "none",
-                    px: 1.5,
-                    py: 0.8,
-                    bgcolor: "#d97706",
-                    "&:hover": { bgcolor: "#b45309" },
-                    boxShadow: "0 2px 8px rgba(217,119,6,.3)",
-                    mr: -0.5,
-                    mt: -0.5,
+                    fontSize: 18,
+                    fontWeight: 900,
+                    color: "#0f172a",
                   }}
-                  endIcon={<Typography sx={{ fontSize: 16, lineHeight: 1 }}>→</Typography>}
-                  onClick={() => onViewLitigation?.(application)}
                 >
-                  Issues Found
-                </Button>
-              ) : (
-                <PassChip passed={true} passLabel="Clear" failLabel="Found" />
-              )}
-            </Box>
-            {litigation.charges && litigation.charges.length > 0 && (
-              <Stack spacing={1} sx={{ mt: 1.5 }}>
-                {litigation.charges.map((c, i) => (
-                  <Typography key={i} fontSize={13} color="text.secondary">
-                    ⚠️ {c.chargee_bank || "Charge"} · {formatCurrency(c.charge_amount)} · {c.status}
-                  </Typography>
+                  Litigation Search
+                </Typography>
+
+                <Typography
+                  color="text.secondary"
+                  sx={{
+                    mt: 0.45,
+                    fontSize: 13,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Screening for outstanding legal cases, charges, and adverse records.
+                </Typography>
+              </Box>
+
+              <Chip
+                label={litigation.passed ? "Clear" : "Review Required"}
+                size="small"
+                sx={{
+                  fontWeight: 900,
+                  bgcolor: litigation.passed ? "#ecfdf5" : "#ffedd5",
+                  color: litigation.passed ? "#047857" : "#c2410c",
+                  border: `1px solid ${
+                    litigation.passed ? "#bbf7d0" : "#fed7aa"
+                  }`,
+                }}
+              />
+            </Stack>
+
+            {litigation.charges && litigation.charges.length > 0 ? (
+              <Stack spacing={1.2}>
+                {litigation.charges.map((charge, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      p: 2,
+                      borderRadius: 3,
+                      bgcolor: "#fffaf5",
+                      border: "1.5px solid #fdba74",
+                    }}
+                  >
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      justifyContent="space-between"
+                      alignItems={{ xs: "flex-start", sm: "flex-start" }}
+                      spacing={1.5}
+                    >
+                      <Box sx={{ flex: 1 }}>
+                        <Typography
+                          sx={{
+                            fontSize: 14,
+                            fontWeight: 900,
+                            color: "#9a3412",
+                          }}
+                        >
+                          {charge.chargee_bank || "Outstanding Charge"}
+                        </Typography>
+
+                        <Typography
+                          fontSize={13}
+                          color="text.secondary"
+                          sx={{ mt: 0.45, lineHeight: 1.55 }}
+                        >
+                          Legal charge recorded against the applicant.
+                        </Typography>
+
+                        <Stack
+                          direction="row"
+                          spacing={3}
+                          flexWrap="wrap"
+                          useFlexGap
+                          sx={{ mt: 1.2 }}
+                        >
+                          <Box>
+                            <Typography
+                              sx={{
+                                fontSize: 10.5,
+                                fontWeight: 850,
+                                color: "#64748b",
+                                textTransform: "uppercase",
+                                letterSpacing: ".05em",
+                              }}
+                            >
+                              Charge Amount
+                            </Typography>
+
+                            <Typography
+                              sx={{
+                                mt: 0.3,
+                                fontSize: 16,
+                                fontWeight: 900,
+                                color: "#0f172a",
+                              }}
+                            >
+                              {formatCurrency(charge.charge_amount)}
+                            </Typography>
+                          </Box>
+
+                          <Box>
+                            <Typography
+                              sx={{
+                                fontSize: 10.5,
+                                fontWeight: 850,
+                                color: "#64748b",
+                                textTransform: "uppercase",
+                                letterSpacing: ".05em",
+                              }}
+                            >
+                              Status
+                            </Typography>
+
+                            <Typography
+                              sx={{
+                                mt: 0.3,
+                                fontSize: 16,
+                                fontWeight: 900,
+                                color: "#c2410c",
+                              }}
+                            >
+                              {charge.status || "Open"}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </Box>
+                    </Stack>
+                  </Box>
                 ))}
               </Stack>
+            ) : (
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 3,
+                  bgcolor: "#ffffff",
+                  border: "1px solid #e5e7eb",
+                }}
+              >
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                >
+                  <Box>
+                    <Typography sx={{ fontWeight: 900, color: "#0f172a" }}>
+                      No outstanding litigation
+                    </Typography>
+
+                    <Typography
+                      fontSize={13}
+                      color="text.secondary"
+                      sx={{ mt: 0.35 }}
+                    >
+                      No adverse legal cases or charges were identified.
+                    </Typography>
+                  </Box>
+
+                  <Chip
+                    label="Clear"
+                    size="small"
+                    sx={{
+                      fontWeight: 900,
+                      bgcolor: "#ecfdf5",
+                      color: "#047857",
+                      border: "1px solid #bbf7d0",
+                    }}
+                  />
+                </Stack>
+              </Box>
+            )}
+
+            {!litigation.passed && (
+              <Box
+                sx={{
+                  mt: 1.5,
+                  display: "flex",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={() => onViewLitigation?.(application)}
+                  sx={{
+                    px: 0,
+                    minWidth: 0,
+                    textTransform: "none",
+                    fontWeight: 850,
+                    color: "#c2410c",
+                    "&:hover": {
+                      bgcolor: "transparent",
+                      textDecoration: "underline",
+                    },
+                  }}
+                >
+                  View details →
+                </Button>
+              </Box>
             )}
           </Panel>
+          <FinancialIndicatorsPanel
+            application={application}
+            fin={fin}
+            formatCurrency={formatCurrency}
+          />
         </Grid>
       </Grid>
 
@@ -1248,53 +1924,6 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
         </Panel>
       )}
 
-      {application?.files && Object.values(application.files).some(Boolean) && (
-        <Panel title="Uploaded Documents">
-          <Stack spacing={1.5}>
-            {[
-              { key: "bank_statement", label: "Corporate Bank Statement" },
-              { key: "income_statement", label: "IRAS Income Statement" },
-              { key: "financials", label: "Company Financials" },
-              { key: "ic", label: "NRIC / ID Copy" },
-            ].map((doc) => {
-              const filename = application.files[doc.key];
-              if (!filename) return null;
-              return (
-                <Box
-                  key={doc.key}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    p: 1.5,
-                    borderRadius: 2,
-                    bgcolor: "#f8fafc",
-                    border: "1px solid #e5e7eb",
-                  }}
-                >
-                  <Box>
-                    <Typography fontWeight={700} fontSize={14}>
-                      {doc.label}
-                    </Typography>
-                    <Typography fontSize={12} color="text.secondary">
-                      {filename}
-                    </Typography>
-                  </Box>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    href={getApplicationFileUrl(application.application_id, doc.key)}
-                    target="_blank"
-                    sx={{ borderRadius: 2, textTransform: "none", fontWeight: 700 }}
-                  >
-                    Open
-                  </Button>
-                </Box>
-              );
-            })}
-          </Stack>
-        </Panel>
-      )}
     </>
   );
 }

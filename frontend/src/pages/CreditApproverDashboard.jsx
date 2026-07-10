@@ -197,7 +197,7 @@ export default function CreditApproverDashboard({ openApplication, onViewHistory
           <MetricCard
             title="Rejected"
             value={`${summary.rejected_percentage || 0}%`}
-            subtitle="Declined for obvious reasons"
+            subtitle="Failed to meet key credit criteria"
             accent="#dc2626"
           />
         </Box>
