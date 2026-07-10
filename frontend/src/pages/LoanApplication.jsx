@@ -37,7 +37,7 @@ export default function LoanApplication({ application, setApplication, next, bac
 
   const validateConsent = () => {
     const consent = application.consent || {};
-    if (!consent.creditBureau || !consent.acra || !consent.screening || !consent.declaration) {
+    if (!consent.screening || !consent.declaration) {
       alert("Please complete all declaration and consent items before submitting.");
       return false;
     }
@@ -49,10 +49,6 @@ export default function LoanApplication({ application, setApplication, next, bac
   };
 
   const handleNext = () => {
-    if (step === 0 && !application.loanPurpose) {
-      alert("Please select a loan purpose.");
-      return;
-    }
     if (step === 1 && !validateDeclarations()) return;
     if (step === 2 && !validateDocuments()) return;
     if (step === 3) {

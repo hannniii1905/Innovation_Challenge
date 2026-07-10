@@ -4,8 +4,8 @@ import { Box } from "@mui/material";
 import DemoProfileSelector from "./pages/DemoProfileSelector";
 import SingpassLogin from "./pages/SingpassLogin";
 import UenLookup from "./pages/UenLookup";
-import KeymanApproval from "./pages/KeymanApproval";
 import MyInfoReview from "./pages/MyInfoReview";
+import PgVerification from "./pages/PgVerification";
 import LoanApplication from "./pages/LoanApplication";
 import SupportingDocuments from "./pages/SupportingDocuments";
 import InitialAssessment from "./pages/InitialAssessment";
@@ -48,8 +48,6 @@ export default function App() {
       financials: null,
     },
     consent: {
-      creditBureau: false,
-      acra: false,
       screening: false,
       declaration: false,
     },
@@ -81,7 +79,7 @@ export default function App() {
               loanPurpose: "Working Capital",
               declarations: { positiveEBITDA: "", positiveTNW: "", existingLoans: "", existingLoanDetails: "", industry: "" },
               uploads: { bankStatement: null, incomeStatement: null, ic: null, financials: null },
-              consent: { creditBureau: false, acra: false, screening: false, declaration: false },
+              consent: { screening: false, declaration: false },
               applicationId: null,
               referenceNumber: null,
               assessment: null,
@@ -109,7 +107,6 @@ export default function App() {
           application={application}
           setApplication={setApplication}
           next={() => setScreen("myInfoReview")}
-          needsKeymanApproval={() => setScreen("keymanApproval")}
           useUenInstead={() => setScreen("uenLookup")}
           back={() => setScreen("profile")}
           goHome={() => setScreen("profile")}
@@ -122,18 +119,7 @@ export default function App() {
         <UenLookup
           application={application}
           setApplication={setApplication}
-          next={() => setScreen("keymanApproval")}
-          back={() => setScreen("singpass")}
-          goHome={() => setScreen("profile")}
-        />
-      );
-      break;
-
-    case "keymanApproval":
-      page = (
-        <KeymanApproval
-          application={application}
-          next={() => setScreen("myInfoReview")}
+          next={() => setScreen("pgVerification")}
           back={() => setScreen("singpass")}
           goHome={() => setScreen("profile")}
         />
@@ -145,8 +131,24 @@ export default function App() {
         <MyInfoReview
           application={application}
           setApplication={setApplication}
-          next={() => setScreen("application")}
+          next={() => setScreen("pgVerification")}
           back={() => setScreen("singpass")}
+          goHome={() => setScreen("profile")}
+        />
+      );
+      break;
+
+    case "pgVerification":
+      page = (
+        <PgVerification
+          application={application}
+          setApplication={setApplication}
+          next={() => setScreen("application")}
+          back={() =>
+            setScreen(
+              application.authMethod === "UEN_ACRA" ? "uenLookup" : "myInfoReview"
+            )
+          }
           goHome={() => setScreen("profile")}
         />
       );
@@ -158,7 +160,7 @@ export default function App() {
           application={application}
           setApplication={setApplication}
           next={() => setScreen("initialAssessment")}
-          back={() => setScreen("myInfoReview")}
+          back={() => setScreen("pgVerification")}
           goHome={() => setScreen("profile")}
         />
       );

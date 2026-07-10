@@ -6,9 +6,6 @@ import {
   Typography,
   Button,
   Divider,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
 } from "@mui/material";
 import PortalShell from "../components/PortalShell";
 
@@ -81,21 +78,25 @@ export default function SingpassLogin({
   application,
   setApplication,
   next,
-  needsKeymanApproval,
   useUenInstead,
   back,
   goHome,
 }) {
   const [step, setStep] = useState("landing");
   const directors = application.profile.directors || [];
-  // Who is logging in: an authorised director (keyman) or a non-director rep.
-  // We avoid revealing the company's actual keymen before login completes.
-  const [applicantChoice, setApplicantChoice] = useState("keyman");
+  const keymen = application.profile.keymen || [];
 
-  const isKeyman = applicantChoice === "keyman";
-  const applicantName = isKeyman
-    ? directors[0] || "Authorised Director"
-    : "Authorised Representative";
+  // The initial Singpass login only extracts the company's MyInfo Business
+  // profile — we do NOT ask here whether the applicant is a keyman or a
+  // personal guarantor. That is decided later, on the PG selection/verification
+  // step. We record who logged in (the top keyman by shareholding, using their
+  // FULL name from the keymen records) so the PG step can tell whether the
+  // applicant is themselves a selected guarantor.
+  const applicantName =
+    [...keymen].sort((a, b) => (b.shareholding || 0) - (a.shareholding || 0))[0]
+      ?.name ||
+    directors[0] ||
+    "Authorised Applicant";
 
   const handleApprove = () => {
     setApplication((prev) => ({
@@ -104,13 +105,12 @@ export default function SingpassLogin({
       applicant: {
         name: applicantName,
         email: null,
-        isKeyman,
+        isKeyman: true,
       },
       singpass: {
         authenticated: true,
         method: "SINGPASS_MYINFO",
         company: prev.profile,
-        keymanApprovalPending: !isKeyman,
       },
     }));
 
@@ -119,12 +119,9 @@ export default function SingpassLogin({
   };
 
   const handleAgree = () => {
-    if (isKeyman) {
-      setStep("success");
-    } else {
-      // Non-keyman applicant → route to the keyman approval gate.
-      needsKeymanApproval();
-    }
+    // Company info retrieved — proceed straight to the MyInfo review. Personal
+    // identity / PG verification happens later, per selected guarantor.
+    setStep("success");
   };
 
   useEffect(() => {
@@ -478,48 +475,11 @@ export default function SingpassLogin({
                 variant="outlined"
                 sx={{ mt: 3, p: 2.5, borderRadius: 3, bgcolor: "#f8fafc" }}
               >
-                <Typography fontWeight={800} fontSize={14} sx={{ mb: 1.5 }}>
-                  Who is applying?
+                <Typography fontSize={13} color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                  This login retrieves your company's verified profile from
+                  Singpass MyInfo Business. Personal guarantors are chosen and
+                  verified individually in a later step.
                 </Typography>
-                <RadioGroup
-                  value={applicantChoice}
-                  onChange={(e) => setApplicantChoice(e.target.value)}
-                >
-                  <FormControlLabel
-                    value="keyman"
-                    control={<Radio size="small" />}
-                    label={
-                      <Typography fontSize={14}>
-                        An authorised director{" "}
-                        <Typography
-                          component="span"
-                          fontSize={12}
-                          color="#15803d"
-                          fontWeight={800}
-                        >
-                          · Authorised keyman
-                        </Typography>
-                      </Typography>
-                    }
-                  />
-                  <FormControlLabel
-                    value="other"
-                    control={<Radio size="small" />}
-                    label={
-                      <Typography fontSize={14}>
-                        A non-director representative{" "}
-                        <Typography
-                          component="span"
-                          fontSize={12}
-                          color="#b45309"
-                          fontWeight={800}
-                        >
-                          · Needs keyman approval
-                        </Typography>
-                      </Typography>
-                    }
-                  />
-                </RadioGroup>
               </Paper>
 
               <Button
@@ -677,22 +637,6 @@ export default function SingpassLogin({
 
               <Box sx={{ px: { xs: 3, md: 4 }, py: 2 }}>
                 <Typography fontSize={12} fontWeight={800} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: ".06em", mb: 1 }}>
-                  Personal (MyInfo)
-                </Typography>
-                {[
-                  "NRIC / FIN",
-                  "Full Name",
-                  "Date of Birth",
-                  "Nationality & Residential Status",
-                  "Residential Address",
-                  "Contact Details (Mobile & Email)",
-                ].map((item) => (
-                  <Typography key={item} sx={{ py: 0.6, fontSize: 15, borderBottom: "1px solid #f1f5f9" }}>
-                    › {item}
-                  </Typography>
-                ))}
-
-                <Typography fontSize={12} fontWeight={800} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: ".06em", mt: 2.5, mb: 1 }}>
                   Business (MyInfo Business)
                 </Typography>
                 {[
@@ -707,6 +651,12 @@ export default function SingpassLogin({
                     › {item}
                   </Typography>
                 ))}
+
+                <Typography fontSize={12} color="text.secondary" sx={{ mt: 2, lineHeight: 1.5 }}>
+                  No personal data is retrieved at this step. Personal
+                  guarantors provide their own details and consent separately
+                  during verification.
+                </Typography>
               </Box>
 
               <Box sx={{ px: { xs: 3, md: 4 }, pb: 3 }}>

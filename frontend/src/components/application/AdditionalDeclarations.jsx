@@ -453,99 +453,113 @@ const SmallInfoList = ({ title, items }) => (
           />
 
           <Grid container spacing={2.5}>
+            {/* Gating question — the detailed declarations below only appear
+                when the applicant confirms dealings with the sanctioned
+                countries/regions. */}
             <Grid size={{ xs: 12 }}>
               <QuestionCard
-                title="Do you transact with persons/entities, both currently or in the future, who are/have any of the following connections to the Sanctioned Countries or Regions?"
-                field="directSanctionsExposure"
-              >
-                <SanctionsCriteriaList />
-              </QuestionCard>
-
-              {declarations.directSanctionsExposure === "yes" && (
-                <DetailsField
-                  field="directSanctionsExposureDetails"
-                  placeholder="Please provide the persons'/entities' names, sanctioned country involved, transactions and your Bank's information."
-                />
-              )}
-            </Grid>
-
-            <Grid size={{ xs: 12 }}>
-              <QuestionCard
-                title="Do you transact with persons/entities, both currently or in the future, indirectly via subsidiaries, representative offices or intermediaries who are/have any of the following connections to the Sanctioned Countries or Regions?"
-                field="indirectSanctionsExposure"
-              >
-                <SanctionsCriteriaList />
-              </QuestionCard>
-
-              {declarations.indirectSanctionsExposure === "yes" && (
-                <DetailsField
-                  field="indirectSanctionsExposureDetails"
-                  placeholder="Please provide the persons'/entities' names, sanctioned country involved, transactions and your Bank's information."
-                />
-              )}
-            </Grid>
-
-            <Grid size={{ xs: 12 }}>
-              <QuestionCard
-                title="Do you have subsidiaries, representative offices or any related companies which are/have any of the following connections to the Sanctioned Countries or Regions?"
-                field="relatedCompanySanctionsExposure"
-              >
-                <SanctionsCriteriaList />
-              </QuestionCard>
-
-              {declarations.relatedCompanySanctionsExposure === "yes" && (
-                <DetailsField
-                  field="relatedCompanySanctionsExposureDetails"
-                  placeholder="Please provide the persons'/entities' names, address, type of relationship, and nature of dealings involved."
-                />
-              )}
-            </Grid>
-
-            <Grid size={{ xs: 12 }}>
-              <QuestionCard
-                title="Do you have any dealings involving the specified sectors/items seen in the table below?"
-                field="specifiedSectorDealings"
-              >
-                <FormalInfoBox
-                  title="Specified sectors:"
-                  items={[
-                    "- Technology",
-                    "- Aerospace",
-                    "- Defense and related materiel",
-                    "- Metals and mining",
-                  ]}
-                />
-
-                <FormalInfoBox
-                  title="Specified items:"
-                  items={[
-                    "- Certain machine tools and manufacturing equipment, e.g. numerically controlled CNC machine tools, additive manufacturing machine tools",
-                    "- Certain navigation instruments, e.g. inertial navigation systems, gyroscopes",
-                  ]}
-                />
-              </QuestionCard>
-
-              {declarations.specifiedSectorDealings === "yes" && (
-                <DetailsField
-                  field="specifiedSectorDealingsDetails"
-                  placeholder="Please provide the persons'/entities' names, sanctioned country involved, transactions and your Bank's information."
-                />
-              )}
-            </Grid>
-
-            <Grid size={{ xs: 12 }}>
-              <QuestionCard
-                title="Do you have any dealings with Myanmar Military/Government or entities owned by Myanmar Military/Government that are Sanctioned directly or indirectly?"
-                field="otherSanctionsDealings"
+                title="Do you, or any related persons/entities, have any dealings (directly or indirectly) with the Sanctioned Countries or Regions listed above?"
+                field="hasSanctionsDealings"
               />
-
-              {declarations.otherSanctionsDealings === "yes" && (
-                <DetailsField
-                  field="otherSanctionsDealingsDetails"
-                  placeholder="Please provide the persons'/entities' names, sanctioned country involved, transactions and your Bank's information."
-                />
-              )}
             </Grid>
+
+            {declarations.hasSanctionsDealings === "yes" && (
+              <>
+                <Grid size={{ xs: 12 }}>
+                  <QuestionCard
+                    title="Do you transact with persons/entities, both currently or in the future, who are/have any of the following connections to the Sanctioned Countries or Regions?"
+                    field="directSanctionsExposure"
+                  >
+                    <SanctionsCriteriaList />
+                  </QuestionCard>
+
+                  {declarations.directSanctionsExposure === "yes" && (
+                    <DetailsField
+                      field="directSanctionsExposureDetails"
+                      placeholder="Please provide the persons'/entities' names, sanctioned country involved, transactions and your Bank's information."
+                    />
+                  )}
+                </Grid>
+
+                <Grid size={{ xs: 12 }}>
+                  <QuestionCard
+                    title="Do you transact with persons/entities, both currently or in the future, indirectly via subsidiaries, representative offices or intermediaries who are/have any of the following connections to the Sanctioned Countries or Regions?"
+                    field="indirectSanctionsExposure"
+                  >
+                    <SanctionsCriteriaList />
+                  </QuestionCard>
+
+                  {declarations.indirectSanctionsExposure === "yes" && (
+                    <DetailsField
+                      field="indirectSanctionsExposureDetails"
+                      placeholder="Please provide the persons'/entities' names, sanctioned country involved, transactions and your Bank's information."
+                    />
+                  )}
+                </Grid>
+
+                <Grid size={{ xs: 12 }}>
+                  <QuestionCard
+                    title="Do you have subsidiaries, representative offices or any related companies which are/have any of the following connections to the Sanctioned Countries or Regions?"
+                    field="relatedCompanySanctionsExposure"
+                  >
+                    <SanctionsCriteriaList />
+                  </QuestionCard>
+
+                  {declarations.relatedCompanySanctionsExposure === "yes" && (
+                    <DetailsField
+                      field="relatedCompanySanctionsExposureDetails"
+                      placeholder="Please provide the persons'/entities' names, address, type of relationship, and nature of dealings involved."
+                    />
+                  )}
+                </Grid>
+
+                <Grid size={{ xs: 12 }}>
+                  <QuestionCard
+                    title="Do you have any dealings involving the specified sectors/items seen in the table below?"
+                    field="specifiedSectorDealings"
+                  >
+                    <FormalInfoBox
+                      title="Specified sectors:"
+                      items={[
+                        "- Technology",
+                        "- Aerospace",
+                        "- Defense and related materiel",
+                        "- Metals and mining",
+                      ]}
+                    />
+
+                    <FormalInfoBox
+                      title="Specified items:"
+                      items={[
+                        "- Certain machine tools and manufacturing equipment, e.g. numerically controlled CNC machine tools, additive manufacturing machine tools",
+                        "- Certain navigation instruments, e.g. inertial navigation systems, gyroscopes",
+                      ]}
+                    />
+                  </QuestionCard>
+
+                  {declarations.specifiedSectorDealings === "yes" && (
+                    <DetailsField
+                      field="specifiedSectorDealingsDetails"
+                      placeholder="Please provide the persons'/entities' names, sanctioned country involved, transactions and your Bank's information."
+                    />
+                  )}
+                </Grid>
+
+                <Grid size={{ xs: 12 }}>
+                  <QuestionCard
+                    title="Do you have any dealings with Myanmar Military/Government or entities owned by Myanmar Military/Government that are Sanctioned directly or indirectly?"
+                    field="otherSanctionsDealings"
+                  />
+
+                  {declarations.otherSanctionsDealings === "yes" && (
+                    <DetailsField
+                      field="otherSanctionsDealingsDetails"
+                      placeholder="Please provide the persons'/entities' names, sanctioned country involved, transactions and your Bank's information."
+                    />
+                  )}
+                </Grid>
+              </>
+            )}
           </Grid>
         </Box>
       </CardContent>

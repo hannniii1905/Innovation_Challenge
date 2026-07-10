@@ -241,29 +241,67 @@ function PGSection({ pgs, pgCoverage, flag }) {
               <TableRow>
                 <TableCell sx={{ fontWeight: 800 }}>Name</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Shareholding</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>Verification</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Age</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Age &lt; 70</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>IRAS income</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>CBS consent</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {pgs.map((p) => (
-                <TableRow key={p.name} hover>
-                  <TableCell sx={{ fontWeight: 700 }}>{p.name}</TableCell>
-                  <TableCell>{p.shareholding != null ? `${p.shareholding}%` : "—"}</TableCell>
-                  <TableCell>{p.age != null ? p.age : "—"}</TableCell>
-                  <TableCell>
-                    {p.age == null ? (
-                      "—"
-                    ) : (
+              {pgs.map((p, idx) => {
+                const methodLabel =
+                  p.method === "MANUAL"
+                    ? "Manual"
+                    : p.method === "SINGPASS_REMOTE"
+                      ? "Singpass (remote)"
+                      : p.method === "SINGPASS"
+                        ? "Singpass"
+                        : null;
+                return (
+                  <TableRow key={p.name || idx} hover>
+                    <TableCell sx={{ fontWeight: 700 }}>{p.name}</TableCell>
+                    <TableCell>{p.shareholding != null ? `${p.shareholding}%` : "—"}</TableCell>
+                    <TableCell>
                       <Chip
                         size="small"
-                        label={p.age < 70 ? "Yes" : "No"}
-                        sx={{ fontWeight: 700, bgcolor: p.age < 70 ? "#dcfce7" : "#fee2e2", color: p.age < 70 ? "#15803d" : "#b91c1c" }}
+                        label={p.verified ? methodLabel || "Verified" : "Pending"}
+                        sx={{
+                          fontWeight: 700,
+                          bgcolor: p.verified ? "#dcfce7" : "#fef3c7",
+                          color: p.verified ? "#15803d" : "#b45309",
+                        }}
                       />
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell>{p.age != null ? p.age : "—"}</TableCell>
+                    <TableCell>
+                      {p.age == null ? (
+                        "—"
+                      ) : (
+                        <Chip
+                          size="small"
+                          label={p.age < 70 ? "Yes" : "No"}
+                          sx={{ fontWeight: 700, bgcolor: p.age < 70 ? "#dcfce7" : "#fee2e2", color: p.age < 70 ? "#15803d" : "#b91c1c" }}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {p.irasIncome != null ? `S$${Number(p.irasIncome).toLocaleString()}` : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        size="small"
+                        label={p.cbsConsent ? "Granted" : "Pending"}
+                        sx={{
+                          fontWeight: 700,
+                          bgcolor: p.cbsConsent ? "#dcfce7" : "#fef3c7",
+                          color: p.cbsConsent ? "#15803d" : "#b45309",
+                        }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
           {isAgeFlag && (

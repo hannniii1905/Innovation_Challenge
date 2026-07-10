@@ -3,11 +3,11 @@ import { useEffect, useState } from "react";
 
 const stages = [
 
-"Retrieving Singpass profile",
+"Retrieving MyInfo Business profile",
 
 "Parsing Bank Statement",
 
-"Analysing Income Statement",
+"Verifying personal guarantors",
 
 "Retrieving Credit Bureau",
 

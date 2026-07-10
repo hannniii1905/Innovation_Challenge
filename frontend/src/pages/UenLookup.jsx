@@ -17,9 +17,14 @@ import {
 import PortalShell from "../components/PortalShell";
 import PropertyMapCard from "../components/PropertyMapCard";
 import { acraLookup } from "../api/client";
+import { usePgSelection, PgSelectionCard } from "../components/application/PgSelection";
 
 export default function UenLookup({ application, setApplication, next, back, goHome }) {
   const profile = application.profile || {};
+
+  // Personal-guarantor selection (shared with the Singpass MyInfo path). The
+  // demo profile's keymen carry shareholding, which the ACRA record does not.
+  const pg = usePgSelection(profile.keymen || []);
 
   const [uen, setUen] = useState(profile.uen || "");
   const [applicantName, setApplicantName] = useState("");
@@ -51,6 +56,7 @@ export default function UenLookup({ application, setApplication, next, back, goH
 
   const handleContinue = () => {
     if (!record) return;
+    if (!pg.meetsCoverage) return;
 
     const resolvedAddress =
       addressSame === "yes"
@@ -84,8 +90,11 @@ export default function UenLookup({ application, setApplication, next, back, goH
         authenticated: false,
         method: "UEN_ACRA",
         company: enrichedProfile,
-        keymanApprovalPending: true,
       },
+      // Selected PGs carried forward as unverified — each will receive an email
+      // link on the PG Verification step (the applicant isn't a keyman here).
+      personalGuarantors: pg.buildGuarantors(),
+      pgCoverage: pg.coverage,
     }));
 
     next();
@@ -120,8 +129,9 @@ export default function UenLookup({ application, setApplication, next, back, goH
         <Typography color="text.secondary" sx={{ mt: 2, lineHeight: 1.6, maxWidth: 620 }}>
           If you don't have a Singpass or Corppass account (for example, a
           foreign director), enter the company's UEN to retrieve its registered
-          details directly from ACRA. As your identity can't be verified this
-          way, the application will require approval from an authorised keyman.
+          details directly from ACRA. Since you can't verify yourself with
+          Singpass, each personal guarantor will be sent a secure link to verify
+          their own identity and consent to a credit check.
         </Typography>
 
         <Box
@@ -288,6 +298,10 @@ export default function UenLookup({ application, setApplication, next, back, goH
                   : operatingAddress.trim() || record.registered_address
               }
             />
+
+            {/* Personal guarantor selection — each selected PG will be emailed
+                a verification link on the next step. */}
+            <PgSelectionCard {...pg} />
           </>
         )}
 
@@ -299,7 +313,7 @@ export default function UenLookup({ application, setApplication, next, back, goH
           </Button>
           <Button
             variant="contained"
-            disabled={!record}
+            disabled={!record || !pg.meetsCoverage}
             onClick={handleContinue}
             sx={{
               borderRadius: 3,

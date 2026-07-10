@@ -40,9 +40,7 @@ export default function SupportingDocuments({
     setSaving(true);
     try {
       const res = await uploadSupportingDocuments(applicationId, {
-        ic: application.uploads.ic,
         financials: application.uploads.financials,
-        incomeStatement: application.uploads.incomeStatement,
       });
       setOnFile(res.documents);
       setSaved(true);
@@ -85,9 +83,7 @@ export default function SupportingDocuments({
             <Box sx={{ mt: 3, display: "flex", flexWrap: "wrap", gap: 1 }}>
               {[
                 ["Bank statement", onFile.bank_statement],
-                ["IC", onFile.ic],
                 ["Financials", onFile.financials],
-                ["Income statement", onFile.income_statement],
               ].map(([label, name]) => (
                 <Chip
                   key={label}

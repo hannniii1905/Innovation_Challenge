@@ -20,11 +20,10 @@ import { QRCode } from "react-qr-code";
 
 export default function ConsentSection({ application, setApplication }) {
   const consent = application.consent || {};
-  const profile = application.profile || {};
-  const keymen = profile.keymen || [];
-  const primaryKeyman = keymen.length > 0
-    ? [...keymen].sort((a, b) => (b.shareholding || 0) - (a.shareholding || 0))[0]
-    : null;
+  // The application is signed by the logged-in applicant (the person submitting
+  // on behalf of the company), not by a "primary keyman" — there is no keyman
+  // selection at login under the current flow.
+  const signingParty = application.applicant?.name || "Authorised Applicant";
   const [showPopup, setShowPopup] = useState(false);
   const [screen, setScreen] = useState("qr");
   const refCode = useMemo(() => String(Math.floor(1000 + Math.random() * 9000)), []);
@@ -70,16 +69,6 @@ export default function ConsentSection({ application, setApplication }) {
   };
 
   const items = [
-    {
-      field: "creditBureau",
-      label:
-        "I authorise the Bank to retrieve and review the applicant's Credit Bureau information for the purpose of assessing this application.",
-    },
-    {
-      field: "acra",
-      label:
-        "I consent to the Bank obtaining and reviewing the applicant company's corporate registry and business profile information, including information from ACRA and other authorised sources.",
-    },
     {
       field: "screening",
       label:
@@ -347,7 +336,7 @@ export default function ConsentSection({ application, setApplication }) {
                     <Person sx={{ fontSize: 48, color: "#64748b", mb: 0.5 }} />
                     <Box sx={{ textAlign: "center" }}>
                       <Typography sx={{ fontWeight: "bold !important", fontSize: 16, color: "#0f172a" }}>
-                        {primaryKeyman?.name || application.applicant?.name || "Signing Party"}
+                        {signingParty}
                       </Typography>
                       <Typography sx={{ fontSize: "11px", color: "#94a3b8" }}>
                         Personal

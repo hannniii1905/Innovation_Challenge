@@ -21,6 +21,7 @@ import {
   getApproverApplication,
   submitApproverDecision,
   getApplicationFileUrl,
+  getGuarantorFileUrl,
 } from "../api/client";
 
 import LightKycPanel from "../components/LightKycPanel";
@@ -416,7 +417,11 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
   const pgCoverage = Number(application.pg_coverage ?? 0);
   const pgCoverageOk = pgCoverage >= 50;
   const agesKnown = pgs.some((p) => p.age != null);
-  const pgAgesOk = pgs.every((p) => p.age == null || p.age < 70);
+  // Only judge ages that are actually known. A null age means the guarantor is
+  // not yet verified — that's a "pending", not an implicit pass.
+  const pgAgesOk = pgs.filter((p) => p.age != null).every((p) => p.age < 70);
+  const allPgVerified = pgs.length > 0 && pgs.every((p) => p.verified);
+  const allPgCbsConsent = pgs.length > 0 && pgs.every((p) => p.cbsConsent);
 
   const fin = uw.financials || {};
   const kiting = uw.credit_kiting || {};
@@ -883,34 +888,128 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
               <TableRow>
                 <TableCell sx={{ fontWeight: 800 }}>Name</TableCell>
                 <TableCell sx={{ fontWeight: 800 }} align="right">Shareholding</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>Verification</TableCell>
                 <TableCell sx={{ fontWeight: 800 }} align="right">Age</TableCell>
-                <TableCell sx={{ fontWeight: 800 }}>Age &lt; 70</TableCell>
+                <TableCell sx={{ fontWeight: 800 }} align="right">IRAS income</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>CBS consent</TableCell>
+                <TableCell sx={{ fontWeight: 800 }}>Documents</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {pgs.map((p) => (
-                <TableRow key={p.name}>
-                  <TableCell sx={{ fontWeight: 700 }}>{p.name}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>
-                    {p.shareholding != null ? `${p.shareholding}%` : "—"}
-                  </TableCell>
-                  <TableCell align="right">{p.age != null ? p.age : "—"}</TableCell>
-                  <TableCell>
-                    {p.age == null ? "—" : <PassChip passed={p.age < 70} passLabel="Yes" failLabel="No" />}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {pgs.map((p, idx) => {
+                const methodLabel =
+                  p.method === "MANUAL"
+                    ? "Manual upload"
+                    : p.method === "SINGPASS_REMOTE"
+                      ? "Singpass (remote)"
+                      : p.method === "SINGPASS"
+                        ? "Singpass"
+                        : null;
+                return (
+                  <TableRow key={p.name || idx}>
+                    <TableCell sx={{ fontWeight: 700 }}>{p.name}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 700 }}>
+                      {p.shareholding != null ? `${p.shareholding}%` : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {p.verified ? (
+                        <Stack spacing={0.3}>
+                          <PassChip passed passLabel="Verified" failLabel="—" />
+                          {methodLabel && (
+                            <Typography fontSize={11} color="text.secondary">
+                              {methodLabel}
+                            </Typography>
+                          )}
+                        </Stack>
+                      ) : (
+                        <Chip
+                          size="small"
+                          label="Pending"
+                          sx={{ bgcolor: "#fef3c7", color: "#b45309", fontWeight: 800 }}
+                        />
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      {p.age != null ? (
+                        <Stack direction="row" spacing={0.8} alignItems="center" justifyContent="flex-end">
+                          <span>{p.age}</span>
+                          <PassChip passed={p.age < 70} passLabel="<70" failLabel="≥70" />
+                        </Stack>
+                      ) : (
+                        "—"
+                      )}
+                    </TableCell>
+                    <TableCell align="right">
+                      {p.irasIncome != null ? formatCurrency(p.irasIncome) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <PassChip passed={!!p.cbsConsent} passLabel="Granted" failLabel="Pending" />
+                    </TableCell>
+                    <TableCell>
+                      {p.ic_path || p.iras_path ? (
+                        <Stack direction="row" spacing={0.5}>
+                          {p.ic_path && (
+                            <Button
+                              size="small"
+                              variant="text"
+                              href={getGuarantorFileUrl(application.application_id, idx, "ic")}
+                              target="_blank"
+                              sx={{ minWidth: 0, textTransform: "none", fontWeight: 700 }}
+                            >
+                              IC
+                            </Button>
+                          )}
+                          {p.iras_path && (
+                            <Button
+                              size="small"
+                              variant="text"
+                              href={getGuarantorFileUrl(application.application_id, idx, "iras")}
+                              target="_blank"
+                              sx={{ minWidth: 0, textTransform: "none", fontWeight: 700 }}
+                            >
+                              IRAS
+                            </Button>
+                          )}
+                        </Stack>
+                      ) : (
+                        <Typography fontSize={12} color="text.secondary">
+                          {p.method === "SINGPASS" || p.method === "SINGPASS_REMOTE"
+                            ? "Via Singpass"
+                            : "—"}
+                        </Typography>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
 
-        {agesKnown && (
-          <Typography fontSize={13} sx={{ mt: 1.5 }} color={pgAgesOk ? "#15803d" : "#b91c1c"} fontWeight={700}>
-            {pgAgesOk
-              ? "All selected guarantors are under 70."
-              : "One or more selected guarantors are 70 or older — review required."}
-          </Typography>
-        )}
+        {/* Verification & consent rollup */}
+        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap sx={{ mt: 1.5 }}>
+          {agesKnown && (
+            <Typography fontSize={13} color={pgAgesOk ? "#15803d" : "#b91c1c"} fontWeight={700}>
+              {pgAgesOk
+                ? "All verified guarantors are under 70."
+                : "One or more guarantors are 70 or older — review required."}
+            </Typography>
+          )}
+          {pgs.length > 0 && (
+            <Typography fontSize={13} color={allPgVerified ? "#15803d" : "#b45309"} fontWeight={700}>
+              {allPgVerified
+                ? "All guarantors identity-verified."
+                : "Some guarantors pending identity verification."}
+            </Typography>
+          )}
+          {pgs.length > 0 && (
+            <Typography fontSize={13} color={allPgCbsConsent ? "#15803d" : "#b45309"} fontWeight={700}>
+              {allPgCbsConsent
+                ? "CBS consent granted by all guarantors."
+                : "CBS consent outstanding for some guarantors."}
+            </Typography>
+          )}
+        </Stack>
 
         {acra.shareholders && acra.shareholders.length > 0 && (
           <>

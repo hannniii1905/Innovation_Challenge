@@ -14,7 +14,7 @@ export default function LightKycPanel({ lightKyc, aml }) {
       passed: aml?.passed ?? true,
       reason: aml?.reason || "",
       description:
-        "Company and keymen screened against AML, sanctions and adverse media lists.",
+        "Company and personal guarantors screened against AML, sanctions and adverse media lists.",
     },
     {
       key: "bank_wide_cif_blacklist",

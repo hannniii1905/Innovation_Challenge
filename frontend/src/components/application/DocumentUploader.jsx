@@ -206,22 +206,29 @@ export default function DocumentUploader({
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, md: 4 }}>
               <UploadBox
-                icon="🪪"
-                title="NRIC / Identification Card"
-                field="ic"
-                helper="Upload the key person’s identification document."
-              />
-            </Grid>
-
-            <Grid size={{ xs: 12, md: 4 }}>
-              <UploadBox
-                icon="📄"
-                title="IRAS Income Statement"
-                field="incomeStatement"
-                helper="Upload the latest 2 years of income or tax supporting document."
+                icon="📊"
+                title="Company Financial Statements"
+                field="financials"
+                helper="Upload the latest management accounts or audited financials (optional)."
               />
             </Grid>
           </Grid>
+
+          <Box
+            sx={{
+              mt: 3,
+              p: 2,
+              borderRadius: 2,
+              bgcolor: "#f0f7ff",
+              border: "1px solid #bfdbfe",
+            }}
+          >
+            <Typography fontSize={13} color="#1d4ed8">
+              Each personal guarantor's identity document (IC) and IRAS Notice of
+              Assessment are collected separately when they verify themselves —
+              they are not uploaded here.
+            </Typography>
+          </Box>
         </Box>
       </CardContent>
     </Card>

@@ -160,17 +160,38 @@ export async function submitApplication(application) {
     JSON.stringify(profileData)
   );
 
-  formData.append(
-    "personal_guarantors_json",
-    JSON.stringify(application.personalGuarantors || [])
-  );
+  // Personal guarantors: strip out the browser File objects (which don't
+  // serialize to JSON) before sending the metadata, and upload each manual
+  // guarantor's IC / IRAS NOA as separate files tagged with the guarantor's
+  // name so the backend can map file -> guarantor.
+  const guarantors = application.personalGuarantors || [];
+  const guarantorsMeta = guarantors.map(({ icFile, irasFile, ...rest }) => ({
+    ...rest,
+    hasIcUpload: !!icFile,
+    hasIrasUpload: !!irasFile,
+  }));
+
+  formData.append("personal_guarantors_json", JSON.stringify(guarantorsMeta));
+
+  guarantors.forEach((g) => {
+    if (g.icFile) {
+      formData.append("pg_ic_files", g.icFile);
+      formData.append("pg_ic_owners", g.name);
+    }
+    if (g.irasFile) {
+      formData.append("pg_iras_files", g.irasFile);
+      formData.append("pg_iras_owners", g.name);
+    }
+  });
 
   formData.append("pg_coverage", application.pgCoverage ?? 0);
 
-  formData.append(
-    "credit_bureau_consent",
-    application.consent?.creditBureau ? "YES" : "NO"
-  );
+  // Credit Bureau consent is now captured per personal guarantor (each PG
+  // consents to their own CBS pull during verification). Report YES only when
+  // every selected guarantor has granted it.
+  const allPgCbsConsent =
+    guarantors.length > 0 && guarantors.every((g) => g.cbsConsent);
+  formData.append("credit_bureau_consent", allPgCbsConsent ? "YES" : "NO");
 
   // Bank statement is mandatory; supporting docs are optional and may be
   // uploaded later, so only append the ones that are present.
@@ -280,6 +301,17 @@ export async function getApproverApplication(applicationId) {
 
 export function getApplicationFileUrl(applicationId, documentType) {
   return `${API_BASE}/approver/applications/${applicationId}/files/${documentType}`;
+}
+
+/**
+ * URL for a personal guarantor's uploaded document (IC / IRAS NOA), addressed
+ * by the guarantor's index in personal_guarantors and the document type.
+ * @param {number} applicationId
+ * @param {number} pgIndex
+ * @param {"ic"|"iras"} documentType
+ */
+export function getGuarantorFileUrl(applicationId, pgIndex, documentType) {
+  return `${API_BASE}/approver/applications/${applicationId}/guarantors/${pgIndex}/${documentType}`;
 }
 
 export async function submitApproverDecision(

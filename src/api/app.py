@@ -385,6 +385,14 @@ async def submit_client_application(
     income_statement: Optional[UploadFile] = File(None),
     ic_copy: Optional[UploadFile] = File(None),
     financials: Optional[UploadFile] = File(None),
+    # Per-guarantor manual uploads. Each *_files entry pairs positionally with
+    # the *_owners entry of the same index (the guarantor's name). These default
+    # to None (not []) because FastAPI does not populate a repeated multipart
+    # field into a list-with-default-[]; None lets it parse the repeated fields.
+    pg_ic_files: Optional[List[UploadFile]] = File(None),
+    pg_ic_owners: Optional[List[str]] = Form(None),
+    pg_iras_files: Optional[List[UploadFile]] = File(None),
+    pg_iras_owners: Optional[List[str]] = Form(None),
     db: Session = Depends(get_db),
 ):
     try:
@@ -423,6 +431,30 @@ async def submit_client_application(
         financials_path = _save_upload(app_folder, financials)
         if financials_path:
             application.financials_path = financials_path
+
+        # Persist each manual guarantor's IC / IRAS NOA into a per-application
+        # sub-folder, then record the saved path on that guarantor's entry so
+        # the approver can retrieve the documents later.
+        #
+        # Deep-copy the guarantor list before mutating: SQLAlchemy tracks JSON
+        # columns by value, so mutating the stored object in place is not
+        # detected. Building a fresh structure and reassigning forces the UPDATE.
+        import copy
+
+        pg_folder = os.path.join(app_folder, "guarantors")
+        guarantors = copy.deepcopy(application.personal_guarantors_json or [])
+        by_name = {g.get("name"): g for g in guarantors if isinstance(g, dict)}
+
+        for owner, upload in zip(pg_ic_owners or [], pg_ic_files or []):
+            saved = _save_upload(pg_folder, upload)
+            if saved and owner in by_name:
+                by_name[owner]["ic_path"] = saved
+        for owner, upload in zip(pg_iras_owners or [], pg_iras_files or []):
+            saved = _save_upload(pg_folder, upload)
+            if saved and owner in by_name:
+                by_name[owner]["iras_path"] = saved
+
+        application.personal_guarantors_json = guarantors
 
         db.commit()
         db.refresh(application)
@@ -743,6 +775,41 @@ def get_application_file(application_id: int, document_type: str, db: Session = 
         raise HTTPException(status_code=400, detail=f"Unknown document type: {document_type}")
 
     file_path = getattr(app_record, col, None)
+    if not file_path or not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="File not found.")
+
+    return FileResponse(file_path, filename=os.path.basename(file_path))
+
+
+@app.get("/approver/applications/{application_id}/guarantors/{pg_index}/{document_type}")
+def get_guarantor_file(
+    application_id: int,
+    pg_index: int,
+    document_type: str,
+    db: Session = Depends(get_db),
+):
+    """Serve a personal guarantor's manually-uploaded document (IC / IRAS NOA).
+
+    Paths are stored per-guarantor inside personal_guarantors_json as
+    ``ic_path`` / ``iras_path`` rather than in dedicated columns.
+    """
+    app_record = (
+        db.query(StagedApplication)
+        .filter(StagedApplication.id == application_id)
+        .first()
+    )
+    if not app_record:
+        raise HTTPException(status_code=404, detail="Application not found.")
+
+    key = {"ic": "ic_path", "iras": "iras_path"}.get(document_type)
+    if not key:
+        raise HTTPException(status_code=400, detail=f"Unknown document type: {document_type}")
+
+    guarantors = app_record.personal_guarantors_json or []
+    if pg_index < 0 or pg_index >= len(guarantors):
+        raise HTTPException(status_code=404, detail="Guarantor not found.")
+
+    file_path = (guarantors[pg_index] or {}).get(key)
     if not file_path or not os.path.isfile(file_path):
         raise HTTPException(status_code=404, detail="File not found.")
 
