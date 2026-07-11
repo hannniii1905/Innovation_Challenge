@@ -47,7 +47,11 @@ class StagedApplication(Base):
     pre_questionnaire_json = Column(SQLiteJSON, nullable=True) # Stores the explicit form fields layout dict
     
     # Local Storage Document File Tracking Infrastructure Roots
-    bank_statement_path = Column(String(512), nullable=True)   # Pointer to raw UOB statement file location
+    bank_statement_paths =  Column(
+                                SQLiteJSON,
+                                nullable=True,
+                                default=list,
+                            )   # Pointer to raw UOB statement file location
     income_statement_path = Column(String(512), nullable=True) # Pointer to raw IRAS tax record statement location
     financials_path = Column(String(512), nullable=True)       # Pointer to uploaded company financials (optional)
 
@@ -127,16 +131,52 @@ def _ensure_columns():
 
     existing = {col["name"] for col in inspector.get_columns("applications")}
     wanted = {
+        "bank_statement_paths": "TEXT",
         "financials_path": "VARCHAR(512)",
         "personal_guarantors_json": "TEXT",
         "pg_coverage": "FLOAT",
         "underwriting_json": "TEXT",
     }
+
     with engine.begin() as conn:
         for name, ddl_type in wanted.items():
             if name not in existing:
                 conn.execute(
                     text(f"ALTER TABLE applications ADD COLUMN {name} {ddl_type}")
+                )
+
+        # Migrate the former single bank-statement path into the new JSON list
+        # column so old applications remain readable after the six-month upload
+        # change.
+        if "bank_statement_path" in existing:
+            legacy_rows = conn.execute(
+                text(
+                    """
+                    SELECT id, bank_statement_path
+                    FROM applications
+                    WHERE bank_statement_path IS NOT NULL
+                      AND TRIM(bank_statement_path) != ''
+                      AND (
+                          bank_statement_paths IS NULL
+                          OR TRIM(bank_statement_paths) = ''
+                      )
+                    """
+                )
+            ).mappings()
+
+            for row in legacy_rows:
+                conn.execute(
+                    text(
+                        """
+                        UPDATE applications
+                        SET bank_statement_paths = :paths
+                        WHERE id = :application_id
+                        """
+                    ),
+                    {
+                        "paths": json.dumps([row["bank_statement_path"]]),
+                        "application_id": row["id"],
+                    },
                 )
 
 

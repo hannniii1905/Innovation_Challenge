@@ -67,10 +67,10 @@ COMPANY_PROFILES = {
     3: {
 
         "uen": "202012345R",
-        "company_name": "ORION LOGISTICS PTE. LTD.",
+        "company_name": "ORION WEALTH MANAGEMENT PTE. LTD.",
         "incorporation_date": "2020-10-09",
-        "ssic_code": "52291",
-        "ssic_description": "Freight Forwarding Services",
+        "ssic_code": "66301",
+        "ssic_description": "Fund/Asset Management",
         "registered_address": "8 Changi South Lane, #02-01, Singapore 486113",
         "directors": [
             "Michael Ong",

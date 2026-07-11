@@ -17,7 +17,6 @@ from sqlalchemy.orm import Session
 
 # Import new backend database and engine components
 from src.database import get_db, StagedApplication
-#from src.underwriting_engine import UnderwritingEngine
 
 # Initialize standard FastAPI router gateway instance
 router = APIRouter(prefix="/api/v1")
@@ -104,7 +103,7 @@ async def submit_application(
             declared_existing_debts=declared_existing_debts,
             consent_credit_bureau=consent_credit_bureau,
             singpass_profile_json=parsed_singpass,
-            bank_statement_path=bank_path,
+            bank_statement_paths=bank_path,
             income_statement_path=income_path,
             ic_path=ic_path
         )
@@ -113,6 +112,7 @@ async def submit_application(
         db.commit()
         db.refresh(new_application)
 
+        from src.underwriting_engine import UnderwritingEngine
         engine = UnderwritingEngine(db)
         result = engine.execute_evaluation(new_application.id)
 
@@ -131,6 +131,7 @@ def evaluate_application(application_id: int, db: Session = Depends(get_db)):
     """
     try:
         # Create instance of our credit engine and pass the db transaction scope session
+        from src.underwriting_engine import UnderwritingEngine
         engine = UnderwritingEngine(db)
         evaluation_results = engine.execute_evaluation(application_id)
         return evaluation_results

@@ -445,12 +445,42 @@ function CompanyOverview({
   propertyOwnership,
   rentAmount,
 }) {
-  const documents = [
-    { key: "bank_statement", label: "Corporate Bank Statement" },
+  const bankStatementDocuments = Array.isArray(
+    application?.files?.bank_statements
+  )
+    ? application.files.bank_statements.map((file, position) => {
+        const fileIndex =
+          typeof file === "object" && file !== null
+            ? file.index ?? position
+            : position;
+
+        return {
+          key: `bank_statement_${fileIndex}`,
+          label: `Corporate Bank Statement ${position + 1}`,
+          filename:
+            typeof file === "object" && file !== null
+              ? file.filename
+              : file,
+          documentType: "bank_statement",
+          fileIndex,
+        };
+      })
+    : [];
+
+  const supportingDocuments = [
     { key: "income_statement", label: "IRAS Income Statement" },
     { key: "financials", label: "Company Financials" },
     { key: "ic", label: "NRIC / ID Copy" },
-  ].filter((doc) => application?.files?.[doc.key]);
+  ]
+    .filter((doc) => application?.files?.[doc.key])
+    .map((doc) => ({
+      ...doc,
+      filename: application.files[doc.key],
+      documentType: doc.key,
+      fileIndex: null,
+    }));
+
+  const documents = [...bankStatementDocuments, ...supportingDocuments];
 
   return (
     <Paper
@@ -626,7 +656,7 @@ function CompanyOverview({
                       noWrap
                       sx={{ mt: 0.4 }}
                     >
-                      {application.files[doc.key]}
+                      {doc.filename}
                     </Typography>
                   </Box>
 
@@ -635,7 +665,8 @@ function CompanyOverview({
                     variant="outlined"
                     href={getApplicationFileUrl(
                       application.application_id,
-                      doc.key
+                      doc.documentType,
+                      doc.fileIndex
                     )}
                     target="_blank"
                     sx={{

@@ -17,6 +17,19 @@ import { detectBankStatementPeriod } from "../../api/client";
 
 const MAX_BANK_STATEMENTS = 6;
 
+const toMonthIndex = (year, month) =>
+  Number(year) * 12 + Number(month) - 1;
+
+const getMonthLabel = (monthIndex) => {
+  const year = Math.floor(monthIndex / 12);
+  const month = monthIndex % 12;
+
+  return new Date(year, month, 1).toLocaleDateString("en-SG", {
+    month: "short",
+    year: "numeric",
+  });
+};
+
 export default function DocumentUploader({
   application,
   setApplication,

@@ -50,29 +50,54 @@ INDUSTRY_CATEGORIES = [
         ],
     },
     {
-        "keywords": ["freight", "forwarding", "logistics", "transport", "52291", "warehouse", "shipping"],
-        "sector": "Logistics — Freight Forwarding & Warehousing",
-        "risk_level": "Elevated",
-        "growth": "moderate",
-        "grants": "Singapore's position as a global transshipment hub and regional supply chain diversification (China+1)",
-        "pressures": [
-            "high sensitivity to global trade volumes, fuel costs, and geopolitical disruptions",
-            "the cyclical nature of freight demand during economic downturns",
-            "high CAPEX requirements for fleet and warehouse infrastructure",
+        "keywords": [
+            "asset management",
+            "fund management",
+            "investment management",
+            "portfolio management",
+            "wealth management",
+            "fund manager",
+            "investment advisory",
+            "66301",
+            "66302",
         ],
-        "tailwinds": "regional supply chain shifts and growth in e-commerce logistics",
+        "sector": "Financial Services — Asset & Fund Management",
+        "risk_level": "Excluded",
+        "growth": "moderate",
+        "grants": (
+            "Singapore remains a major regional wealth and asset-management hub, "
+            "supported by strong capital inflows and demand for professional investment services."
+        ),
+        "pressures": [
+            "high regulatory and compliance requirements under Singapore financial-services rules",
+            "sensitivity of fee income to market performance and assets under management",
+            "reputational and conduct risk arising from investment suitability and client-money handling",
+            "increased scrutiny over AML, source of funds, and cross-border investor activity",
+        ],
+        "tailwinds": (
+            "continued growth in regional wealth, family offices, private markets, "
+            "and demand for professionally managed investment products"
+        ),
         "key_risks_pool": [
-            "Exposure to global trade cycle — volumes decline during economic downturns",
-            "Fuel price volatility directly impacting operating margins",
-            "Geopolitical risks (Red Sea disruptions, US-China tariffs) affecting shipping routes",
-            "High CAPEX requirements for fleet and warehouse infrastructure",
-            "Regulatory compliance — customs, safety, and environmental standards",
+            "Regulatory and licensing risk associated with regulated fund-management activities",
+            "AML and source-of-funds exposure from high-value and cross-border investors",
+            "Market volatility reducing assets under management and management-fee income",
+            "Liquidity and valuation risk for private-market or alternative investments",
+            "Conduct and suitability risk when managing client assets",
+            "Operational and cybersecurity risk involving sensitive financial information",
         ],
         "outlook": [
-            "Cautious — near-term headwinds from global trade uncertainty. Medium-term supported by regional supply chain diversification (China+1).",
-            "Mixed — freight forwarding faces cyclical pressure while warehousing benefits from e-commerce structural growth.",
+            (
+                "Excluded — asset and fund-management businesses fall outside the "
+                "product's eligible industry scope and trigger an immediate decline recommendation."
+            ),
+            (
+                "Not eligible — despite long-term growth in Singapore's wealth-management sector, "
+                "the business activity is excluded under the lending policy."
+            ),
         ],
     },
+    
     {
         "keywords": ["manufacturing", "factory", "production", "industrial", "precision", "engineering"],
         "sector": "Manufacturing — General & Precision Engineering",

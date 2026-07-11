@@ -18,6 +18,12 @@ EXCLUDED_INDUSTRIES = [
     "military",
     "night club",
     "nightclub",
+    "ktv",
+    "embassy",
+    "bank",
+    "government",
+    "fund",
+    "asset management"
 ]
 
 # Demo hits can be keyed by UEN or exact upper-case company name.
@@ -27,13 +33,13 @@ AML_HITS = {
 }
 
 BANK_WIDE_CIF_BLACKLIST = {
-    "201844192K": "Prior account closure under bank-wide CIF blacklist policy.",
-    "VORTEX RETAIL SINGAPORE PTE. LTD.": "Internal blacklist record found for applicant CIF.",
+    # "201844192K": "Prior account closure under bank-wide CIF blacklist policy.",
+    "201844192K": "Internal blacklist record found for applicant CIF.",
 }
 
 ON_US_OFF_US_ADVERSE = {
-    "202012345R": "Off-us bureau shows unresolved returned-cheque / delinquency indicator.",
-    # "202012345R": "On-us conduct shows material excesses and repeated arrears.",
+    # "202012345R": "Off-us bureau shows unresolved returned-cheque / delinquency indicator.",
+    "202012345R": "On-us conduct shows material excesses and repeated arrears.",
 }
 
 
@@ -92,7 +98,7 @@ def run_light_kyc(app_record: Any) -> dict:
             "passed": not industry_blocked,
             "status": "Clear" if not industry_blocked else "Review",
             "description": "Business activity checked against excluded industries.",
-            "source": "Excluded industries: casino, military, night club",
+            "source": "Excluded industries",
             "reason": (
                 f"Excluded industry detected: {industry}. Matched '{matched_industry}'."
                 if industry_blocked

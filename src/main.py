@@ -41,6 +41,7 @@ from src.ocr_engine import (
 )
 from src.parsers.iras_noa_parser import IrasNoaParser
 from src.reporter import ReportGenerator
+from src.statement_period_detector import detect_statement_period
 
 # Exit codes
 EXIT_SUCCESS = 0
@@ -106,7 +107,7 @@ def analyze_bank_statement(
     parser = parser_class()
 
     company_name = parser.extract_company_name(text)
-    statement_period = parser.identify_statement_period(text)
+    statement_period = detect_statement_period(text)
     transactions = parser.extract_transactions(text)
 
     loan_result = LoanDetector().detect(transactions)

@@ -14,7 +14,7 @@ from src.loan_detector import LoanDetector
 from src.fraud_detector import FraudDetector
 from src.credit_kiting import CreditKitingDetector
 from src.parsers.iras_noa_parser import IrasNoaParser
-
+from src.statement_period_detector import detect_statement_period
 
 logger = logging.getLogger("ocr_analyzer")
 
@@ -74,68 +74,155 @@ class UnderwritingEngine:
 
         raw_credits_total = 0.0
         flagged_kiting_volume = 0.0
-
         detected_loans_count = 0
         has_fraud_tampering = False
 
-        suspicious_credits = []
-        loan_result = {}
+        all_transactions = []
+        all_suspicious_credits = []
+        all_credit_kiting_findings = []
+        all_loan_repayments = []
+        statement_results = []
 
         bank_type = None
-        statement_period = None
-        credit_kiting_findings = []
-        from src.document_router import DocumentRouter
-        if app_record.bank_statement_path:
-            try:
+        statement_periods = []
 
-                engine = OCREngine(app_record.bank_statement_path)
+        statement_paths = app_record.bank_statement_paths or []
+
+        if not statement_paths:
+            return {
+                "bank": None,
+                "warnings": ["No bank statements uploaded."],
+                "raw_credits_total": 0.0,
+                "flagged_kiting_volume": 0.0,
+                "loan_result": {
+                    "count": 0,
+                    "repayments": [],
+                },
+                "detected_loans_count": 0,
+                "has_fraud_tampering": False,
+                "suspicious_credits": [],
+                "statement_period": None,
+                "statement_periods": [],
+                "credit_kiting_findings": [],
+                "transactions": [],
+                "documents": [],
+            }
+
+        for statement_path in statement_paths:
+            try:
+                engine = OCREngine(statement_path)
                 pages = engine.extract()
                 text = "\n".join(pages)
+
                 router = DocumentRouter(pages)
-                bank_type = router.identify()
+                detected_bank = router.identify()
+
                 parser_class = router.get_parser_class()
                 parser = parser_class()
-                transactions = parser.extract_transactions(text)
-                statement_period = parser.identify_statement_period(text)
 
-                for tx in transactions:
-                    if (tx.transaction_type or "").lower() == "credit":
-                        raw_credits_total += float(tx.amount or 0)
+                transactions = parser.extract_transactions(text) or []
+                statement_period = detect_statement_period(text)
 
-                loan_result = LoanDetector().detect(transactions)
-                detected_loans_count = loan_result.get("count", 0)
-                suspicious_credits = FraudDetector().analyze(
-                    transactions,
-                    statement_period
-                )
-                if suspicious_credits:
-                    has_fraud_tampering = True
-                    flagged_kiting_volume = sum(
-                        item.transaction.amount
-                        for item in suspicious_credits
-                    )
+                if bank_type is None:
+                    bank_type = detected_bank
 
-                credit_kiting_findings = CreditKitingDetector().detect(
-                    transactions, statement_period
+                if statement_period:
+                    statement_periods.append(statement_period)
+
+                statement_credit_total = sum(
+                    float(tx.amount or 0)
+                    for tx in transactions
+                    if (tx.transaction_type or "").lower() == "credit"
                 )
 
-            except Exception as e:
-                logger.error(str(e))
-                warnings.append(str(e))
+                raw_credits_total += statement_credit_total
+                all_transactions.extend(transactions)
+
+                statement_results.append({
+                    "path": statement_path,
+                    "filename": statement_path.split("/")[-1].split("\\")[-1],
+                    "bank": detected_bank,
+                    "statement_period": statement_period,
+                    "transaction_count": len(transactions),
+                    "credit_transaction_count": sum(
+                        1
+                        for tx in transactions
+                        if (tx.transaction_type or "").lower() == "credit"
+                    ),
+                    "debit_transaction_count": sum(
+                        1
+                        for tx in transactions
+                        if (tx.transaction_type or "").lower() == "debit"
+                    ),
+                    "total_credits": round(statement_credit_total, 2),
+                })
+
+            except Exception as error:
+                logger.exception(
+                    "Failed to analyse bank statement: %s",
+                    statement_path,
+                )
+                warnings.append(
+                    f"{statement_path}: {str(error)}"
+                )
+
+        # Run the existing detectors on the combined six-month transaction history.
+        if all_transactions:
+            loan_result = LoanDetector().detect(all_transactions) or {}
+            detected_loans_count = loan_result.get("count", 0)
+            all_loan_repayments = loan_result.get("repayments", []) or []
+
+            combined_statement_period = (
+                f"{statement_periods[0]} - {statement_periods[-1]}"
+                if len(statement_periods) > 1
+                else statement_periods[0]
+                if statement_periods
+                else None
+            )
+
+            all_suspicious_credits = FraudDetector().analyze(
+                all_transactions,
+                combined_statement_period,
+            ) or []
+
+            if all_suspicious_credits:
+                has_fraud_tampering = True
+                flagged_kiting_volume = sum(
+                    float(item.transaction.amount or 0)
+                    for item in all_suspicious_credits
+                )
+
+            all_credit_kiting_findings = CreditKitingDetector().detect(
+                all_transactions,
+                combined_statement_period,
+            ) or []
+
+        else:
+            loan_result = {
+                "count": 0,
+                "repayments": [],
+            }
+            combined_statement_period = None
+
         return {
             "bank": bank_type,
             "warnings": warnings,
-            "raw_credits_total": raw_credits_total,
-            "flagged_kiting_volume": flagged_kiting_volume,
-            "loan_result": loan_result,
+            "raw_credits_total": round(raw_credits_total, 2),
+            "flagged_kiting_volume": round(flagged_kiting_volume, 2),
+            "loan_result": {
+                **loan_result,
+                "repayments": all_loan_repayments,
+            },
             "detected_loans_count": detected_loans_count,
             "has_fraud_tampering": has_fraud_tampering,
-            "suspicious_credits": suspicious_credits,
-            "statement_period": statement_period,
-            "credit_kiting_findings": credit_kiting_findings,
-            "transactions": transactions,
+            "suspicious_credits": all_suspicious_credits,
+            "statement_period": combined_statement_period,
+            "statement_periods": statement_periods,
+            "credit_kiting_findings": all_credit_kiting_findings,
+            "transactions": all_transactions,
+            "documents": statement_results,
         }
-   
+
     def _analyse_income_statement(self, app_record):
         from src.parsers.income_statement_parser import IncomeStatementParser
         if not app_record.income_statement_path:

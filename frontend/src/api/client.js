@@ -195,9 +195,34 @@ export async function submitApplication(application) {
 
   // Bank statement is mandatory; supporting docs are optional and may be
   // uploaded later, so only append the ones that are present.
-  (application.uploads.bankStatements || []).forEach((statement) => {
-    formData.append("bank_statements", statement.file);
+  const bankStatements = application.uploads?.bankStatements || [];
+
+  if (bankStatements.length !== 6) {
+    throw new Error(
+      "Please upload all 6 monthly corporate bank statements."
+    );
+  }
+
+  bankStatements.forEach((statement) => {
+    if (statement?.file) {
+      formData.append("bank_statements", statement.file);
+    }
   });
+
+  const latestStatement = [...bankStatements]
+    .filter((statement) => statement?.file)
+    .sort((a, b) => {
+      const aMonth = Number(a.year || 0) * 12 + Number(a.month || 0);
+      const bMonth = Number(b.year || 0) * 12 + Number(b.month || 0);
+
+      return bMonth - aMonth;
+    })[0];
+
+  if (!latestStatement?.file) {
+    throw new Error("No valid corporate bank statement was found.");
+  }
+
+  formData.append("bank_statement", latestStatement.file);
   if (application.uploads.incomeStatement) {
     formData.append("income_statement", application.uploads.incomeStatement);
   }
@@ -215,7 +240,21 @@ export async function submitApplication(application) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || "Application submission failed.");
+
+    console.error("Application submission error:", error);
+
+    const detail = error?.detail;
+
+    const message =
+      typeof detail === "string"
+        ? detail
+        : Array.isArray(detail)
+        ? detail.map((item) => item?.msg || JSON.stringify(item)).join(", ")
+        : detail
+        ? JSON.stringify(detail)
+        : "Application submission failed.";
+
+    throw new Error(message);
   }
 
   return response.json();
@@ -301,8 +340,16 @@ export async function getApproverApplication(applicationId) {
   return response.json();
 }
 
-export function getApplicationFileUrl(applicationId, documentType) {
-  return `${API_BASE}/approver/applications/${applicationId}/files/${documentType}`;
+export function getApplicationFileUrl(
+  applicationId,
+  documentType,
+  fileIndex = null
+) {
+  const url = `${API_BASE}/approver/applications/${applicationId}/files/${documentType}`;
+
+  return fileIndex === null || fileIndex === undefined
+    ? url
+    : `${url}?index=${encodeURIComponent(fileIndex)}`;
 }
 
 /**

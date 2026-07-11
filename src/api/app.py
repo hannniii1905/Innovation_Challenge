@@ -26,10 +26,13 @@ from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-
+from typing import List
 from src.database import init_db, get_db, StagedApplication
 from src.underwriting_engine import UnderwritingEngine
-
+from src.statement_period_detector import (
+    detect_statement_period,
+    extract_statement_period,
+)
 from src.api.schemas import (
     STAGE_ANALYZING,
     STAGE_AWAITING_VERIFICATION,
@@ -444,8 +447,7 @@ async def detect_bank_statement_period(
             )
 
         text = "\n".join(pages)
-        parser = router.get_parser_class()()
-        statement_period = parser.identify_statement_period(text)
+        statement_period = detect_statement_period(text)
 
         print("STATEMENT PERIOD RESULT:", statement_period)
         print("STATEMENT PERIOD TYPE:", type(statement_period))
@@ -592,6 +594,125 @@ async def detect_bank_statement_period(
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
 
+# def analyse_bank_statements(statement_paths: list[str]) -> dict:
+#     all_transactions = []
+#     all_suspicious_credits = []
+#     statement_results = []
+
+#     total_credits = 0.0
+#     total_debits = 0.0
+#     detected_loans_count = 0
+#     has_fraud_tampering = False
+
+#     detected_bank = None
+
+#     for statement_path in statement_paths:
+#         pages = OCREngine(statement_path).extract()
+
+#         router = DocumentRouter(pages)
+#         bank_type = router.identify()
+#         parser = router.get_parser_class()()
+
+#         text = "\n".join(pages)
+
+#         transactions = parser.extract_transactions(text)
+#         statement_period = parser.identify_statement_period(text)
+
+#         if detected_bank is None:
+#             detected_bank = bank_type
+
+#         credit_transactions = [
+#             transaction
+#             for transaction in transactions
+#             if str(transaction.transaction_type).lower() == "credit"
+#         ]
+
+#         debit_transactions = [
+#             transaction
+#             for transaction in transactions
+#             if str(transaction.transaction_type).lower() == "debit"
+#         ]
+
+#         statement_credits = sum(
+#             float(transaction.amount or 0)
+#             for transaction in credit_transactions
+#         )
+
+#         statement_debits = sum(
+#             float(transaction.amount or 0)
+#             for transaction in debit_transactions
+#         )
+
+#         total_credits += statement_credits
+#         total_debits += statement_debits
+#         all_transactions.extend(transactions)
+
+#         statement_results.append({
+#             "filename": os.path.basename(statement_path),
+#             "path": statement_path,
+#             "bank": bank_type,
+#             "statement_period": statement_period,
+#             "transaction_count": len(transactions),
+#             "credit_transaction_count": len(credit_transactions),
+#             "debit_transaction_count": len(debit_transactions),
+#             "total_credits": round(statement_credits, 2),
+#             "total_debits": round(statement_debits, 2),
+#         })
+
+#     # Run the existing detectors against the combined six-month history.
+#     combined_statement_period = " | ".join(
+#         str(item.get("statement_period"))
+#         for item in statement_results
+#         if item.get("statement_period")
+#     )
+
+#     suspicious_credits = FraudDetector().analyze(
+#         all_transactions,
+#         combined_statement_period or None,
+#     )
+
+#     loan_result = LoanDetector().detect(all_transactions) or {}
+#     detected_loans = loan_result.get("repayments", []) or []
+
+#     credit_kiting_findings = CreditKitingDetector().detect(
+#         all_transactions,
+#         combined_statement_period or None,
+#     ) or []
+
+#     flagged_kiting_volume = sum(
+#         float(item.transaction.amount or 0)
+#         for item in suspicious_credits
+#     )
+
+#     return {
+#         "bank": detected_bank,
+#         "documents": statement_results,
+#         "transactions": all_transactions,
+#         "total_transaction_count": len(all_transactions),
+#         "credit_transaction_count": sum(
+#             1
+#             for transaction in all_transactions
+#             if str(transaction.transaction_type).lower() == "credit"
+#         ),
+#         "debit_transaction_count": sum(
+#             1
+#             for transaction in all_transactions
+#             if str(transaction.transaction_type).lower() == "debit"
+#         ),
+#         "raw_credits_total": round(total_credits, 2),
+#         "raw_debits_total": round(total_debits, 2),
+#         "flagged_kiting_volume": round(flagged_kiting_volume, 2),
+#         "suspicious_credits": suspicious_credits,
+#         "loan_result": loan_result,
+#         "detected_loans_count": loan_result.get(
+#             "count",
+#             len(detected_loans),
+#         ),
+#         "has_fraud_tampering": bool(suspicious_credits),
+#         "credit_kiting_findings": credit_kiting_findings,
+#         "statement_period": combined_statement_period or None,
+#     }
+
 @app.post("/client/submit")
 async def submit_client_application(
     profile_id: int = Form(...),
@@ -608,7 +729,7 @@ async def submit_client_application(
     personal_guarantors_json: str = Form("[]"),
     pg_coverage: float = Form(0),
     credit_bureau_consent: str = Form("NO"),
-    bank_statement: UploadFile = File(...),
+    bank_statements: List[UploadFile] = File(...),
     income_statement: Optional[UploadFile] = File(None),
     ic_copy: Optional[UploadFile] = File(None),
     financials: Optional[UploadFile] = File(None),
@@ -622,6 +743,12 @@ async def submit_client_application(
     pg_iras_owners: Optional[List[str]] = Form(None),
     db: Session = Depends(get_db),
 ):
+    if len(bank_statements) != 6:
+        raise HTTPException(
+            status_code=400,
+            detail="Exactly 6 monthly bank statements are required.",
+        )
+        
     try:
         application = StagedApplication(
             status="PENDING",
@@ -645,7 +772,32 @@ async def submit_client_application(
 
         # Bank statement is mandatory; the rest are optional supporting docs
         # that may also be uploaded later.
-        application.bank_statement_path = _save_upload(app_folder, bank_statement)
+        # Save all 6 corporate bank statements
+        bank_statement_paths = []
+
+        bank_folder = os.path.join(app_folder, "bank_statements")
+        os.makedirs(bank_folder, exist_ok=True)
+
+        for index, upload in enumerate(bank_statements, start=1):
+            safe_filename = os.path.basename(
+                upload.filename or f"statement_{index}.pdf"
+            )
+
+            saved_path = os.path.join(
+                bank_folder,
+                f"{index:02d}_{safe_filename}",
+            )
+
+            with open(saved_path, "wb") as destination:
+                shutil.copyfileobj(upload.file, destination)
+
+            bank_statement_paths.append(saved_path)
+
+        # Persist all 6 paths on the application record
+        application.bank_statement_paths = bank_statement_paths
+
+        db.commit()
+        db.refresh(application)
 
         income_path = _save_upload(app_folder, income_statement)
         if income_path:
@@ -790,12 +942,20 @@ def get_application_documents(application_id: int, db: Session = Depends(get_db)
         "reference_number": f"APP-2026-{str(app_record.id).zfill(6)}",
         "company_name": app_record.company_name,
         "documents": {
-            "bank_statement": _name(app_record.bank_statement_path),
-            "income_statement": _name(app_record.income_statement_path),
+            "bank_statements": [
+                os.path.basename(path)
+                for path in (app_record.bank_statement_paths or [])
+            ],
+            "income_statement": _name(
+                app_record.income_statement_path
+            ),
             "ic": _name(app_record.ic_path),
-            "financials": _name(app_record.financials_path),
+            "financials": _name(
+                app_record.financials_path
+            ),
         },
     }
+
 
 
 @app.post("/client/applications/{application_id}/documents")
@@ -804,41 +964,49 @@ async def upload_application_documents(
     income_statement: Optional[UploadFile] = File(None),
     ic_copy: Optional[UploadFile] = File(None),
     financials: Optional[UploadFile] = File(None),
-    bank_statement: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
 ):
-    """Attach supporting documents to an already-submitted application.
+    """Attach optional supporting documents to an existing application."""
 
-    All fields are optional; any subset can be uploaded. Lets an applicant
-    return after submission to provide IC, financials, or the income statement.
-    """
     app_record = (
         db.query(StagedApplication)
         .filter(StagedApplication.id == application_id)
         .first()
     )
-    if not app_record:
-        raise HTTPException(status_code=404, detail="Application not found.")
 
-    app_folder = os.path.join(UPLOAD_DIR, f"application_{app_record.id}")
+    if not app_record:
+        raise HTTPException(
+            status_code=404,
+            detail="Application not found.",
+        )
+
+    app_folder = os.path.join(
+        UPLOAD_DIR,
+        f"application_{app_record.id}",
+    )
+
     updated = []
 
-    bank_path = _save_upload(app_folder, bank_statement)
-    if bank_path:
-        app_record.bank_statement_path = bank_path
-        updated.append("bank_statement")
-
-    income_path = _save_upload(app_folder, income_statement)
+    income_path = _save_upload(
+        app_folder,
+        income_statement,
+    )
     if income_path:
         app_record.income_statement_path = income_path
         updated.append("income_statement")
 
-    ic_path = _save_upload(app_folder, ic_copy)
+    ic_path = _save_upload(
+        app_folder,
+        ic_copy,
+    )
     if ic_path:
         app_record.ic_path = ic_path
         updated.append("ic")
 
-    financials_path = _save_upload(app_folder, financials)
+    financials_path = _save_upload(
+        app_folder,
+        financials,
+    )
     if financials_path:
         app_record.financials_path = financials_path
         updated.append("financials")
@@ -849,18 +1017,28 @@ async def upload_application_documents(
     def _name(path):
         return os.path.basename(path) if path else None
 
+    bank_statement_files = [
+        os.path.basename(path)
+        for path in (app_record.bank_statement_paths or [])
+    ]
+
     return {
         "application_id": app_record.id,
-        "reference_number": f"APP-2026-{str(app_record.id).zfill(6)}",
+        "reference_number": (
+            f"APP-2026-{str(app_record.id).zfill(6)}"
+        ),
         "updated": updated,
         "documents": {
-            "bank_statement": _name(app_record.bank_statement_path),
-            "income_statement": _name(app_record.income_statement_path),
+            "bank_statements": bank_statement_files,
+            "income_statement": _name(
+                app_record.income_statement_path
+            ),
             "ic": _name(app_record.ic_path),
-            "financials": _name(app_record.financials_path),
+            "financials": _name(
+                app_record.financials_path
+            ),
         },
     }
-
 
 @app.get("/approver/applications")
 def list_approver_applications(
@@ -989,10 +1167,34 @@ def get_approver_application(application_id: int, db: Session = Depends(get_db))
         "pg_coverage": app_record.pg_coverage,
         "underwriting": app_record.underwriting_json or {},
         "files": {
-            "bank_statement": os.path.basename(app_record.bank_statement_path) if app_record.bank_statement_path else None,
-            "income_statement": os.path.basename(app_record.income_statement_path) if app_record.income_statement_path else None,
-            "financials": os.path.basename(app_record.financials_path) if app_record.financials_path else None,
-            "ic": os.path.basename(app_record.ic_path) if app_record.ic_path else None,
+            "bank_statements": [
+                {
+                    "index": index,
+                    "filename": os.path.basename(path),
+                }
+                for index, path in enumerate(
+                    app_record.bank_statement_paths or []
+                )
+            ],
+            "income_statement": (
+                os.path.basename(
+                    app_record.income_statement_path
+                )
+                if app_record.income_statement_path
+                else None
+            ),
+            "financials": (
+                os.path.basename(
+                    app_record.financials_path
+                )
+                if app_record.financials_path
+                else None
+            ),
+            "ic": (
+                os.path.basename(app_record.ic_path)
+                if app_record.ic_path
+                else None
+            ),
         },
         "company_profile": {
             "company_name": (
@@ -1029,7 +1231,6 @@ def get_approver_application(application_id: int, db: Session = Depends(get_db))
 
 
 DOC_TYPE_COLUMN = {
-    "bank_statement": "bank_statement_path",
     "income_statement": "income_statement_path",
     "financials": "financials_path",
     "ic": "ic_path",
@@ -1037,7 +1238,12 @@ DOC_TYPE_COLUMN = {
 
 
 @app.get("/approver/applications/{application_id}/files/{document_type}")
-def get_application_file(application_id: int, document_type: str, db: Session = Depends(get_db)):
+def get_application_file(
+    application_id: int,
+    document_type: str,
+    index: int = 0,
+    db: Session = Depends(get_db),
+):
     app_record = (
         db.query(StagedApplication)
         .filter(StagedApplication.id == application_id)
@@ -1046,11 +1252,30 @@ def get_application_file(application_id: int, document_type: str, db: Session = 
     if not app_record:
         raise HTTPException(status_code=404, detail="Application not found.")
 
-    col = DOC_TYPE_COLUMN.get(document_type)
-    if not col:
-        raise HTTPException(status_code=400, detail=f"Unknown document type: {document_type}")
+    if document_type == "bank_statement":
+        bank_statement_paths = app_record.bank_statement_paths or []
 
-    file_path = getattr(app_record, col, None)
+        # Defensive handling for any legacy record containing one path instead
+        # of the current list-of-paths format.
+        if isinstance(bank_statement_paths, str):
+            bank_statement_paths = [bank_statement_paths]
+
+        if index < 0 or index >= len(bank_statement_paths):
+            raise HTTPException(
+                status_code=404,
+                detail="Bank statement file not found.",
+            )
+
+        file_path = bank_statement_paths[index]
+    else:
+        col = DOC_TYPE_COLUMN.get(document_type)
+        if not col:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown document type: {document_type}",
+            )
+        file_path = getattr(app_record, col, None)
+
     if not file_path or not os.path.isfile(file_path):
         raise HTTPException(status_code=404, detail="File not found.")
 
@@ -1322,7 +1547,7 @@ def _run_extraction(session: OCRSession, pdf_bytes: bytes) -> None:
             parser = router.get_parser_class()()
             session.bank = doc_type
             session.company_name = parser.extract_company_name(text)
-            session.statement_period = parser.identify_statement_period(text)
+            
             session.progress = 90
             session.progress_message = "Extracting transactions…"
             session.transactions = [

@@ -292,7 +292,7 @@ REVIEW = [
 ]
 
 REJECT = [
-    {"name": "ORION LOGISTICS PTE. LTD.", "uen": "202012345R", "industry": "Freight Forwarding Services", "cbs": "HX",
+    {"name": "ORION WEALTH MANAGEMENT PTE. LTD.", "uen": "202012345R", "industry": "Fund/Asset Management", "cbs": "HX",
      "revenue": 380000, "margin": 0.05, "existing_monthly": 18500, "requested": 200000, "tenure": 60, "keymen": 6,
      "incorp": "2020-10-09", "kiting_score": 88, "kiting_volume": 60000, "litigation_count": 3, "undeclared": True,
      "tnw": -50000, "tampering": True, "detected_loans": 3, "bank": "DBS", "aged_majority": True,
