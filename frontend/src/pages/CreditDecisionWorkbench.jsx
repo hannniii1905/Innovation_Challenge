@@ -94,9 +94,9 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
   const decisionLabel = application?.system_decision || "PENDING_REVIEW";
 
   const decisionColor =
-    decisionLabel === "APPROVE"
+    decisionLabel === "APPROVED"
       ? "success"
-      : decisionLabel === "REJECT"
+      : decisionLabel === "REJECTED"
       ? "error"
       : "warning";
 

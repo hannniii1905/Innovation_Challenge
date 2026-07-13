@@ -30,7 +30,7 @@ export default function ConsentSection({ application, setApplication }) {
 
   useEffect(() => {
     if (screen !== "loading") return;
-    const timer = setTimeout(() => setScreen("sign"), 3000);
+    const timer = setTimeout(() => setScreen("sign"), 1500);
     return () => clearTimeout(timer);
   }, [screen]);
 
@@ -46,7 +46,7 @@ export default function ConsentSection({ application, setApplication }) {
           singpassSignedAt: new Date().toISOString(),
         },
       }));
-    }, 3000);
+    }, 1500);
     return () => clearTimeout(timer);
   }, [screen]);
 

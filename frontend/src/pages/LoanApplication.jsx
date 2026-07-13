@@ -15,8 +15,9 @@ export default function LoanApplication({ application, setApplication, next, bac
   const validateDocuments = () => {
     // Only the corporate bank statement is mandatory. IC, financials and the
     // income statement are optional supporting docs that can be uploaded later.
-    if (!application.uploads.bankStatements) {
-      alert("Please upload your Corporate Bank Statement.");
+    const bankStatements = application.uploads.bankStatements || [];
+    if (bankStatements.length < 6) {
+      alert("Please upload all 6 monthly corporate bank statements before proceeding.");
       return false;
     }
     return true;

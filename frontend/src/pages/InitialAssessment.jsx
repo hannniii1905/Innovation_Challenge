@@ -162,6 +162,12 @@ export default function InitialAssessment({
     subtitle =
       "Congratulations! Based on our initial automated assessment, your application has been automatically approved.\n\nYour application is now pending a final review by one of our Credit Approvers before the facility can be formally approved.";
     chipColor = "success";
+  } else if (recommendation === "REJECTED") {
+    icon = <div style={{ fontSize: 80 }}>❌</div>;
+    title = "Application Not Approved";
+    subtitle =
+      "We regret to inform you that your application did not meet the required criteria based on our automated assessment.\n\nPlease contact our relationship manager for more information.";
+    chipColor = "error";
   } else {
     icon = <div style={{ fontSize: 80 }}>🟡</div>;
     title = "Needs Further Review";

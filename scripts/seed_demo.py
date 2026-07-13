@@ -194,6 +194,7 @@ def build(cfg, offset):
 
     system_decision = "APPROVED" if target == "APPROVED" else "NEEDS_FURTHER_REVIEW"
     status = "REJECTED" if target == "REJECT" else "PENDING"
+
     risk_flags = list(drivers) if target != "APPROVED" else []
 
     reasons = {
@@ -201,8 +202,58 @@ def build(cfg, offset):
         "REVIEW": "Elevated PD and/or thin coverage. Referred for manual credit review.",
         "REJECT": "Adverse bureau grade, weak coverage and material risk flags. Declined for obvious reasons.",
     }
+    system_reason = reasons[target]
 
     keymen_share = [{"name": k["name"], "role": k["role"], "shareholding": k["shareholding"]} for k in keymen]
+
+    # Build Light KYC checks for the underwriting bundle
+    from src.mock_data.light_kyc import run_light_kyc, _contains_excluded_industry, EXCLUDED_INDUSTRIES, BANK_WIDE_CIF_BLACKLIST, ON_US_OFF_US_ADVERSE, AML_HITS
+
+    def _norm(val):
+        return str(val or "").strip().upper()
+
+    uen_norm = _norm(cfg["uen"])
+    name_norm = _norm(cfg["name"])
+    industry = cfg.get("industry", "")
+
+    def _lookup(table):
+        return table.get(uen_norm) or table.get(name_norm) or ""
+
+    aml_reason = _lookup(AML_HITS)
+    cif_reason = _lookup(BANK_WIDE_CIF_BLACKLIST)
+    exposure_reason = _lookup(ON_US_OFF_US_ADVERSE)
+    industry_blocked, matched_industry = _contains_excluded_industry(industry)
+
+    lkyc_checks = [
+        {"key": "aml", "label": "AML", "passed": not bool(aml_reason),
+         "status": "Clear" if not aml_reason else "Review",
+         "description": "Company and keymen screened against AML, sanctions and adverse media lists.",
+         "source": "Mock AML / sanctions watchlist", "reason": aml_reason},
+        {"key": "bank_wide_cif_blacklist", "label": "Bank-wide CIF Blacklist",
+         "passed": not bool(cif_reason), "status": "Clear" if not cif_reason else "Review",
+         "description": "Applicant UEN / CIF checked against internal bank-wide blacklist records.",
+         "source": "Mock internal CIF blacklist", "reason": cif_reason},
+        {"key": "industry_blacklist", "label": "Industry Blacklist",
+         "passed": not industry_blocked, "status": "Clear" if not industry_blocked else "Review",
+         "description": "Business activity checked against excluded industries.",
+         "source": "Excluded industries",
+         "reason": f"Excluded industry detected: {industry}. Matched '{matched_industry}'." if industry_blocked else ""},
+        {"key": "on_us_off_us", "label": "On-us / Off-us Check",
+         "passed": not bool(exposure_reason), "status": "Clear" if not exposure_reason else "Review",
+         "description": "Checks existing UOB conduct and external/off-us banking exposure indicators.",
+         "source": "Mock bank conduct + bureau exposure file", "reason": exposure_reason},
+    ]
+    lkyc_failed = [c for c in lkyc_checks if not c["passed"]]
+    lkyc_passed = all(c["passed"] for c in lkyc_checks)
+
+    light_kyc = {
+        "passed": lkyc_passed,
+        "status": "Clear" if lkyc_passed else "Review",
+        "checks": lkyc_checks,
+        "failed_checks": lkyc_failed,
+        "excluded_industries": EXCLUDED_INDUSTRIES,
+        "summary": "All Light KYC checks cleared." if lkyc_passed else "; ".join(c["reason"] for c in lkyc_failed if c.get("reason")),
+    }
 
     underwriting = {
         "bank_ocr": {"bank": cfg.get("bank", "DBS"), "total_credits": round(revenue / 2),
@@ -214,7 +265,8 @@ def build(cfg, offset):
         "litigation": {"count": cfg["litigation_count"],
                        "charges": cfg.get("charges", []),
                        "high_risk": lit_high, "passed": not lit_high},
-        "aml": {"passed": True, "reason": ""},
+        "aml": {"passed": not bool(aml_reason), "reason": aml_reason},
+        "light_kyc": light_kyc,
         "financials": {
             "annualised_revenue": float(revenue), "ebitda": float(ebitda),
             "ebitda_margin": round(margin * 100, 1), "tnw": float(tnw),
@@ -238,6 +290,20 @@ def build(cfg, offset):
                        "requested_amount": float(cfg["requested"]), "drivers": drivers},
     }
 
+    # Auto-reject: override system_decision and status if light_kyc checks fail
+    if not lkyc_passed:
+        system_decision = "REJECTED"
+        status = "REJECTED"
+        failed_reasons = []
+        for c in lkyc_failed:
+            if c["key"] == "bank_wide_cif_blacklist":
+                failed_reasons.append("Bank-wide CIF Blacklist hit")
+            elif c["key"] == "industry_blacklist":
+                failed_reasons.append("Industry Blacklist exclusion")
+            elif c["key"] == "on_us_off_us":
+                failed_reasons.append("On-us/Off-us adverse conduct")
+        system_reason = "Auto-rejected: " + "; ".join(failed_reasons) + "."
+
     return StagedApplication(
         status=status, uen=cfg["uen"], company_name=cfg["name"], industry=cfg["industry"],
         requested_quantum=float(cfg["requested"]), declared_loans=cfg.get("declared", "NIL"),
@@ -249,7 +315,7 @@ def build(cfg, offset):
         annualised_revenue=float(revenue), ebitda=float(ebitda), tnw=float(tnw),
         dscr=dscr, fcc=float(fcc), credit_kiting_score=float(cfg["kiting_score"]),
         existing_debt=float(existing_monthly * 12), existing_debt_items=debt_items,
-        system_decision=system_decision, system_reason=reasons[target],
+        system_decision=system_decision, system_reason=system_reason,
         risk_flags=risk_flags, approved_amount=approved_limit,
         underwriting_json=underwriting,
     )

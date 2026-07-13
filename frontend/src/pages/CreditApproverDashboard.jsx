@@ -71,13 +71,13 @@ export default function CreditApproverDashboard({ openApplication, onViewHistory
   };
 
   const reviewLabel = (category) => {
-    if (category === "REJECT_RECOMMENDED") return "Reject Recommended";
+    if (category === "REJECTED") return "Rejected";
     if (category === "MANUAL_REVIEW_REQUIRED") return "Manual Review Required";
     return "Approved";
   };
 
   const reviewColor = (category) => {
-    if (category === "REJECT_RECOMMENDED") return "error";
+    if (category === "REJECTED") return "error";
     if (category === "MANUAL_REVIEW_REQUIRED") return "warning";
     return "success";
   };
@@ -237,15 +237,6 @@ export default function CreditApproverDashboard({ openApplication, onViewHistory
             sx={{ borderRadius: 3, fontWeight: 800 }}
         >
             Manual Review Required
-        </Button>
-
-        <Button
-            color="error"
-            variant={filter === "REJECT_RECOMMENDED" ? "contained" : "outlined"}
-            onClick={() => setFilter("REJECT_RECOMMENDED")}
-            sx={{ borderRadius: 3, fontWeight: 800 }}
-        >
-            Reject Recommended
         </Button>
 
         <Box sx={{ flex: 1 }} />

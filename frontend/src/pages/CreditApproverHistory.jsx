@@ -24,7 +24,7 @@ export default function CreditApproverHistory({ decidedApplications, openApplica
   useEffect(() => {
     async function loadHistory() {
       try {
-        const data = await getApproverApplications(true);
+        const data = await getApproverApplications();
         setHistoryApplications(data.applications || []);
       } catch (err) {
         setError(err.message || "Unable to load history.");
@@ -49,6 +49,7 @@ export default function CreditApproverHistory({ decidedApplications, openApplica
   const filteredHistory = useMemo(() => {
     return allHistory.filter((app) => {
       if (tab === "REJECTED") return app.approverDecision === "REJECTED";
+      if (tab === "AUTO_REJECTED") return app.system_decision === "REJECTED" && !app.approverDecision;
       if (tab === "APPROVED") return app.approverDecision === "APPROVED";
       if (tab === "FOR_REVIEW") return app.approverDecision === "SUBJECT TO APPROVAL";
       return false;
@@ -84,6 +85,7 @@ export default function CreditApproverHistory({ decidedApplications, openApplica
 
   const tabs = [
     { key: "REJECTED", label: "Rejected", color: "error" },
+    { key: "AUTO_REJECTED", label: "Auto-Rejected", color: "error" },
     { key: "APPROVED", label: "Approved", color: "success" },
     { key: "FOR_REVIEW", label: "For review", color: "warning" },
   ];
@@ -219,7 +221,7 @@ export default function CreditApproverHistory({ decidedApplications, openApplica
                 {filteredHistory.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                      No {tab === "FOR_REVIEW" ? "subject-to-approval" : tab.toLowerCase()} applications found.
+                      No {tab === "FOR_REVIEW" ? "subject-to-approval" : tab === "AUTO_REJECTED" ? "auto-rejected" : tab.toLowerCase()} applications found.
                     </TableCell>
                   </TableRow>
                 )}
@@ -233,8 +235,16 @@ export default function CreditApproverHistory({ decidedApplications, openApplica
                     <TableCell>{formatCurrency(app.requested_quantum)}</TableCell>
                     <TableCell>
                       <Chip
-                        label={formatDecision(app.approverDecision)}
-                        color={decisionColor(app.approverDecision)}
+                        label={
+                          !app.approverDecision && app.system_decision === "REJECTED"
+                            ? "Auto-Rejected"
+                            : formatDecision(app.approverDecision)
+                        }
+                        color={
+                          !app.approverDecision && app.system_decision === "REJECTED"
+                            ? "error"
+                            : decisionColor(app.approverDecision)
+                        }
                         size="small"
                         sx={{ fontWeight: 700 }}
                       />

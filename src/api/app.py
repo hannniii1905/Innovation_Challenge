@@ -873,19 +873,44 @@ async def submit_client_application(
         cbs_ok = cb.get("passed", True)
         aml_ok = light_kyc_res.get("passed", aml_res.get("passed", True))
 
-        if not cbs_ok or not aml_ok or pd > 30:
-            ai_recommendation = "NEEDS_FURTHER_REVIEW"
-            review_category = "REJECT_RECOMMENDED"
+        # Auto-reject: check specific Light KYC checks
+        lkyc_checks = light_kyc_res.get("checks", [])
+        cif_blacklist_failed = any(
+            c.get("key") == "bank_wide_cif_blacklist" and not c.get("passed", True)
+            for c in lkyc_checks
+        )
+        industry_blacklist_failed = any(
+            c.get("key") == "industry_blacklist" and not c.get("passed", True)
+            for c in lkyc_checks
+        )
+        on_us_off_us_failed = any(
+            c.get("key") == "on_us_off_us" and not c.get("passed", True)
+            for c in lkyc_checks
+        )
+        auto_reject_screening = cif_blacklist_failed or industry_blacklist_failed or on_us_off_us_failed
+
+        if auto_reject_screening:
+            # Immediate auto-reject for CIF blacklist, industry blacklist, or on-us/off-us failure
+            ai_recommendation = "REJECTED"
+            app_status = "REJECTED"
+            failed_reasons = []
+            if cif_blacklist_failed:
+                failed_reasons.append("Bank-wide CIF Blacklist hit")
+            if industry_blacklist_failed:
+                failed_reasons.append("Industry Blacklist exclusion")
+            if on_us_off_us_failed:
+                failed_reasons.append("On-us/Off-us adverse conduct")
+            reason = "Auto-rejected: " + "; ".join(failed_reasons) + "."
+        elif not cbs_ok or not aml_ok or pd > 30:
+            ai_recommendation = "REJECTED"
             app_status = "REJECTED"
             reason = "Adverse credit bureau grade / screening or high probability of default. Declined."
         elif pd >= 12 or lit.get("high_risk") or drivers:
             ai_recommendation = "NEEDS_FURTHER_REVIEW"
-            review_category = "MANUAL_REVIEW_REQUIRED"
             app_status = "PENDING"
             reason = "Elevated risk indicators require manual credit review."
         else:
             ai_recommendation = "APPROVED"
-            review_category = "APPROVED"
             app_status = "APPROVED"
             reason = "Clean bureau grade and low probability of default. Auto-approved within risk tolerance."
             application.approver_decision = "APPROVED"
@@ -904,7 +929,6 @@ async def submit_client_application(
             "application_id": application.id,
             "reference_number": f"APP-2026-{str(application.id).zfill(6)}",
             "ai_recommendation": ai_recommendation,
-            "review_category": review_category,
             "recommended_amount": application.approved_amount,
             "status": app_status,
             "raw_result": result,
@@ -1062,15 +1086,8 @@ def list_approver_applications(
 
         if system_decision == "APPROVED":
             review_category = "APPROVED"
-        elif (
-            "light kyc" in risk_text
-            or "blacklist" in risk_text
-            or "sanction" in risk_text
-            or "fraud" in risk_text
-            or "decline" in risk_text
-            or app.status == "REJECTED"
-        ):
-            review_category = "REJECT_RECOMMENDED"
+        elif system_decision == "REJECTED" or app.status == "REJECTED":
+            review_category = "REJECTED"
         else:
             review_category = "MANUAL_REVIEW_REQUIRED"
 
@@ -1092,7 +1109,7 @@ def list_approver_applications(
 
     total = len(rows)
     approved = len([x for x in rows if x["review_category"] == "APPROVED"])
-    rejected = len([x for x in rows if x["review_category"] == "REJECT_RECOMMENDED"])
+    rejected = len([x for x in rows if x["review_category"] == "REJECTED"])
     further_review = len(
         [x for x in rows if x["review_category"] == "MANUAL_REVIEW_REQUIRED"]
     )
