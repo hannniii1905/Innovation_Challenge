@@ -163,7 +163,6 @@ source ~/.zshrc
 ```
 
 **Free tier limits:** 30 requests/day, ~5-10 second response time per analysis.
-Enough for demo and development use.
 
 ## API Endpoints
 
