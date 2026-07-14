@@ -22,6 +22,7 @@ import {
   submitApproverDecision,
   getApplicationFileUrl,
   getGuarantorFileUrl,
+  getAiDecision,
 } from "../api/client";
 
 import LightKycPanel from "../components/LightKycPanel";
@@ -32,6 +33,8 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
   const [error, setError] = useState("");
   const [approverNotes, setApproverNotes] = useState("");
   const [decisionLoading, setDecisionLoading] = useState(false);
+  const [aiDecision, setAiDecision] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const applicationId = applicationSummary?.application_id;
 
   useEffect(() => {
@@ -49,6 +52,22 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
     if (applicationId) {
       loadApplication();
     }
+  }, [applicationId]);
+
+  useEffect(() => {
+    async function loadAiDecision() {
+      if (!applicationId) return;
+      setAiLoading(true);
+      try {
+        const data = await getAiDecision(applicationId);
+        setAiDecision(data);
+      } catch {
+        setAiDecision(null);
+      } finally {
+        setAiLoading(false);
+      }
+    }
+    loadAiDecision();
   }, [applicationId]);
 
   const formatCurrency = (value) => {
@@ -209,6 +228,8 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
           onViewTampering={onViewTampering}
           onViewLitigation={onViewLitigation}
           onViewRiskFlag={onViewRiskFlag}
+          aiDecision={aiDecision}
+          aiLoading={aiLoading}
         />
 
         <ApproverActionPanel
@@ -297,7 +318,17 @@ function FinalAssessmentSummary({
   onViewTampering,
   onViewLitigation,
   onViewRiskFlag,
+  aiDecision,
+  aiLoading,
 }) {
+  const decisionConfig = {
+    APPROVED: { color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", icon: "✓" },
+    REJECTED: { color: "#dc2626", bg: "#fef2f2", border: "#fecaca", icon: "✕" },
+    "SUBJECT TO APPROVAL": { color: "#d97706", bg: "#fffbeb", border: "#fde68a", icon: "!" },
+  };
+
+  const cfg = decisionConfig[aiDecision?.decision] || decisionConfig["SUBJECT TO APPROVAL"];
+
   return (
     <Panel title="Final Assessment Summary">
       <Grid container spacing={3}>
@@ -309,21 +340,124 @@ function FinalAssessmentSummary({
               color: "#64748b",
               textTransform: "uppercase",
               letterSpacing: ".06em",
-              mb: 1,
+              mb: 1.5,
             }}
           >
-            AI Decision Rationale
+            AI Decision &amp; Rationale
           </Typography>
 
-          <Typography
-            color="text.secondary"
-            sx={{
-              lineHeight: 1.8,
-              fontSize: 14,
-            }}
-          >
-            {application.system_reason}
-          </Typography>
+          {aiLoading ? (
+            <Box
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                bgcolor: "#f8fafc",
+                border: "1px dashed #cbd5e1",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+                <CircularProgress size={22} sx={{ color: "#005EB8" }} />
+                <Typography color="text.secondary" fontSize={14} fontWeight={500}>
+                  Generating AI assessment...
+                </Typography>
+              </Box>
+              <LinearProgress sx={{ borderRadius: 2, height: 6, bgcolor: "#e2e8f0" }} />
+            </Box>
+          ) : aiDecision ? (
+            <Stack spacing={0}>
+              {/* Decision card */}
+              <Box
+                sx={{
+                  p: 2.5,
+                  borderRadius: 3,
+                  bgcolor: cfg.bg,
+                  border: `1.5px solid ${cfg.border}`,
+                  mb: 2,
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+                  <Box
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: "50%",
+                      bgcolor: cfg.color,
+                      color: "white",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 16,
+                      fontWeight: 900,
+                    }}
+                  >
+                    {cfg.icon}
+                  </Box>
+                  <Typography sx={{ fontSize: 20, fontWeight: 900, color: cfg.color, letterSpacing: "-0.01em" }}>
+                    {aiDecision.decision}
+                  </Typography>
+                </Box>
+                {aiDecision.provider === "huggingface" && (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>
+                    <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "#005EB8" }} />
+                    <Typography fontSize={11} color="#64748b" sx={{ fontWeight: 500 }}>
+                      Powered by AI
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+
+              {/* Rationale */}
+              <Box sx={{ px: 0.5, mb: 2.5 }}>
+                <Typography
+                  color="#334155"
+                  sx={{ lineHeight: 1.85, fontSize: 14, fontWeight: 400 }}
+                >
+                  {aiDecision.rationale}
+                </Typography>
+              </Box>
+
+              {/* Key factors */}
+              {aiDecision.key_factors?.length > 0 && (
+                <Box>
+                  <Typography
+                    fontSize={12}
+                    fontWeight={900}
+                    color="#64748b"
+                    sx={{ mb: 1, textTransform: "uppercase", letterSpacing: ".06em" }}
+                  >
+                    Key Factors
+                  </Typography>
+                  <Stack direction="row" flexWrap="wrap" gap={0.8}>
+                    {aiDecision.key_factors.map((f, i) => {
+                      const isRisk = f.toLowerCase().includes("high") || f.toLowerCase().includes("risk") || f.toLowerCase().includes("kiting") || f.toLowerCase().includes("suspicious");
+                      const isGood = f.toLowerCase().includes("strong") || f.toLowerCase().includes("good") || f.toLowerCase().includes("approved");
+                      const chipColor = isRisk ? "#dc2626" : isGood ? "#16a34a" : "#475569";
+                      const chipBg = isRisk ? "#fef2f2" : isGood ? "#f0fdf4" : "#f1f5f9";
+                      return (
+                        <Chip
+                          key={i}
+                          label={f}
+                          size="small"
+                          sx={{
+                            fontWeight: 600,
+                            fontSize: 12,
+                            bgcolor: chipBg,
+                            color: chipColor,
+                            border: `1px solid ${chipColor}22`,
+                            height: 28,
+                          }}
+                        />
+                      );
+                    })}
+                  </Stack>
+                </Box>
+              )}
+            </Stack>
+          ) : (
+            <Typography color="text.secondary" sx={{ lineHeight: 1.8, fontSize: 14 }}>
+              {application.system_reason}
+            </Typography>
+          )}
         </Grid>
 
         <Grid size={{ xs: 12, md: 5 }}>

@@ -203,6 +203,13 @@ export default function CreditApproverHistory({ decidedApplications, openApplica
                     textTransform: "none",
                     fontSize: 13,
                     minWidth: 80,
+                    bgcolor: subTab === s ? (s === "AUTO" ? "#16a34a" : "#f97316") : "transparent",
+                    color: subTab === s ? "white" : (s === "AUTO" ? "#16a34a" : "#f97316"),
+                    borderColor: s === "AUTO" ? "#16a34a" : "#f97316",
+                    "&:hover": {
+                      bgcolor: s === "AUTO" ? "#15803d" : "#ea580c",
+                      borderColor: s === "AUTO" ? "#15803d" : "#ea580c",
+                    },
                   }}
                 >
                   {s === "AUTO" ? "Auto" : "Manual"}

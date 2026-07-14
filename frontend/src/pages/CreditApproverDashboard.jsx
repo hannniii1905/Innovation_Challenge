@@ -189,7 +189,7 @@ export default function CreditApproverDashboard({ openApplication, onViewHistory
             rejectedCount={summary.auto_rejected_count || 0}
             approvedLabel="approved"
             rejectedLabel="rejected"
-            accent="#6366f1"
+            accent="#16a34a"
           />
           <SplitMetricCard
             title="Manual"
@@ -198,7 +198,7 @@ export default function CreditApproverDashboard({ openApplication, onViewHistory
             rejectedCount={summary.manual_rejected_count || 0}
             approvedLabel="approved"
             rejectedLabel="rejected"
-            accent="#8b5cf6"
+            accent="#f97316"
           />
           <SplitMetricCard
             title="Needs Further Review"

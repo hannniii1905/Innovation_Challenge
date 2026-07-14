@@ -295,10 +295,6 @@ def analyze_industry(industry: str | None) -> dict | None:
     if not industry:
         return None
 
-    ai_result = _hf_analyze(industry)
-    if ai_result:
-        return ai_result
-
     cat = _classify(industry)
     if not cat:
         return generate_fallback(industry)

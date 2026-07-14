@@ -340,6 +340,17 @@ export async function getApproverApplication(applicationId) {
   return response.json();
 }
 
+export async function getAiDecision(applicationId) {
+  const response = await fetch(`${API_BASE}/approver/applications/${applicationId}/ai-decision`);
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || "Failed to generate AI decision.");
+  }
+
+  return response.json();
+}
+
 export function getApplicationFileUrl(
   applicationId,
   documentType,

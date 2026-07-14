@@ -17,6 +17,7 @@ Validates: Requirements 8.1-8.7, 9.1-9.8, 10.1-10.8
 
 import os
 import json
+import re
 import shutil
 import tempfile
 import threading
@@ -1357,6 +1358,113 @@ def get_guarantor_file(
         raise HTTPException(status_code=404, detail="File not found.")
 
     return FileResponse(file_path, filename=os.path.basename(file_path))
+
+
+@app.get("/approver/applications/{application_id}/ai-decision")
+def get_ai_decision(application_id: int, db: Session = Depends(get_db)):
+    app_record = (
+        db.query(StagedApplication)
+        .filter(StagedApplication.id == application_id)
+        .first()
+    )
+    if not app_record:
+        raise HTTPException(status_code=404, detail="Application not found.")
+
+    uw = app_record.underwriting_json or {}
+    cb = uw.get("credit_bureau", {})
+    fin = uw.get("financials", {})
+    risk_model = uw.get("risk_model", {})
+    kiting = uw.get("credit_kiting", {})
+    aml = uw.get("aml", {})
+    litigation = uw.get("litigation", {})
+    pgs = app_record.personal_guarantors_json or []
+
+    context = f"""Application: {app_record.company_name} (UEN: {app_record.uen})
+Industry: {app_record.industry}
+Requested Amount: ${app_record.requested_quantum:,.0f}
+System Decision: {app_record.system_decision}
+Risk Flags: {', '.join(app_record.risk_flags or []) or 'None'}
+
+Credit Bureau Grade: {cb.get('grade', 'N/A')} (passed: {cb.get('passed', 'N/A')})
+Risk Model PD: {risk_model.get('pd_percent', 'N/A')}%
+Approved Limit: ${risk_model.get('approved_limit', 0):,.0f}
+Rating Band: {risk_model.get('rating_band', 'N/A')}
+
+Annualised Revenue: ${fin.get('annualised_revenue', 0):,.0f}
+DSCR: {fin.get('dscr', 'N/A')}
+Credit Kiting Score: {kiting.get('score', 0)}/100 (flagged volume: ${kiting.get('flagged_volume', 0):,.0f})
+AML Risk: {aml.get('risk_level', 'N/A')}
+Litigation: {litigation.get('count', 0)} matter(s) found
+
+Personal Guarantors ({len(pgs)}):
+{chr(10).join(f"  - {p.get('name')}: verified={p.get('verified')}, age={p.get('age')}, cbs_consent={p.get('cbsConsent')}" for p in pgs) or '  None'}
+"""
+
+    api_key = os.environ.get("HF_TOKEN")
+    if not api_key:
+        return {
+            "decision": app_record.system_decision or "PENDING_REVIEW",
+            "rationale": app_record.system_reason or "LLM not configured. Set HF_TOKEN to enable AI decision generation.",
+            "provider": "fallback",
+        }
+
+    try:
+        from huggingface_hub import InferenceClient
+        client = InferenceClient(token=api_key)
+
+        system_msg = "You are a senior credit risk analyst at a Singapore bank. You return only valid JSON, no markdown, no code fences."
+
+        user_msg = f"""Based on the following loan application data, provide your credit decision and rationale.
+
+{context}
+
+Return ONLY valid JSON with these fields:
+{{
+  "decision": "APPROVED" or "REJECTED" or "SUBJECT TO APPROVAL",
+  "rationale": "A detailed 3-5 sentence professional rationale explaining the decision, covering key strengths, weaknesses, and risk factors.",
+  "key_factors": ["Factor 1", "Factor 2", "Factor 3"]
+}}
+
+Rules:
+- decision must be one of: APPROVED, REJECTED, SUBJECT TO APPROVAL
+- If PD > 30% or credit kiting score > 30 or AML is high risk, lean toward REJECTED or SUBJECT TO APPROVAL
+- If DSCR < 1.2, flag concern about debt serviceability
+- key_factors must have 3-5 items
+- Be specific to the actual data, not generic"""
+
+        response = client.chat_completion(
+            model="Qwen/Qwen2.5-7B-Instruct",
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": user_msg},
+            ],
+            max_tokens=1024,
+            temperature=0.3,
+        )
+
+        text = response.choices[0].message.content.strip()
+        if text.startswith("```"):
+            text = re.sub(r"^```(?:json)?\s*", "", text)
+            text = re.sub(r"\s*```$", "", text)
+
+        data = json.loads(text)
+
+        if data.get("decision") not in ("APPROVED", "REJECTED", "SUBJECT TO APPROVAL"):
+            data["decision"] = app_record.system_decision or "PENDING_REVIEW"
+
+        return {
+            "decision": data["decision"],
+            "rationale": data.get("rationale", ""),
+            "key_factors": data.get("key_factors", []),
+            "provider": "huggingface",
+        }
+
+    except Exception:
+        return {
+            "decision": app_record.system_decision or "PENDING_REVIEW",
+            "rationale": app_record.system_reason or "AI decision generation failed. Displaying system assessment.",
+            "provider": "fallback",
+        }
 
 
 @app.post("/approver/applications/{application_id}/decision")

@@ -125,18 +125,22 @@ Open the printed URL (default `http://localhost:5173`). The Vite dev server
 proxies `/api/*` requests to the backend on port `8000`, so no extra
 configuration is needed as long as both are running.
 
-### AI Industry Analysis (Hugging Face LLM)
+### AI Decision Generation (Hugging Face LLM)
 
-The **AI Industry Analysis** panel in the Credit Decision Workbench is powered
-by a free Hugging Face LLM (Qwen 2.5 7B). When enabled, it generates a
-real, industry-specific risk analysis for each loan application instead of using
-hardcoded templates.
+The **Final Assessment Summary** panel in the Credit Decision Workbench uses a
+free Hugging Face LLM (Qwen 2.5 7B) to generate an AI-powered credit decision
+with rationale. This provides a second opinion alongside the automated underwriting
+engine.
 
 **How it works:**
-- The LLM is called **once** when an applicant submits a loan application
-- The result is saved to the database and cached — the approver workbench
-  reads the stored result, not the LLM
-- Without the token, the system falls back to the existing mock templates
+- When a Credit Approver opens an application, the workbench automatically
+  calls the LLM with all available data (financials, credit bureau, risk flags,
+  kiting score, guarantors, etc.)
+- The LLM returns a decision (APPROVED / REJECTED / SUBJECT TO APPROVAL),
+  a detailed rationale, and key factors
+- The result is displayed in the "Final Assessment Summary" panel with a
+  color-coded decision chip and "Powered by AI" label
+- Without the token, the system falls back to the original system reason
   (no errors, no crashes)
 
 **Setup (free, no billing required):**
