@@ -252,13 +252,13 @@ export default function ConsentSection({ application, setApplication }) {
           )}
         </Box>
 
-        <Dialog open={showPopup} onClose={() => setShowPopup(false)} maxWidth="md">
+        <Dialog open={showPopup} onClose={() => setShowPopup(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
           {screen !== "sign" && (
-            <DialogTitle sx={{ fontWeight: 800, fontSize: 16, textAlign: "center", pt: 3 }}>
+            <DialogTitle sx={{ fontWeight: 800, fontSize: 16, textAlign: "center", pt: 3, pb: 0 }}>
               Digital Signature via Singpass
             </DialogTitle>
           )}
-          <DialogContent sx={{ textAlign: "center", pb: 3, boxSizing: "border-box", overflow: "auto" }}>
+          <DialogContent sx={{ textAlign: "center", pb: 5, boxSizing: "border-box", overflow: "auto", px: 4 }}>
             {screen === "loading" ? (
               <Box
                 sx={{

@@ -44,32 +44,32 @@ function SingpassAuthDialog({ open, onClose, onDone, guarantorName }) {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-      <DialogTitle sx={{ textAlign: "center", fontWeight: 900, pt: 3 }}>
-        <Typography component="span" sx={{ color: "#ef4444", fontWeight: 950, fontSize: 24 }}>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
+      <DialogTitle sx={{ textAlign: "center", fontWeight: 900, pt: 3, pb: 0 }}>
+        <Typography component="span" sx={{ color: "#ef4444", fontWeight: 950, fontSize: 26 }}>
           singpass
         </Typography>
       </DialogTitle>
-      <DialogContent sx={{ textAlign: "center", pb: 4 }}>
+      <DialogContent sx={{ textAlign: "center", pb: 4, px: 4 }}>
         {phase === "qr" && (
           <Box>
-            <Typography fontSize={14} color="text.secondary" sx={{ mb: 2 }}>
+            <Typography fontSize={14} color="text.secondary" sx={{ mb: 2.5, lineHeight: 1.6 }}>
               <strong>{guarantorName}</strong>, scan this code with your Singpass
               app to verify your identity and retrieve your IRAS income.
             </Typography>
             <Box
               sx={{
                 display: "inline-flex",
-                p: 2,
+                p: 2.5,
                 border: "3px solid #ef4444",
                 borderRadius: 3,
                 bgcolor: "white",
                 mb: 3,
               }}
             >
-              <QRCode value={`UOB-PG-${guarantorName}`} size={160} />
+              <QRCode value={`UOB-PG-${guarantorName}`} size={180} />
             </Box>
-            <Box sx={{ textAlign: "left", mb: 3 }}>
+            <Box sx={{ textAlign: "left", mb: 3, px: 1 }}>
               <Typography fontSize={12} fontWeight={800} color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: ".06em", mb: 1 }}>
                 Singpass will share
               </Typography>
@@ -78,7 +78,7 @@ function SingpassAuthDialog({ open, onClose, onDone, guarantorName }) {
                 "Date of Birth",
                 "IRAS Notice of Assessment (income)",
               ].map((item) => (
-                <Typography key={item} sx={{ py: 0.5, fontSize: 14, borderBottom: "1px solid #f1f5f9" }}>
+                <Typography key={item} sx={{ py: 0.6, fontSize: 14, borderBottom: "1px solid #f1f5f9" }}>
                   › {item}
                 </Typography>
               ))}
@@ -91,7 +91,7 @@ function SingpassAuthDialog({ open, onClose, onDone, guarantorName }) {
               fullWidth
               variant="contained"
               color="error"
-              sx={{ borderRadius: 2, py: 1.3, fontWeight: 900 }}
+              sx={{ borderRadius: 2, py: 1.4, fontWeight: 900, fontSize: 15 }}
               onClick={() => {
                 setPhase("approving");
                 setTimeout(() => setPhase("done"), 1800);
