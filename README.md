@@ -125,6 +125,42 @@ Open the printed URL (default `http://localhost:5173`). The Vite dev server
 proxies `/api/*` requests to the backend on port `8000`, so no extra
 configuration is needed as long as both are running.
 
+### AI Industry Analysis (Hugging Face LLM)
+
+The **AI Industry Analysis** panel in the Credit Decision Workbench is powered
+by a free Hugging Face LLM (Qwen 2.5 7B). When enabled, it generates a
+real, industry-specific risk analysis for each loan application instead of using
+hardcoded templates.
+
+**How it works:**
+- The LLM is called **once** when an applicant submits a loan application
+- The result is saved to the database and cached — the approver workbench
+  reads the stored result, not the LLM
+- Without the token, the system falls back to the existing mock templates
+  (no errors, no crashes)
+
+**Setup (free, no billing required):**
+
+1. Create a free account at [huggingface.co](https://huggingface.co/join)
+2. Go to [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
+3. Click **"New token"**, select **"Read"** role, and generate
+4. Export the token before starting the backend:
+
+```bash
+export HF_TOKEN="hf_your_token_here"
+uvicorn src.api.app:app --reload
+```
+
+**To make it persistent**, add to your shell profile (`~/.zshrc` or `~/.bashrc`):
+
+```bash
+echo 'export HF_TOKEN="hf_your_token_here"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+**Free tier limits:** 30 requests/day, ~5-10 second response time per analysis.
+Enough for demo and development use.
+
 ## API Endpoints
 
 All endpoints are served under the `/api` prefix. A session is created on
@@ -231,10 +267,15 @@ Innovation_Challenge/
 │   ├── main.py              # CLI entry point
 │   ├── ocr_engine.py        # PDF text extraction
 │   ├── document_router.py   # Document type identification and routing
+│   ├── credit_kiting.py     # Credit-kiting detection + recommendations
+│   ├── underwriting_engine.py# Underwriting score calculations
+│   ├── mock_data/
+│   │   └── industry_risks.py# Industry analysis (HuggingFace LLM + fallback templates)
 │   ├── api/
 │   │   ├── __init__.py
 │   │   ├── app.py           # FastAPI app + endpoints
 │   │   ├── schemas.py       # Pydantic request/response models
+│   │   ├── credit_bureau_client.py # Mock CBS API
 │   │   └── session_store.py # In-memory session store
 │   ├── parsers/
 │   │   ├── __init__.py
@@ -243,10 +284,10 @@ Innovation_Challenge/
 │   │   ├── ocbc_parser.py   # OCBC statement parser
 │   │   ├── maybank_parser.py# Maybank statement parser
 │   │   ├── uob_parser.py   # UOB statement parser
-│   │   └── iras_noa_parser.py # IRAS NOA parser
+│   │   ├── iras_noa_parser.py # IRAS NOA parser
+│   │   └── credit_bureau_parser.py # CBS PDF report parser
 │   ├── loan_detector.py     # Loan repayment detection
 │   ├── fraud_detector.py    # Suspicious credit detection
-│   ├── credit_kiting.py     # Credit-kiting detection + recommendations
 │   └── reporter.py          # JSON report generation
 ├── frontend/                # React + Tailwind web UI (Vite)
 │   ├── src/

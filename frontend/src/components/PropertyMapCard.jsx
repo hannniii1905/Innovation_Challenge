@@ -6,8 +6,6 @@ import {
   Stack,
   Chip,
   CircularProgress,
-  ToggleButton,
-  ToggleButtonGroup,
 } from "@mui/material";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
@@ -59,7 +57,6 @@ function siteObservations(property) {
 export default function PropertyMapCard({ address }) {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState("street"); // "street" | "satellite"
 
   useEffect(() => {
     if (!address) {
@@ -96,11 +93,6 @@ export default function PropertyMapCard({ address }) {
   const center = property ? [property.lat, property.lng] : SINGAPORE_CENTER;
   const observations = property ? siteObservations(property) : [];
 
-  // Keyless Google Maps Street View embed centred on the property coordinates.
-  const streetViewSrc = property
-    ? `https://maps.google.com/maps?q=&layer=c&cbll=${property.lat},${property.lng}&cbp=11,0,0,0,0&output=svembed`
-    : `https://maps.google.com/maps?q=Singapore&layer=c&output=svembed`;
-
   return (
     <Paper sx={{ p: 3.5, borderRadius: 4, boxShadow: "0 10px 24px rgba(15,23,42,.06)" }}>
       <Stack
@@ -116,60 +108,32 @@ export default function PropertyMapCard({ address }) {
             Virtual site visit to verify business signage and operating evidence at the registered address.
           </Typography>
         </Box>
-        <ToggleButtonGroup
-          size="small"
-          exclusive
-          value={view}
-          onChange={(_, v) => v && setView(v)}
-          sx={{
-            "& .MuiToggleButton-root": {
-              textTransform: "none",
-              fontWeight: 800,
-              px: 2,
-              borderRadius: 2,
-            },
-          }}
-        >
-          <ToggleButton value="street">Street View</ToggleButton>
-          <ToggleButton value="satellite">Satellite</ToggleButton>
-        </ToggleButtonGroup>
       </Stack>
 
       <Box sx={{ position: "relative", height: 260, borderRadius: 2, overflow: "hidden", mt: 2, mb: 2 }}>
-        {view === "street" ? (
-          <iframe
-            title="Street view of registered address"
-            src={streetViewSrc}
-            style={{ height: "100%", width: "100%", border: 0 }}
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            allowFullScreen
+        <MapContainer
+          center={center}
+          zoom={property ? 18 : 12}
+          scrollWheelZoom={false}
+          style={{ height: "100%", width: "100%" }}
+        >
+          <TileLayer
+            attribution="Esri"
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
           />
-        ) : (
-          <MapContainer
-            center={center}
-            zoom={property ? 18 : 12}
-            scrollWheelZoom={false}
-            style={{ height: "100%", width: "100%" }}
-          >
-            <TileLayer
-              attribution="Esri"
-              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-            />
-            {property && (
-              <Marker position={center}>
-                <Popup>
-                  {property.building_name}
-                  <br />
-                  {property.address}
-                </Popup>
-              </Marker>
-            )}
-          </MapContainer>
-        )}
+          {property && (
+            <Marker position={center}>
+              <Popup>
+                {property.building_name}
+                <br />
+                {property.address}
+              </Popup>
+            </Marker>
+          )}
+        </MapContainer>
         <Chip
           size="small"
-          label={view === "street" ? "📍 Street-level view" : "🛰️ Satellite view"}
+          label="🛰️ Satellite view"
           sx={{
             position: "absolute",
             top: 10,

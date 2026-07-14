@@ -102,6 +102,7 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
 
   const uw = application?.underwriting || {};
   const fin = uw.financials || {};
+  const cbs = uw.credit_bureau || {};
   const singpass = application?.singpass_profile || {};
   const propertyOwnership = singpass.propertyOwnership;
   const rentAmount = singpass.rentAmount;
@@ -445,6 +446,7 @@ function CompanyOverview({
   propertyOwnership,
   rentAmount,
 }) {
+  const cbs = application?.underwriting?.credit_bureau || {};
   const bankStatementDocuments = Array.isArray(
     application?.files?.bank_statements
   )
@@ -574,7 +576,21 @@ function CompanyOverview({
               directorNames.length > 0
                 ? directorNames.join(", ")
                 : "No director information available",
-            size: { xs: 12, md: 9 },
+            size: { xs: 12, md: 6.5 },
+          },
+          {
+            label: "Credit Bureau Score",
+            value: (() => {
+              const grade = cbs.grade;
+              if (!grade) return "—";
+              const fail = ["HH", "HX", "HZ"].includes(grade);
+              return (
+                <span style={{ color: fail ? "#dc2626" : "#16a34a", fontWeight: 850 }}>
+                  {grade}
+                </span>
+              );
+            })(),
+            size: { xs: 12, sm: 6, md: 2.5 },
           },
         ].map((item) => (
           <Grid key={item.label} size={item.size}>

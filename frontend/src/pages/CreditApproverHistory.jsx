@@ -19,7 +19,8 @@ export default function CreditApproverHistory({ decidedApplications, openApplica
   const [historyApplications, setHistoryApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState("REJECTED");
+  const [tab, setTab] = useState("APPROVED");
+  const [subTab, setSubTab] = useState("AUTO");
 
   useEffect(() => {
     async function loadHistory() {
@@ -48,13 +49,18 @@ export default function CreditApproverHistory({ decidedApplications, openApplica
 
   const filteredHistory = useMemo(() => {
     return allHistory.filter((app) => {
-      if (tab === "REJECTED") return app.approverDecision === "REJECTED";
-      if (tab === "AUTO_REJECTED") return app.system_decision === "REJECTED" && !app.approverDecision;
-      if (tab === "APPROVED") return app.approverDecision === "APPROVED";
+      if (tab === "APPROVED") {
+        if (subTab === "AUTO") return app.review_category === "APPROVED" && !app.approverDecision;
+        if (subTab === "MANUAL") return app.review_category === "APPROVED" && app.approverDecision === "APPROVED";
+      }
+      if (tab === "REJECTED") {
+        if (subTab === "AUTO") return app.review_category === "REJECTED" && !app.approverDecision;
+        if (subTab === "MANUAL") return app.review_category === "REJECTED" && app.approverDecision === "REJECTED";
+      }
       if (tab === "FOR_REVIEW") return app.approverDecision === "SUBJECT TO APPROVAL";
       return false;
     });
-  }, [allHistory, tab]);
+  }, [allHistory, tab, subTab]);
 
   const handleDelete = async (appId) => {
     if (!window.confirm("Delete this application from the queue?")) return;
@@ -77,17 +83,10 @@ export default function CreditApproverHistory({ decidedApplications, openApplica
     return d.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
-  const decisionColor = (d) => {
-    if (d === "APPROVED") return "success";
-    if (d === "REJECTED") return "error";
-    return "warning";
-  };
-
   const tabs = [
-    { key: "REJECTED", label: "Rejected", color: "error" },
-    { key: "AUTO_REJECTED", label: "Auto-Rejected", color: "error" },
     { key: "APPROVED", label: "Approved", color: "success" },
-    { key: "FOR_REVIEW", label: "For review", color: "warning" },
+    { key: "REJECTED", label: "Rejected", color: "error" },
+    { key: "FOR_REVIEW", label: "For Review", color: "warning" },
   ];
 
   return (
@@ -182,13 +181,35 @@ export default function CreditApproverHistory({ decidedApplications, openApplica
                 key={t.key}
                 color={t.color}
                 variant={tab === t.key ? "contained" : "outlined"}
-                onClick={() => setTab(t.key)}
+                onClick={() => { setTab(t.key); setSubTab("AUTO"); }}
                 sx={{ borderRadius: 3, fontWeight: 800 }}
               >
                 {t.label}
               </Button>
             ))}
           </Stack>
+
+          {(tab === "APPROVED" || tab === "REJECTED") && (
+            <Stack direction="row" spacing={1} sx={{ mb: 3 }}>
+              {["AUTO", "MANUAL"].map((s) => (
+                <Button
+                  key={s}
+                  variant={subTab === s ? "contained" : "outlined"}
+                  onClick={() => setSubTab(s)}
+                  size="small"
+                  sx={{
+                    borderRadius: 2,
+                    fontWeight: 700,
+                    textTransform: "none",
+                    fontSize: 13,
+                    minWidth: 80,
+                  }}
+                >
+                  {s === "AUTO" ? "Auto" : "Manual"}
+                </Button>
+              ))}
+            </Stack>
+          )}
 
           {loading && (
             <Box sx={{ py: 8, textAlign: "center" }}>
@@ -221,7 +242,7 @@ export default function CreditApproverHistory({ decidedApplications, openApplica
                 {filteredHistory.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                      No {tab === "FOR_REVIEW" ? "subject-to-approval" : tab === "AUTO_REJECTED" ? "auto-rejected" : tab.toLowerCase()} applications found.
+                      No {tab === "FOR_REVIEW" ? "subject-to-approval" : `${subTab === "AUTO" ? "auto" : "manual"} ${tab.toLowerCase()}`} applications found.
                     </TableCell>
                   </TableRow>
                 )}
@@ -236,14 +257,24 @@ export default function CreditApproverHistory({ decidedApplications, openApplica
                     <TableCell>
                       <Chip
                         label={
-                          !app.approverDecision && app.system_decision === "REJECTED"
+                          !app.approverDecision && app.system_decision === "APPROVED"
+                            ? "Auto-Approved"
+                            : !app.approverDecision && app.system_decision === "REJECTED"
                             ? "Auto-Rejected"
+                            : app.approverDecision === "APPROVED"
+                            ? "Manual Approved"
+                            : app.approverDecision === "REJECTED"
+                            ? "Manual Rejected"
                             : formatDecision(app.approverDecision)
                         }
                         color={
-                          !app.approverDecision && app.system_decision === "REJECTED"
+                          app.approverDecision === "APPROVED" ||
+                          (!app.approverDecision && app.system_decision === "APPROVED")
+                            ? "success"
+                            : app.approverDecision === "REJECTED" ||
+                              (!app.approverDecision && app.system_decision === "REJECTED")
                             ? "error"
-                            : decisionColor(app.approverDecision)
+                            : "warning"
                         }
                         size="small"
                         sx={{ fontWeight: 700 }}

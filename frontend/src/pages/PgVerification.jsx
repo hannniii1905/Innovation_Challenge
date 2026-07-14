@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Paper,
@@ -35,8 +35,11 @@ function maskEmail(email, name) {
 function SingpassAuthDialog({ open, onClose, onDone, guarantorName }) {
   const [phase, setPhase] = useState("qr"); // qr | approving | done
 
+  useEffect(() => {
+    if (open) setPhase("qr");
+  }, [open]);
+
   const handleClose = () => {
-    setPhase("qr");
     onClose();
   };
 

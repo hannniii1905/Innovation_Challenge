@@ -176,29 +176,35 @@ export default function CreditApproverDashboard({ openApplication, onViewHistory
             },
           }}
         >
-          <MetricCard
+          <SplitMetricCard
             title="Total Applications"
             value={summary.total_applications || 0}
             subtitle="Applications submitted"
             accent="#005EB8"
           />
-          <MetricCard
-            title="Auto-Approved"
-            value={`${summary.approved_percentage || 0}%`}
-            subtitle="Passed automated assessment"
-            accent="#16a34a"
+          <SplitMetricCard
+            title="Auto"
+            value={`${summary.auto_approved_percentage || 0}%`}
+            approvedCount={summary.auto_approved_count || 0}
+            rejectedCount={summary.auto_rejected_count || 0}
+            approvedLabel="approved"
+            rejectedLabel="rejected"
+            accent="#6366f1"
           />
-          <MetricCard
+          <SplitMetricCard
+            title="Manual"
+            value={`${summary.manual_approved_percentage || 0}%`}
+            approvedCount={summary.manual_approved_count || 0}
+            rejectedCount={summary.manual_rejected_count || 0}
+            approvedLabel="approved"
+            rejectedLabel="rejected"
+            accent="#8b5cf6"
+          />
+          <SplitMetricCard
             title="Needs Further Review"
             value={`${summary.further_review_percentage || 0}%`}
-            subtitle="Requires credit approver attention"
+            subtitle={`${summary.further_review_count || 0} require credit approver attention`}
             accent="#f59e0b"
-          />
-          <MetricCard
-            title="Rejected"
-            value={`${summary.rejected_percentage || 0}%`}
-            subtitle="Failed to meet key credit criteria"
-            accent="#dc2626"
           />
         </Box>
 
@@ -337,7 +343,12 @@ export default function CreditApproverDashboard({ openApplication, onViewHistory
   );
 }
 
-function MetricCard({ title, value, subtitle, accent }) {
+function SplitMetricCard({ title, value, subtitle, approvedCount, rejectedCount, approvedLabel, rejectedLabel, accent }) {
+  const hasBreakdown = approvedCount != null && rejectedCount != null;
+  const total = hasBreakdown ? approvedCount + rejectedCount : 0;
+  const approvedPct = total > 0 ? (approvedCount / total) * 100 : 0;
+  const rejectedPct = total > 0 ? (rejectedCount / total) * 100 : 0;
+
   return (
     <Paper
       elevation={0}
@@ -347,9 +358,10 @@ function MetricCard({ title, value, subtitle, accent }) {
         height: "100%",
         border: "1px solid #e5e7eb",
         boxShadow: "0 12px 28px rgba(15,23,42,.08)",
+        borderTop: `4px solid ${accent}`,
       }}
     >
-      <Typography color="text.secondary" sx={{ fontWeight: 700 }}>
+      <Typography color="text.secondary" sx={{ fontWeight: 900, fontSize: 15 }}>
         {title}
       </Typography>
 
@@ -365,9 +377,57 @@ function MetricCard({ title, value, subtitle, accent }) {
         {value}
       </Typography>
 
-      <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-        {subtitle}
-      </Typography>
+      {hasBreakdown && (
+        <>
+          <Box sx={{ mt: 1.5, mb: 1 }}>
+            <Box
+              sx={{
+                height: 8,
+                borderRadius: 4,
+                bgcolor: "#f1f5f9",
+                overflow: "hidden",
+                display: "flex",
+              }}
+            >
+              <Box
+                sx={{
+                  width: `${approvedPct}%`,
+                  bgcolor: "#22c55e",
+                  transition: "width 0.6s ease",
+                }}
+              />
+              <Box
+                sx={{
+                  width: `${rejectedPct}%`,
+                  bgcolor: "#ef4444",
+                  transition: "width 0.6s ease",
+                }}
+              />
+            </Box>
+          </Box>
+
+          <Box sx={{ display: "flex", gap: 2, mt: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+              <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: "#22c55e", flexShrink: 0 }} />
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, lineHeight: "10px" }}>
+                {approvedCount} {approvedLabel}
+              </Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+              <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: "#ef4444", flexShrink: 0 }} />
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, lineHeight: "10px" }}>
+                {rejectedCount} {rejectedLabel}
+              </Typography>
+            </Box>
+          </Box>
+        </>
+      )}
+
+      {!hasBreakdown && subtitle && (
+        <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+          {subtitle}
+        </Typography>
+      )}
     </Paper>
   );
 }

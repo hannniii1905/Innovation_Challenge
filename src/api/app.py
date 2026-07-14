@@ -1114,6 +1114,23 @@ def list_approver_applications(
         [x for x in rows if x["review_category"] == "MANUAL_REVIEW_REQUIRED"]
     )
 
+    auto_approved = len([
+        x for x in rows
+        if x["review_category"] == "APPROVED" and x["approver_decision"] is None
+    ])
+    manual_approved = len([
+        x for x in rows
+        if x["review_category"] == "APPROVED" and x["approver_decision"] is not None
+    ])
+    auto_rejected = len([
+        x for x in rows
+        if x["review_category"] == "REJECTED" and x["approver_decision"] is None
+    ])
+    manual_rejected = len([
+        x for x in rows
+        if x["review_category"] == "REJECTED" and x["approver_decision"] is not None
+    ])
+
     def pct(n):
         return round((n / total) * 100, 1) if total else 0
 
@@ -1126,6 +1143,14 @@ def list_approver_applications(
             "approved_percentage": pct(approved),
             "further_review_percentage": pct(further_review),
             "rejected_percentage": pct(rejected),
+            "auto_approved_count": auto_approved,
+            "manual_approved_count": manual_approved,
+            "auto_rejected_count": auto_rejected,
+            "manual_rejected_count": manual_rejected,
+            "auto_approved_percentage": pct(auto_approved),
+            "manual_approved_percentage": pct(manual_approved),
+            "auto_rejected_percentage": pct(auto_rejected),
+            "manual_rejected_percentage": pct(manual_rejected),
         },
         "applications": rows,
     }

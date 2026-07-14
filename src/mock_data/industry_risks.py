@@ -1,5 +1,9 @@
+import json
+import os
 import random
 import re
+
+HF_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
 INDUSTRY_CATEGORIES = [
     {
@@ -225,9 +229,75 @@ def _generate_outlook(cat: dict, rng: random.Random) -> str:
     return base
 
 
+def _hf_analyze(industry: str) -> dict | None:
+    api_key = os.environ.get("HF_TOKEN")
+    if not api_key:
+        return None
+
+    try:
+        from huggingface_hub import InferenceClient
+        client = InferenceClient(token=api_key)
+
+        system_msg = "You are a senior credit risk analyst at a Singapore bank. You return only valid JSON, no markdown, no code fences."
+
+        user_msg = f"""Analyse the "{industry}" industry sector in Singapore for a loan application.
+
+Return ONLY valid JSON with exactly these fields:
+{{
+  "sector": "Short sector label (e.g. 'Food & Beverage / Hospitality')",
+  "risk_level": "Low" or "Moderate" or "Elevated" or "High",
+  "summary": "1-2 paragraph professional assessment of the sector's credit risk profile, growth outlook, and key dynamics in Singapore.",
+  "key_risks": ["Risk 1", "Risk 2", "Risk 3", "Risk 4"],
+  "outlook": "1 sentence forward-looking outlook for this sector."
+}}
+
+Rules:
+- risk_level must be one of: Low, Moderate, Elevated, High
+- key_risks must have exactly 3-5 items
+- summary should be 2-4 sentences, professional tone
+- Base your analysis on real Singapore market conditions
+- Be specific to the actual industry, not generic"""
+
+        response = client.chat_completion(
+            model=HF_MODEL,
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": user_msg},
+            ],
+            max_tokens=1024,
+            temperature=0.3,
+        )
+
+        text = response.choices[0].message.content.strip()
+        if text.startswith("```"):
+            text = re.sub(r"^```(?:json)?\s*", "", text)
+            text = re.sub(r"\s*```$", "", text)
+
+        data = json.loads(text)
+
+        required_keys = {"sector", "risk_level", "summary", "key_risks", "outlook"}
+        if not required_keys.issubset(data.keys()):
+            return None
+
+        if data["risk_level"] not in ("Low", "Moderate", "Elevated", "High"):
+            data["risk_level"] = "Moderate"
+
+        if not isinstance(data["key_risks"], list) or len(data["key_risks"]) < 3:
+            return None
+
+        return data
+
+    except Exception:
+        return None
+
+
 def analyze_industry(industry: str | None) -> dict | None:
     if not industry:
         return None
+
+    ai_result = _hf_analyze(industry)
+    if ai_result:
+        return ai_result
 
     cat = _classify(industry)
     if not cat:
