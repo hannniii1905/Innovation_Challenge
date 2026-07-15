@@ -52,6 +52,7 @@ class StagedApplication(Base):
                                 nullable=True,
                                 default=list,
                             )   # Pointer to raw UOB statement file location
+    bank_statement_metadata_json = Column(SQLiteJSON, nullable=True)  # Month/year metadata for uploaded statements
     income_statement_path = Column(String(512), nullable=True) # Pointer to raw IRAS tax record statement location
     financials_path = Column(String(512), nullable=True)       # Pointer to uploaded company financials (optional)
 
@@ -132,6 +133,7 @@ def _ensure_columns():
     existing = {col["name"] for col in inspector.get_columns("applications")}
     wanted = {
         "bank_statement_paths": "TEXT",
+        "bank_statement_metadata_json": "TEXT",
         "financials_path": "VARCHAR(512)",
         "personal_guarantors_json": "TEXT",
         "pg_coverage": "FLOAT",

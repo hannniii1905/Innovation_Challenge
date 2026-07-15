@@ -141,11 +141,9 @@ class OCREngine:
         """
         # Primary extraction: pdfplumber (embedded text)
         text = page.extract_text() or ""
-        print(f"DEBUG: Extracted text length: {len(text) if text else 0}")
 
         if len(text.strip()) >= MIN_TEXT_LENGTH:
             return text
-        print("DEBUG: pdfplumber failed, falling back to OCR")
         # Fallback: OCR extraction using pytesseract + pdf2image
         return self._ocr_extract_page(page_number)
 
@@ -186,7 +184,6 @@ class OCREngine:
                 )
 
             # Run OCR on the page image
-            print(f"DEBUG: Running Tesseract on image...")
             text = pytesseract.image_to_string(images[0])
             return text or ""
 

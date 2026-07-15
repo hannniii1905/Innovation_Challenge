@@ -51,8 +51,6 @@ async function handle(response) {
  * @returns {Promise<{session_id: string, stage: string, document_type: string}>}
  */
 export async function uploadDocument(file) {
-  console.log("DEBUG: File object being sent:", file); // Check this in F12 console
-  console.log("DEBUG: Is file a File object?", file instanceof File);
   const form = new FormData();
   // Ensure "file" matches the exact parameter name expected by your FastAPI backend
   form.append("file", file); 
@@ -203,11 +201,24 @@ export async function submitApplication(application) {
     );
   }
 
+  const bankStatementMetadata = bankStatements.map((statement, index) => ({
+    index,
+    filename: statement.filename,
+    month: statement.month,
+    year: statement.year,
+    label: statement.periodLabel,
+  }));
+
   bankStatements.forEach((statement) => {
     if (statement?.file) {
       formData.append("bank_statements", statement.file);
     }
   });
+
+  formData.append(
+    "bank_statement_metadata_json",
+    JSON.stringify(bankStatementMetadata)
+  );
 
   const latestStatement = [...bankStatements]
     .filter((statement) => statement?.file)

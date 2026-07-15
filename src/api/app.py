@@ -595,125 +595,6 @@ async def detect_bank_statement_period(
         if tmp_path and os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-# def analyse_bank_statements(statement_paths: list[str]) -> dict:
-#     all_transactions = []
-#     all_suspicious_credits = []
-#     statement_results = []
-
-#     total_credits = 0.0
-#     total_debits = 0.0
-#     detected_loans_count = 0
-#     has_fraud_tampering = False
-
-#     detected_bank = None
-
-#     for statement_path in statement_paths:
-#         pages = OCREngine(statement_path).extract()
-
-#         router = DocumentRouter(pages)
-#         bank_type = router.identify()
-#         parser = router.get_parser_class()()
-
-#         text = "\n".join(pages)
-
-#         transactions = parser.extract_transactions(text)
-#         statement_period = parser.identify_statement_period(text)
-
-#         if detected_bank is None:
-#             detected_bank = bank_type
-
-#         credit_transactions = [
-#             transaction
-#             for transaction in transactions
-#             if str(transaction.transaction_type).lower() == "credit"
-#         ]
-
-#         debit_transactions = [
-#             transaction
-#             for transaction in transactions
-#             if str(transaction.transaction_type).lower() == "debit"
-#         ]
-
-#         statement_credits = sum(
-#             float(transaction.amount or 0)
-#             for transaction in credit_transactions
-#         )
-
-#         statement_debits = sum(
-#             float(transaction.amount or 0)
-#             for transaction in debit_transactions
-#         )
-
-#         total_credits += statement_credits
-#         total_debits += statement_debits
-#         all_transactions.extend(transactions)
-
-#         statement_results.append({
-#             "filename": os.path.basename(statement_path),
-#             "path": statement_path,
-#             "bank": bank_type,
-#             "statement_period": statement_period,
-#             "transaction_count": len(transactions),
-#             "credit_transaction_count": len(credit_transactions),
-#             "debit_transaction_count": len(debit_transactions),
-#             "total_credits": round(statement_credits, 2),
-#             "total_debits": round(statement_debits, 2),
-#         })
-
-#     # Run the existing detectors against the combined six-month history.
-#     combined_statement_period = " | ".join(
-#         str(item.get("statement_period"))
-#         for item in statement_results
-#         if item.get("statement_period")
-#     )
-
-#     suspicious_credits = FraudDetector().analyze(
-#         all_transactions,
-#         combined_statement_period or None,
-#     )
-
-#     loan_result = LoanDetector().detect(all_transactions) or {}
-#     detected_loans = loan_result.get("repayments", []) or []
-
-#     credit_kiting_findings = CreditKitingDetector().detect(
-#         all_transactions,
-#         combined_statement_period or None,
-#     ) or []
-
-#     flagged_kiting_volume = sum(
-#         float(item.transaction.amount or 0)
-#         for item in suspicious_credits
-#     )
-
-#     return {
-#         "bank": detected_bank,
-#         "documents": statement_results,
-#         "transactions": all_transactions,
-#         "total_transaction_count": len(all_transactions),
-#         "credit_transaction_count": sum(
-#             1
-#             for transaction in all_transactions
-#             if str(transaction.transaction_type).lower() == "credit"
-#         ),
-#         "debit_transaction_count": sum(
-#             1
-#             for transaction in all_transactions
-#             if str(transaction.transaction_type).lower() == "debit"
-#         ),
-#         "raw_credits_total": round(total_credits, 2),
-#         "raw_debits_total": round(total_debits, 2),
-#         "flagged_kiting_volume": round(flagged_kiting_volume, 2),
-#         "suspicious_credits": suspicious_credits,
-#         "loan_result": loan_result,
-#         "detected_loans_count": loan_result.get(
-#             "count",
-#             len(detected_loans),
-#         ),
-#         "has_fraud_tampering": bool(suspicious_credits),
-#         "credit_kiting_findings": credit_kiting_findings,
-#         "statement_period": combined_statement_period or None,
-#     }
-
 @app.post("/client/submit")
 async def submit_client_application(
     profile_id: int = Form(...),
@@ -731,6 +612,7 @@ async def submit_client_application(
     pg_coverage: float = Form(0),
     credit_bureau_consent: str = Form("NO"),
     bank_statements: List[UploadFile] = File(...),
+    bank_statement_metadata_json: str = Form("[]"),
     income_statement: Optional[UploadFile] = File(None),
     ic_copy: Optional[UploadFile] = File(None),
     financials: Optional[UploadFile] = File(None),
@@ -751,17 +633,51 @@ async def submit_client_application(
         )
         
     try:
+        personal_guarantors = json.loads(personal_guarantors_json or "[]")
+        if not isinstance(personal_guarantors, list):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid personal_guarantors_json payload.",
+            )
+
+        singpass_profile = json.loads(singpass_profile_json or "{}")
+        if not isinstance(singpass_profile, dict):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid singpass_profile_json payload.",
+            )
+
+        questionnaire = json.loads(pre_questionnaire_json or "{}")
+        if not isinstance(questionnaire, dict):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid pre_questionnaire_json payload.",
+            )
+
+        bank_statement_metadata = json.loads(bank_statement_metadata_json or "[]")
+        if not isinstance(bank_statement_metadata, list):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid bank_statement_metadata_json payload.",
+            )
+
         application = StagedApplication(
             status="PENDING",
             uen=uen,
             company_name=company_name,
             industry=industry,
             requested_quantum=requested_quantum,
+
+            loan_tenure_months=loan_tenure_months,
+            monthly_installment=monthly_installment,
+            loan_purpose=loan_purpose,
+
             declared_loans=declared_loans,
-            pre_questionnaire_json=json.loads(pre_questionnaire_json),
-            singpass_profile_json=json.loads(singpass_profile_json),
-            personal_guarantors_json=json.loads(personal_guarantors_json),
+            pre_questionnaire_json=questionnaire,
+            singpass_profile_json=singpass_profile,
+            personal_guarantors_json=personal_guarantors,
             pg_coverage=pg_coverage,
+            bank_statement_metadata_json=bank_statement_metadata,
         )
 
         db.add(application)
@@ -857,6 +773,8 @@ async def submit_client_application(
         ratios = result.get("financial_ratios") or {}
         application.annualised_revenue = ratios.get("annualised_revenue")
         application.dscr = ratios.get("dscr")
+        application.fcc = ratios.get("fcc")
+        application.mue = ratios.get("mue")
         application.existing_debt = ratios.get("existing_debt")
         application.existing_debt_items = ratios.get("existing_debt_items") or []
         application.credit_kiting_score = ratios.get("credit_kiting_score")
@@ -1170,6 +1088,7 @@ def get_approver_application(application_id: int, db: Session = Depends(get_db))
     
     profile = _profile_by_uen(app_record.uen) or {}
     singpass = app_record.singpass_profile_json or {}
+    business_info = singpass.get("businessInfo") or singpass.get("business_info") or {}
 
     person = (
         singpass.get("person")
@@ -1184,6 +1103,84 @@ def get_approver_application(application_id: int, db: Session = Depends(get_db))
         or singpass.get("keymen")
         or []
     )
+    underwriting = app_record.underwriting_json or {}
+
+    acra_data = underwriting.get("acra") or {}
+    acra_shareholders = acra_data.get("shareholders") or []
+
+    stored_guarantors = (
+        app_record.personal_guarantors_json
+        if isinstance(app_record.personal_guarantors_json, list)
+        else []
+    )
+
+    personal_guarantors = (
+        stored_guarantors
+        if stored_guarantors
+        else acra_shareholders
+    )
+
+    bank_statement_metadata = app_record.bank_statement_metadata_json or []
+    if not isinstance(bank_statement_metadata, list):
+        bank_statement_metadata = []
+
+    def month_year_sort_key(item):
+        try:
+            return int(item.get("year")) * 12 + int(item.get("month"))
+        except Exception:
+            return float("inf")
+
+    indexed_bank_metadata = {
+        int(item.get("index", idx)): item
+        for idx, item in enumerate(bank_statement_metadata)
+        if isinstance(item, dict)
+    }
+
+    bank_statement_files = []
+    for idx, path in enumerate(app_record.bank_statement_paths or []):
+        meta = indexed_bank_metadata.get(idx, {})
+        month = meta.get("month")
+        year = meta.get("year")
+        label = meta.get("label")
+
+        if not label and month and year:
+            import calendar
+            try:
+                label = f"{calendar.month_abbr[int(month)]} {int(year)}"
+            except Exception:
+                label = None
+
+        bank_statement_files.append({
+            "index": idx,
+            "filename": os.path.basename(path),
+            "month": month,
+            "year": year,
+            "label": label or f"Corporate Bank Statement {idx + 1}",
+        })
+
+    bank_statement_files.sort(key=month_year_sort_key)
+
+    def get_shareholding(person):
+        if not isinstance(person, dict):
+            return 0.0
+
+        return float(
+            person.get("shareholding")
+            or person.get("shareholding_percentage")
+            or person.get("percentage")
+            or 0
+        )
+
+
+    pg_coverage = float(
+        app_record.pg_coverage or 0
+    )
+
+    if pg_coverage <= 0 and personal_guarantors:
+        pg_coverage = sum(
+            get_shareholding(person)
+            for person in personal_guarantors
+        )
 
     return {
         "application_id": app_record.id,
@@ -1191,6 +1188,13 @@ def get_approver_application(application_id: int, db: Session = Depends(get_db))
         "company_name": app_record.company_name,
         "uen": app_record.uen,
         "requested_quantum": app_record.requested_quantum,
+        "loan_tenure_months": app_record.loan_tenure_months,
+        "monthly_installment": app_record.monthly_installment,
+        "loan_purpose": app_record.loan_purpose,
+        "recommended_amount": (
+            app_record.approved_amount
+            or app_record.requested_quantum
+        ),
         "recommended_amount": app_record.approved_amount or app_record.requested_quantum,
         "status": app_record.status,
         "system_decision": app_record.system_decision or "PENDING_REVIEW",
@@ -1206,19 +1210,12 @@ def get_approver_application(application_id: int, db: Session = Depends(get_db))
         "approver_notes": app_record.approver_notes,
         # Evidence for the credit decision workbench
         "singpass_profile": app_record.singpass_profile_json,
+        "business_info": business_info,
         "personal_guarantors": app_record.personal_guarantors_json or [],
-        "pg_coverage": app_record.pg_coverage,
+        "pg_coverage": app_record.pg_coverage or 0,
         "underwriting": app_record.underwriting_json or {},
         "files": {
-            "bank_statements": [
-                {
-                    "index": index,
-                    "filename": os.path.basename(path),
-                }
-                for index, path in enumerate(
-                    app_record.bank_statement_paths or []
-                )
-            ],
+            "bank_statements": bank_statement_files,
             "income_statement": (
                 os.path.basename(
                     app_record.income_statement_path
@@ -1253,6 +1250,12 @@ def get_approver_application(application_id: int, db: Session = Depends(get_db))
                 or singpass.get("incorporationDate")
             ),
             "company_status": profile.get("company_status") or "Live Company",
+            "registered_address": (
+                profile.get("registered_address")
+                or profile.get("registeredAddress")
+                or business_info.get("registeredAddress")
+                or ""
+            ),
             "directors": profile_directors,
             "mobile": (
                 person.get("mobile")
@@ -1896,7 +1899,6 @@ async def submit_verification(
 
 def _run_analysis(session: OCRSession) -> None:
     """Run downstream analysis on verified data, updating progress as it goes."""
-    print(f"DEBUG: Starting _run_analysis for session {session.session_id}")
     session.stage = STAGE_ANALYZING
     session.progress = 10
     session.progress_message = "Starting analysis of verified data…"

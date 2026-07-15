@@ -13,6 +13,7 @@ from src.ocr_engine import OCREngine
 from src.loan_detector import LoanDetector
 from src.fraud_detector import FraudDetector
 from src.credit_kiting import CreditKitingDetector
+from src.mock_data.company_profiles import COMPANY_PROFILES
 from src.parsers.iras_noa_parser import IrasNoaParser
 from src.statement_period_detector import detect_statement_period
 
@@ -29,23 +30,23 @@ BLACKLISTED_COMPANIES = [
 ]
 
 INDUSTRY_INCOME_FACTORS = {
-    "Manufacturing": 0.20,
+    "Manufacturing": 0.10,
     "Construction": 0.15,
-    "Retail": 0.10,
+    "Retail": 0.07,
     "Wholesale Trade": 0.12,
     "Wholesale": 0.12,
-    "Services": 0.25,
-    "Technology": 0.30,
+    "Services": 0.13,
+    "Technology": 0.13,
     "Food & Beverage": 0.10,
-    "Healthcare": 0.25,
-    "Education": 0.20,
-    "Transportation": 0.15,
-    "Real Estate": 0.20,
-    "Agriculture": 0.12,
-    "Energy": 0.18,
-    "Financial Services": 0.30,
-    "Insurance": 0.25,
-    "Hospitality": 0.12,
+    "Healthcare": 0.13,
+    "Education": 0.13,
+    "Transportation": 0.12,
+    "Real Estate": 0.12,
+    "Agriculture": 0.10,
+    "Energy": 0.12,
+    "Financial Services": 0.13,
+    "Insurance": 0.13,
+    "Hospitality": 0.10,
 }
 
 INTEREST_RATE = 0.0775  # indicative p.a.
@@ -287,85 +288,321 @@ class UnderwritingEngine:
             "reason": ""
         }
 
-    def _calculate_financial_ratios(self, app_record, bank_result, income_result):
+    def _calculate_financial_ratios(
+        self,
+        app_record,
+        bank_result,
+        income_result,
+    ):
+        raw_credits = float(
+            bank_result.get("raw_credits_total", 0) or 0
+        )
 
-        raw_credits = float(bank_result.get("raw_credits_total", 0) or 0)
+        flagged_kiting_volume = float(
+            bank_result.get("flagged_kiting_volume", 0) or 0
+        )
+
+        # Turnover after suspicious credits are removed.
+        true_adjusted_turnover = bank_result.get(
+            "true_adjusted_turnover"
+        )
+
+        if true_adjusted_turnover is None:
+            true_adjusted_turnover = max(
+                raw_credits - flagged_kiting_volume,
+                0.0,
+            )
+        else:
+            true_adjusted_turnover = float(
+                true_adjusted_turnover or 0
+            )
+
         loan_result = bank_result.get("loan_result") or {}
         loan_repayments = loan_result.get("repayments") or []
+
         statement_period = bank_result.get("statement_period")
-        industry = (app_record.industry or "").strip()
+        statement_periods = (
+            bank_result.get("statement_periods") or []
+        )
+        statement_documents = (
+            bank_result.get("documents") or []
+        )
 
-        # --- coverage days from statement period ---
-        coverage_days = self._parse_coverage_days(statement_period)
+        industry = self._resolve_industry_group(app_record)
 
-        # --- annualised revenue ---
-        income_revenue = float(income_result.get("revenue", 0) or 0)
-        if income_revenue > 0:
-            annualised_revenue = round(income_revenue, 2)
-        elif coverage_days > 0 and raw_credits > 0:
-            annualised_revenue = round(raw_credits / coverage_days * 365, 2)
+        # --------------------------------------------------
+        # Statement coverage
+        # --------------------------------------------------
+
+        coverage_days = self._parse_coverage_days(
+            statement_period
+        )
+
+        statement_count = (
+            len(statement_documents)
+            or len(statement_periods)
+        )
+
+        # Each uploaded document represents one monthly statement.
+        # Six statements therefore represent approximately six months.
+        if statement_count > 1:
+            coverage_days = round(
+                statement_count * 365 / 12
+            )
+
+        # --------------------------------------------------
+        # Annualised revenue
+        # --------------------------------------------------
+
+        income_revenue = float(
+            income_result.get("revenue", 0) or 0
+        )
+
+        if true_adjusted_turnover > 0 and coverage_days > 0:
+            # Prefer month-based annualisation when coverage represents full months
+            if statement_count and statement_count > 0:
+                months = statement_count
+            else:
+                months = max(1, round(coverage_days / 30))
+
+            annualised_revenue = round(
+                float(true_adjusted_turnover) / months * 12,
+                2,
+            )
+        elif income_revenue > 0:
+            annualised_revenue = round(
+                income_revenue,
+                2,
+            )
         else:
-            annualised_revenue = round(raw_credits, 2)
+            annualised_revenue = 0.0
 
-        # --- existing debt ---
-        recurring_deductions = self._find_recurring_deductions(loan_repayments, coverage_days)
-        existing_debt = round(recurring_deductions.get("annualised", 0), 2)
-        existing_debt_items = recurring_deductions.get("items", [])
+        # --------------------------------------------------
+        # Existing debt
+        # --------------------------------------------------
 
-        # --- DSCR ---
-        factor = INDUSTRY_INCOME_FACTORS.get(industry, 0.15)
-        serviceable_income = annualised_revenue * factor
+        recurring_deductions = (
+            self._find_recurring_deductions(
+                loan_repayments,
+                coverage_days,
+            )
+        )
 
-        tenure_months = int(app_record.loan_tenure_months or 12)
-        annual_principal = float(app_record.requested_quantum or 0) / max(tenure_months / 12, 1)
-        annual_interest = float(app_record.requested_quantum or 0) * INTEREST_RATE
-        new_annual_instalment = annual_principal + annual_interest
-        total_debt_service = existing_debt + new_annual_instalment
-        dscr = round(serviceable_income / total_debt_service, 2) if total_debt_service > 0 else 0.0
+        existing_monthly = round(
+            recurring_deductions.get("monthly", 0) or 0,
+            2,
+        )
 
-        # --- ebitda / tnw from income statement ---
+        existing_debt = round(existing_monthly * 12, 2)
+
+        existing_debt_items = (
+            recurring_deductions.get("items") or []
+        )
+
+        # --------------------------------------------------
+        # Serviceable income
+        # --------------------------------------------------
+
+        factor = INDUSTRY_INCOME_FACTORS.get(
+            industry,
+            0.15,
+        )
+
+        serviceable_income = round(
+            annualised_revenue * factor,
+            2,
+        )
+
+        # --------------------------------------------------
+        # New facility debt service
+        # --------------------------------------------------
+
+        tenure_months = int(
+            app_record.loan_tenure_months or 12
+        )
+
+        requested_quantum = float(
+            app_record.requested_quantum or 0
+        )
+
+        loan_years = max(
+            tenure_months / 12,
+            1,
+        )
+
+        annual_principal = (
+            requested_quantum / loan_years
+        )
+
+        annual_interest = (
+            requested_quantum * INTEREST_RATE
+        )
+
+        new_annual_instalment = (
+            annual_principal + annual_interest
+        )
+
+        # Respect explicit monthly installment if provided on the application
+        if getattr(app_record, "monthly_installment", None) not in (None, ""):
+            new_monthly_installment = float(app_record.monthly_installment or 0)
+            new_annual_instalment = round(new_monthly_installment * 12, 2)
+        else:
+            new_monthly_installment = round(new_annual_instalment / 12, 2)
+
+        total_debt_service = (
+            existing_debt + new_annual_instalment
+        )
+
+        monthly_debt_service = round(
+            existing_monthly + new_monthly_installment,
+            2,
+        )
+
+        # --------------------------------------------------
+        # DSCR and FCC
+        # --------------------------------------------------
+
+        dscr = (
+            round(
+                serviceable_income
+                / total_debt_service,
+                2,
+            )
+            if total_debt_service > 0
+            else None
+        )
+
+        # For the current prototype, fixed-charge obligations
+        # use the same available debt-service data as DSCR.
+        fcc = (
+            round(
+                serviceable_income
+                / total_debt_service,
+                2,
+            )
+            if total_debt_service > 0
+            else None
+        )
+
+        # --------------------------------------------------
+        # EBITDA and TNW
+        # --------------------------------------------------
+
         ebitda = income_result.get("ebitda")
         tnw = income_result.get("tnw")
+
         ebitda_margin = None
-        if ebitda and annualised_revenue > 0:
-            ebitda_margin = round(ebitda / annualised_revenue * 100, 1)
 
-        # --- monthly debt service (detected from bank statement) ---
-        monthly_debt_service = round(existing_debt / 12, 2) if existing_debt > 0 else 0.0
+        if ebitda is not None and annualised_revenue > 0:
+            ebitda_margin = round(
+                float(ebitda)
+                / annualised_revenue
+                * 100,
+                1,
+            )
 
-        # --- MUE: max on-us clean exposure (~2 months turnover) ---
-        mue = round(annualised_revenue / 6, 2) if annualised_revenue > 0 else None
+        # Keep your existing prototype MUE calculation.
+        mue = (
+            round(annualised_revenue / 6, 2)
+            if annualised_revenue > 0
+            else None
+        )
 
-        # --- credit kiting score ---
-        ck_findings = bank_result.get("credit_kiting_findings") or []
-        credit_kiting_score = self._calculate_credit_kiting_score(ck_findings)
+        # --------------------------------------------------
+        # Credit-kiting result
+        # --------------------------------------------------
+
+        credit_kiting_findings = (
+            bank_result.get(
+                "credit_kiting_findings"
+            )
+            or []
+        )
+
+        credit_kiting_score = (
+            self._calculate_credit_kiting_score(
+                credit_kiting_findings
+            )
+        )
 
         return {
+            "true_adjusted_turnover": round(
+                true_adjusted_turnover,
+                2,
+            ),
+            "coverage_days": coverage_days,
+            "statement_count": statement_count,
+
             "annualised_revenue": annualised_revenue,
             "dscr": dscr,
+            "fcc": fcc,
+
             "ebitda": ebitda,
             "ebitda_margin": ebitda_margin,
             "tnw": tnw,
+
             "industry": industry,
             "industry_income_factor": factor,
-            "serviceable_income": round(serviceable_income, 2),
+
+            "serviceable_income": serviceable_income,
             "monthly_debt_service": monthly_debt_service,
-            "annual_debt_service": round(total_debt_service, 2),
+            "annual_debt_service": round(
+                total_debt_service,
+                2,
+            ),
+
             "mue": mue,
-            "fcc": None,
             "existing_debt": existing_debt,
             "existing_debt_items": existing_debt_items,
+
             "credit_kiting_score": credit_kiting_score,
             "credit_kiting_findings": [
                 {
-                    "pattern": f.pattern,
-                    "risk_level": f.risk_level,
-                    "explanation": f.explanation,
-                    "amounts": [round(t.amount, 2) for t in f.related_transactions],
+                    "pattern": finding.pattern,
+                    "risk_level": finding.risk_level,
+                    "explanation": finding.explanation,
+                    "amounts": [
+                        round(transaction.amount, 2)
+                        for transaction
+                        in finding.related_transactions
+                    ],
                 }
-                for f in ck_findings
+                for finding in credit_kiting_findings
             ],
         }
+    
+    @staticmethod
+    def _normalize_industry_name(industry):
+        if not industry:
+            return ""
+        value = str(industry).strip().lower()
+        if any(keyword in value for keyword in ["retail", "supermarket", "department store", "store"]):
+            return "Retail"
+        if any(keyword in value for keyword in ["manufact", "factory", "production", "industrial", "fabricat"]):
+            return "Manufacturing"
+        if any(keyword in value for keyword in ["software", "app", "development", "service", "consult", "digital"]):
+            return "Services"
+        return ""
+
+    def _resolve_industry_group(self, app_record):
+        explicit_industry = self._normalize_industry_name(getattr(app_record, "industry", ""))
+        if explicit_industry:
+            return explicit_industry
+
+        uen = str(getattr(app_record, "uen", "") or "").strip().upper()
+        if uen:
+            profile = None
+            for prof in COMPANY_PROFILES.values():
+                if str(prof.get("uen", "")).strip().upper() == uen:
+                    profile = prof
+                    break
+            if profile:
+                ssic_description = str(profile.get("ssic_description", "") or "")
+                mapped = self._normalize_industry_name(ssic_description)
+                if mapped:
+                    return mapped
+
+        return "Services"
 
     @staticmethod
     def _parse_coverage_days(statement_period):
@@ -396,10 +633,11 @@ class UnderwritingEngine:
     @staticmethod
     def _find_recurring_deductions(loan_repayments, coverage_days):
         annualised = 0.0
+        monthly = 0.0
         items = []
 
         if not loan_repayments:
-            return {"annualised": 0.0, "items": []}
+            return {"annualised": 0.0, "monthly": 0.0, "items": []}
 
         amount_groups = {}
         for lr in loan_repayments:
@@ -418,13 +656,16 @@ class UnderwritingEngine:
             }
             items.append(entry)
             if count >= 2:
+                monthly += amt
                 annualised += amt * 12
             elif coverage_days > 0:
+                monthly += (amt * count) / coverage_days * 30
                 annualised += (amt * count) / coverage_days * 365
             else:
+                monthly += amt * count
                 annualised += amt * count
 
-        return {"annualised": annualised, "items": items}
+        return {"annualised": annualised, "monthly": monthly, "items": items}
 
     @staticmethod
     def _calculate_credit_kiting_score(findings):

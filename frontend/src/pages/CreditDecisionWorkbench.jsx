@@ -123,9 +123,36 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
   const fin = uw.financials || {};
   const cbs = uw.credit_bureau || {};
   const singpass = application?.singpass_profile || {};
-  const propertyOwnership = singpass.propertyOwnership;
-  const rentAmount = singpass.rentAmount;
   const companyProfile = application?.company_profile || {};
+  const businessInfo =
+    application?.business_info ||
+    singpass.businessInfo ||
+    singpass.business_info ||
+    {};
+  const propertyOwnership =
+    singpass.propertyOwnership ||
+    singpass.property_ownership ||
+    application?.propertyOwnership ||
+    application?.property_ownership ||
+    companyProfile.propertyOwnership ||
+    companyProfile.property_ownership ||
+    "";
+  const rentAmount =
+    singpass.rentAmount ||
+    singpass.rent_amount ||
+    application?.rentAmount ||
+    application?.rent_amount ||
+    companyProfile.rentAmount ||
+    companyProfile.rent_amount ||
+    0;
+  const registeredAddress =
+    companyProfile.registered_address ||
+    companyProfile.registeredAddress ||
+    businessInfo.registeredAddress ||
+    businessInfo.registered_address ||
+    businessInfo.primarySsic ||
+    businessInfo.primary_ssic ||
+    "";
   const profileDirectors =
     companyProfile.directors ||
     singpass.keymen ||
@@ -218,6 +245,7 @@ export default function CreditDecisionWorkbench({ applicationSummary, back, onDe
           decisionColor={decisionColor}
           propertyOwnership={propertyOwnership}
           rentAmount={rentAmount}
+          registeredAddress={registeredAddress}
         />        
 
         <EvidenceSection application={application} formatCurrency={formatCurrency} onViewTampering={onViewTampering} onViewLitigation={onViewLitigation} />
@@ -551,16 +579,16 @@ function Panel({ title, children }) {
     <Paper
       elevation={0}
       sx={{
-        p: 3.5,
+        p: 2.5,
         borderRadius: 4,
-        border: "1px solid #e5e7eb",
-        boxShadow: "0 10px 24px rgba(15,23,42,.06)",
+        border: "1px solid #e2e7ef",
+        boxShadow: "0 6px 18px rgba(15,23,42,.05)",
         mb: 3,
         width: "100%",
       }}
     >
       {title && (
-        <Typography sx={{ fontSize: 18, fontWeight: 800, mb: 2 }}>
+        <Typography sx={{ fontSize: 17, fontWeight: 700, mb: 2 }}>
           {title}
         </Typography>
       )}
@@ -579,28 +607,42 @@ function CompanyOverview({
   decisionColor,
   propertyOwnership,
   rentAmount,
+  registeredAddress,
 }) {
   const cbs = application?.underwriting?.credit_bureau || {};
   const bankStatementDocuments = Array.isArray(
     application?.files?.bank_statements
   )
-    ? application.files.bank_statements.map((file, position) => {
-        const fileIndex =
-          typeof file === "object" && file !== null
-            ? file.index ?? position
-            : position;
+    ? [...application.files.bank_statements]
+        .filter((file) => file && typeof file === "object")
+        .sort((a, b) => {
+          const aMonth = Number(a.year || 0) * 12 + Number(a.month || 0);
+          const bMonth = Number(b.year || 0) * 12 + Number(b.month || 0);
+          return aMonth - bMonth;
+        })
+        .map((file, position) => {
+          const fileIndex = file.index ?? position;
+          const label = file.label
+            ? file.label
+            : file.year && file.month
+            ? `${new Date(
+                Number(file.year),
+                Number(file.month) - 1,
+                1
+              ).toLocaleDateString("en-SG", {
+                month: "short",
+                year: "numeric",
+              })}`
+            : `Corporate Bank Statement ${position + 1}`;
 
-        return {
-          key: `bank_statement_${fileIndex}`,
-          label: `Corporate Bank Statement ${position + 1}`,
-          filename:
-            typeof file === "object" && file !== null
-              ? file.filename
-              : file,
-          documentType: "bank_statement",
-          fileIndex,
-        };
-      })
+          return {
+            key: `bank_statement_${fileIndex}`,
+            label,
+            filename: file.filename,
+            documentType: "bank_statement",
+            fileIndex,
+          };
+        })
     : [];
 
   const supportingDocuments = [
@@ -680,29 +722,51 @@ function CompanyOverview({
           {
             label: "Incorporation Date",
             value: incorporationDate,
-            size: { xs: 12, sm: 6, md: 2.5 },
+            size: { xs: 12, sm: 6, md: 2 },
           },
           {
             label: "Company Status",
             value: companyProfile.company_status || "Live Company",
-            size: { xs: 12, sm: 6, md: 2.5 },
+            size: { xs: 12, sm: 6, md: 2 },
           },
           {
-            label: "Requested Amount",
+            label: "Requested Loan",
             value: `$${Number(
               application.requested_quantum || 0
             ).toLocaleString()}`,
-            size: { xs: 12, sm: 6, md: 3 },
+            size: { xs: 12, sm: 6, md: 2 },
+          },
+          {
+            label: "Loan Tenure",
+            value:
+              application.loan_tenure_months != null
+                ? `${application.loan_tenure_months} months`
+                : "—",
+            size: { xs: 12, sm: 6, md: 2 },
           },
           {
             label: "Business Premises",
             value:
               propertyOwnership === "owned"
-                ? "Owned by company"
+                ? (
+                    <>
+                      Owned by company
+                      {registeredAddress ? <br /> : null}
+                      {registeredAddress}
+                    </>
+                  )
                 : propertyOwnership === "rented"
-                ? `Rented · S$${Number(rentAmount || 0).toLocaleString()} per month`
+                ? (
+                    <>
+                      Rented · S$${Number(rentAmount || 0).toLocaleString()} monthly
+                      {registeredAddress ? <br /> : null}
+                      {registeredAddress}
+                    </>
+                  )
+                : registeredAddress
+                ? registeredAddress
                 : "—",
-            size: { xs: 12, sm: 6, md: 3 },
+            size: { xs: 12, md: 4 },
           },
           {
             label: "Directors",
@@ -728,7 +792,10 @@ function CompanyOverview({
           },
         ].map((item) => (
           <Grid key={item.label} size={item.size}>
-            <CompanyField label={item.label} value={item.value} />
+            <ProfileStat
+              label={item.label}
+              value={item.value}
+            />
           </Grid>
         ))}
       </Grid>
@@ -777,23 +844,28 @@ function CompanyOverview({
               <Grid key={doc.key} size={{ xs: 12, sm: 6, md: 4 }}>
                 <Box
                   sx={{
-                    p: 1.8,
+                    px: 1.7,
+                    py: 1.3,
+                    minHeight: 64,
                     height: "100%",
-                    minHeight: 88,
-                    borderRadius: 3,
+                    borderRadius: 2.25,
                     bgcolor: "#ffffff",
                     border: "1px solid #dbe3ee",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
                     gap: 1.5,
+                    transition: "border-color 0.15s ease",
+                    "&:hover": {
+                      borderColor: "#93c5fd",
+                    },
                   }}
                 >
                   <Box sx={{ minWidth: 0 }}>
                     <Typography
                       sx={{
-                        fontSize: 14,
-                        fontWeight: 850,
+                        fontSize: 13.5,
+                        fontWeight: 800,
                         color: "#0f172a",
                       }}
                     >
@@ -801,18 +873,19 @@ function CompanyOverview({
                     </Typography>
 
                     <Typography
-                      fontSize={12}
-                      color="text.secondary"
-                      noWrap
-                      sx={{ mt: 0.4 }}
+                      sx={{
+                        mt: 0.25,
+                        fontSize: 11.5,
+                        color: "#64748b",
+                      }}
                     >
-                      {doc.filename}
+                      PDF document
                     </Typography>
                   </Box>
 
                   <Button
                     size="small"
-                    variant="outlined"
+                    variant="text"
                     href={getApplicationFileUrl(
                       application.application_id,
                       doc.documentType,
@@ -821,12 +894,13 @@ function CompanyOverview({
                     target="_blank"
                     sx={{
                       flexShrink: 0,
-                      borderRadius: 2.5,
+                      minWidth: 0,
+                      px: 1,
                       textTransform: "none",
-                      fontWeight: 850,
+                      fontWeight: 800,
                     }}
                   >
-                    Open
+                    Open ↗
                   </Button>
                 </Box>
               </Grid>
@@ -882,83 +956,217 @@ function CompanyField({ label, value }) {
   );
 }
 
+function ProfileStat({ label, value }) {
+  return (
+    <Box
+      sx={{
+        px: 2,
+        py: 1.7,
+        minHeight: 78,
+        height: "100%",
+        borderRadius: 2.5,
+        bgcolor: "#f8fafc",
+        border: "1px solid #e2e8f0",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+      }}
+    >
+      <Typography
+        sx={{
+          fontSize: 10.5,
+          fontWeight: 800,
+          textTransform: "uppercase",
+          letterSpacing: ".055em",
+          color: "#64748b",
+          lineHeight: 1.2,
+        }}
+      >
+        {label}
+      </Typography>
+
+      <Typography
+        sx={{
+          mt: 0.65,
+          fontSize: 16,
+          fontWeight: 750,
+          color: "#0f172a",
+          lineHeight: 1.35,
+          overflowWrap: "anywhere",
+        }}
+      >
+        {value || "—"}
+      </Typography>
+    </Box>
+  );
+}
+
 function FinancialIndicatorsPanel({ application, fin, formatCurrency }) {
+  const dscrValue = fin.dscr != null ? Number(fin.dscr) : application.dscr != null ? Number(application.dscr) : null;
+  const fccValue = fin.fcc != null ? Number(fin.fcc) : application.fcc != null ? Number(application.fcc) : null;
+  const existingDebtValue = fin.existing_debt != null ? Number(fin.existing_debt) : application.existing_debt != null ? Number(application.existing_debt) : null;
+  const mueValue = fin.mue != null ? Number(fin.mue) : application.mue != null ? Number(application.mue) : null;
+  const dscrOk = dscrValue == null ? null : dscrValue >= 1.25;
+  const fccOk = fccValue == null ? null : fccValue > 1;
+
+  const formatValue = (value, prefix = "", suffix = "") => {
+    if (value == null || Number.isNaN(value)) return "—";
+    return `${prefix}${Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${suffix}`;
+  };
+
+  const statusChip = (ok, passLabel, failLabel) => {
+    if (ok == null) return null;
+    return (
+      <Chip
+        label={ok ? passLabel : failLabel}
+        size="small"
+        sx={{
+          borderRadius: 50,
+          px: 1.5,
+          py: 0.5,
+          fontWeight: 800,
+          color: ok ? "#0f5f34" : "#7f1d1d",
+          bgcolor: ok ? "#ecfdf5" : "#fef2f2",
+          border: ok ? "1px solid #bbf7d0" : "1px solid #fecaca",
+        }}
+      />
+    );
+  };
+
   return (
     <Panel title="Financial Indicators">
-      <Stack spacing={0.2}>
-        <SummaryRow
-          label="Annualised Revenue"
-          value={
-            fin.annualised_revenue != null
-              ? formatCurrency(fin.annualised_revenue)
-              : formatCurrency(application.annualised_revenue)
-          }
-        />
+      <Grid container spacing={1.5}>
+        <Grid item xs={12} sm={6} md={3}>
+          <MetricCard
+            label="Annualised Revenue"
+            value={formatValue(fin.annualised_revenue ?? application.annualised_revenue, "$")}
+            caption="True adjusted turnover annualised"
+          />
+        </Grid>
 
-        <SummaryRow
-          label="DSCR"
-          value={
-            fin.dscr != null
-              ? Number(fin.dscr).toFixed(2)
-              : application.dscr ?? "—"
-          }
-        />
+        <Grid item xs={12} sm={6} md={3}>
+          <MetricCard
+            label="DSCR"
+            value={formatValue(dscrValue)}
+            valueColor={dscrOk === false ? "#991b1b" : "#0f172a"}
+            caption={dscrOk == null ? "Awaiting input" : dscrOk ? "Healthy coverage" : "Below 1.25 target"}
+            badge={statusChip(dscrOk, "Good", "Review")}
+          />
+        </Grid>
 
-        <SummaryRow
-          label="Existing Debt"
-          value={
-            application.existing_debt != null
-              ? formatCurrency(application.existing_debt)
-              : "—"
-          }
-        />
+        <Grid item xs={12} sm={6} md={3}>
+          <MetricCard
+            label="FCC"
+            value={formatValue(fccValue)}
+            valueColor={fccOk === false ? "#991b1b" : "#0f172a"}
+            caption={fccOk == null ? "Awaiting input" : fccOk ? "Adequate coverage" : "Needs improvement"}
+            badge={statusChip(fccOk, "Pass", "Review")}
+          />
+        </Grid>
 
-        <SummaryRow
-          label="Credit-kiting Score"
-          value={
-            application.credit_kiting_score != null
-              ? `${application.credit_kiting_score}/100`
-              : "—"
-          }
-        />
+        <Grid item xs={12} sm={6} md={3}>
+          <MetricCard
+            label="Monthly Debt Service"
+            value={formatValue(fin.monthly_debt_service, "$")}
+            caption="Loan + other monthly obligations"
+          />
+        </Grid>
 
-        <SummaryRow
-          label="Tangible Net Worth"
-          value={fin.tnw != null ? formatCurrency(fin.tnw) : "—"}
-        />
+        <Grid item xs={12} sm={6} md={3}>
+          <MetricCard
+            label="MUE"
+            value={formatValue(mueValue, "$")}
+            caption="On-us debt exposure less collateral"
+          />
+        </Grid>
 
-        <SummaryRow
-          label="EBITDA"
-          value={
-            fin.ebitda != null
-              ? `${formatCurrency(fin.ebitda)}${
-                  fin.ebitda_margin != null
-                    ? ` (${fin.ebitda_margin}%)`
-                    : ""
-                }`
-              : "—"
-          }
-        />
+        <Grid item xs={12} sm={6} md={3}>
+          <MetricCard
+            label="Serviceable Income"
+            value={formatValue(fin.serviceable_income, "$")}
+            caption="Industry-adjusted cash flow"
+          />
+        </Grid>
 
-        <SummaryRow
-          label="Serviceable Income"
-          value={
-            fin.serviceable_income != null
-              ? formatCurrency(fin.serviceable_income)
-              : "—"
-          }
-        />
+        <Grid item xs={12} sm={6} md={3}>
+          <MetricCard
+            label="Existing Debt"
+            value={formatValue(existingDebtValue, "$")}
+            caption="Annualised existing liability"
+          />
+        </Grid>
 
-        <SummaryRow
-          label="Monthly Debt Service"
-          value={
-            fin.monthly_debt_service != null
-              ? formatCurrency(fin.monthly_debt_service)
-              : "—"
-          }
-        />
-      </Stack>
+      </Grid>
     </Panel>
+  );
+}
+
+function MetricCard({ label, value, caption, badge, valueColor }) {
+  return (
+    <Box
+      sx={{
+        p: 2,
+        borderRadius: 3,
+        bgcolor: "#ffffff",
+        border: "1px solid #e2e7ef",
+        minHeight: 118,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+      }}
+    >
+      <Box>
+        <Typography
+          sx={{
+            fontSize: 16,
+            fontWeight: 900,
+            fontFamily: "inherit",
+            color: "#0f172a",
+            lineHeight: 1.35,
+            textTransform: "none",
+            letterSpacing: 0,
+          }}
+        >
+          {label}
+        </Typography>
+
+        <Typography
+          sx={{
+            mt: 0.65,
+            fontSize: 16,
+            fontWeight: 400,
+            fontFamily: "inherit",
+            color: valueColor || "#0f172a",
+            lineHeight: 1.3,
+          }}
+        >
+          {value}
+        </Typography>
+      </Box>
+
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          gap: 1,
+          mt: 1.25,
+        }}
+      >
+        <Typography
+          sx={{
+            flex: 1,
+            fontSize: 13,
+            color: "#64748b",
+            lineHeight: 1.45,
+          }}
+        >
+          {caption}
+        </Typography>
+
+        {badge}
+      </Box>
+    </Box>
   );
 }
 
@@ -966,7 +1174,13 @@ function SummaryRow({ label, value }) {
   return (
     <Box sx={{ display: "grid", gridTemplateColumns: "1fr auto", columnGap: 3, alignItems: "center" }}>
       <Typography color="text.secondary">{label}</Typography>
-      <Typography fontWeight={700} textAlign="right">{value}</Typography>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
+        {typeof value === "string" ? (
+          <Typography fontWeight={700} textAlign="right">{value}</Typography>
+        ) : (
+          value
+        )}
+      </Box>
     </Box>
   );
 }
@@ -1020,9 +1234,56 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
   const aml = uw.aml || {};
   const lightKyc = uw.light_kyc || {};
 
-  const pgs = application.personal_guarantors || [];
-  const pgCoverage = Number(application.pg_coverage ?? 0);
-  const pgCoverageOk = pgCoverage >= 50;
+const acraShareholders = Array.isArray(acra.shareholders)
+  ? acra.shareholders
+  : [];
+
+const storedGuarantors = Array.isArray(application.personal_guarantors)
+  ? application.personal_guarantors
+  : [];
+
+  // Prefer the actual selected guarantors.
+  // Fall back to ACRA shareholders for older/demo applications.
+  const guarantorSource =
+    storedGuarantors.length > 0
+      ? storedGuarantors
+      : acraShareholders;
+
+  const pgs = guarantorSource.map((person) => ({
+    ...person,
+
+    name:
+      person.name ||
+      person.fullName ||
+      person.full_name ||
+      "Unknown shareholder",
+
+    shareholding: Number(
+      person.shareholding ??
+      person.shareholding_percentage ??
+      person.percentage ??
+      0
+    ),
+  }));
+
+  const calculatedPgCoverage = pgs.reduce(
+    (total, person) =>
+      total + Number(person.shareholding || 0),
+    0
+  );
+
+  const storedPgCoverage = Number(
+    application.pg_coverage ?? 0
+  );
+
+  const pgCoverage =
+    storedPgCoverage > 0
+      ? storedPgCoverage
+      : calculatedPgCoverage;
+
+  const pgCoverageOk =
+    pgs.length > 0 && pgCoverage >= 50;
+
   const agesKnown = pgs.some((p) => p.age != null);
   // Only judge ages that are actually known. A null age means the guarantor is
   // not yet verified — that's a "pending", not an implicit pass.
@@ -1613,7 +1874,7 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
                 <TableCell sx={{ fontWeight: 800 }}>Name</TableCell>
                 <TableCell sx={{ fontWeight: 800 }} align="right">Shareholding</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Verification</TableCell>
-                <TableCell sx={{ fontWeight: 800 }} align="right">Age</TableCell>
+                <TableCell sx={{ fontWeight: 800 }} align="center">Age</TableCell>
                 <TableCell sx={{ fontWeight: 800 }} align="right">IRAS income</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>CBS consent</TableCell>
                 <TableCell sx={{ fontWeight: 800 }}>Documents</TableCell>
@@ -1653,11 +1914,30 @@ function EvidenceSection({ application, formatCurrency, onViewTampering, onViewL
                         />
                       )}
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="center" sx={{ pr: 2 }}>
                       {p.age != null ? (
-                        <Stack direction="row" spacing={0.8} alignItems="center" justifyContent="flex-end">
-                          <span>{p.age}</span>
-                          <PassChip passed={p.age < 70} passLabel="<70" failLabel="≥70" />
+                        <Stack
+                          direction="column"
+                          spacing={0.5}
+                          alignItems="flex-end"
+                          justifyContent="center"
+                          sx={{ minWidth: 70 }}
+                        >
+                          <Typography
+                            component="span"
+                            sx={{
+                              fontWeight: 700,
+                              lineHeight: 1.2,
+                            }}
+                          >
+                            {p.age}
+                          </Typography>
+
+                          <PassChip
+                            passed={p.age < 70}
+                            passLabel="<70"
+                            failLabel="≥70"
+                          />
                         </Stack>
                       ) : (
                         "—"
