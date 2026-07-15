@@ -184,7 +184,7 @@ export default function CreditApproverDashboard({ openApplication, onViewHistory
           />
           <SplitMetricCard
             title="Auto"
-            value={`${summary.auto_approved_percentage || 0}%`}
+            value={`${summary.auto_total_percentage || 0}%`}
             approvedCount={summary.auto_approved_count || 0}
             rejectedCount={summary.auto_rejected_count || 0}
             approvedLabel="approved"
@@ -193,7 +193,7 @@ export default function CreditApproverDashboard({ openApplication, onViewHistory
           />
           <SplitMetricCard
             title="Manual"
-            value={`${summary.manual_approved_percentage || 0}%`}
+            value={`${summary.manual_total_percentage || 0}%`}
             approvedCount={summary.manual_approved_count || 0}
             rejectedCount={summary.manual_rejected_count || 0}
             approvedLabel="approved"

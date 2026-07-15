@@ -459,6 +459,13 @@ class UnderwritingEngine:
         )
 
         # --------------------------------------------------
+        # EBITDA and TNW (need EBITDA for FCC calculation)
+        # --------------------------------------------------
+
+        ebitda = income_result.get("ebitda")
+        tnw = income_result.get("tnw")
+
+        # --------------------------------------------------
         # DSCR and FCC
         # --------------------------------------------------
 
@@ -472,24 +479,24 @@ class UnderwritingEngine:
             else None
         )
 
-        # For the current prototype, fixed-charge obligations
-        # use the same available debt-service data as DSCR.
-        fcc = (
-            round(
-                serviceable_income
-                / total_debt_service,
-                2,
+        # Prefer an EBITDA-based fixed-charge coverage (FCC) when EBITDA
+        # is available; otherwise fall back to the prototype DSCR-style
+        # calculation. This prevents FCC from always equalling DSCR.
+        if ebitda is not None and total_debt_service > 0:
+            try:
+                fcc = round(float(ebitda) / total_debt_service, 2)
+            except Exception:
+                fcc = None
+        else:
+            fcc = (
+                round(
+                    serviceable_income
+                    / total_debt_service,
+                    2,
+                )
+                if total_debt_service > 0
+                else None
             )
-            if total_debt_service > 0
-            else None
-        )
-
-        # --------------------------------------------------
-        # EBITDA and TNW
-        # --------------------------------------------------
-
-        ebitda = income_result.get("ebitda")
-        tnw = income_result.get("tnw")
 
         ebitda_margin = None
 

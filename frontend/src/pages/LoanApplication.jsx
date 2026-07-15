@@ -7,7 +7,7 @@ import ConsentSection from "../components/application/ConsentSection";
 import PortalShell from "../components/PortalShell";
 import { Button, Box, Typography, Paper, Stack } from "@mui/material";
 
-const steps = ["Loan Details", "Questionnaire", "Documents", "Consent"];
+const steps = ["Loan Details", "Additional Declarations", "Documents", "Consent"];
 
 export default function LoanApplication({ application, setApplication, next, back, goHome }) {
   const [step, setStep] = useState(0);
@@ -81,34 +81,44 @@ export default function LoanApplication({ application, setApplication, next, bac
             boxShadow: "0 12px 28px rgba(15,23,42,.06)",
           }}
         >
-          {step !== 1 && (
-            <>
-              <Typography
-                color="#005EB8"
-                sx={{ mb: 1, fontWeight: 700, fontSize: 14 }}
-              >
-                Business Financing Application
-              </Typography>
+          <>
+            <Typography
+              sx={{
+                mb: 1,
+                fontWeight: 700,
+                fontSize: 14,
+                color: "#0f172a",
+              }}
+            >
+              Business Financing Application
+            </Typography>
 
-              <Typography
-                sx={{
-                  fontSize: 28,
-                  fontWeight: 800,
-                  color: "#0f172a",
-                  lineHeight: 1.2,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {steps[step]}
-              </Typography>
+            <Typography
+              sx={{
+                fontSize: 28,
+                fontWeight: 800,
+                color: "#0f172a",
+                lineHeight: 1.2,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              {steps[step]}
+            </Typography>
 
-              <Typography color="text.secondary" sx={{ mt: 1.2, fontSize: 15 }}>
-                Complete each section of your business loan application.
-              </Typography>
-            </>
-          )}
+            <Typography
+              color="text.secondary"
+              sx={{
+                mt: 1.2,
+                fontSize: 15,
+              }}
+            >
+              {step === 1
+                ? "Please provide the following declarations for the initial credit assessment."
+                : "Complete each section of your business loan application."}
+            </Typography>
+          </>
 
-          <Box sx={{ display: "flex", gap: 1.5, mt: step !== 1 ? 3 : 0 }}>
+          <Box sx={{ display: "flex", gap: 1.5, mt: 3 }}>
             {steps.map((label, index) => (
               <Box
                 key={label}

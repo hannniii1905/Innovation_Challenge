@@ -373,35 +373,25 @@ const SmallInfoList = ({ title, items }) => (
 
 
   return (
-    <Card
-      elevation={0}
-      sx={{
-        mb: 4,
-        borderRadius: 5,
-        border: "1px solid #e5e7eb",
-        boxShadow: "0 18px 40px rgba(15,23,42,.07)",
-      }}
-    >
-      <CardContent sx={{ p: 0 }}>
-        <Box
+    <>
+      {/* DECLARATIONS CONTENT CARD */}
+      <Card
+        elevation={0}
+        sx={{
+          mb: 4,
+          borderRadius: 5,
+          border: "1px solid #e5e7eb",
+          boxShadow: "0 18px 40px rgba(15,23,42,.07)",
+        }}
+      >
+        <CardContent
           sx={{
-            px: 4,
-            py: 3,
-            borderBottom: "1px solid #e5e7eb",
-            background:
-              "linear-gradient(90deg, rgba(230,240,250,0.9), rgba(255,255,255,0.9))",
+            p: 4,
+            "&:last-child": {
+              pb: 4,
+            },
           }}
         >
-          <Typography sx={{ fontSize: 25, fontWeight: 800, color: "#0f172a" }}>
-            Additional Declarations
-          </Typography>
-
-          <Typography color="text.secondary" sx={{ mt: 0.8, fontSize: 14 }}>
-            Please provide the following declarations for the initial credit assessment.
-          </Typography>
-        </Box>
-
-        <Box sx={{ p: 4 }}>
           {/* SECTION A */}
           <SectionHeader
             label="Section A"
@@ -561,8 +551,8 @@ const SmallInfoList = ({ title, items }) => (
               </>
             )}
           </Grid>
-        </Box>
+      
       </CardContent>
     </Card>
-  );
-}
+  </>
+)};

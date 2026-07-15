@@ -1050,6 +1050,9 @@ def list_approver_applications(
         if x["review_category"] == "REJECTED" and x["approver_decision"] is not None
     ])
 
+    auto_total = auto_approved + auto_rejected
+    manual_total = manual_approved + manual_rejected
+
     def pct(n):
         return round((n / total) * 100, 1) if total else 0
 
@@ -1066,10 +1069,14 @@ def list_approver_applications(
             "manual_approved_count": manual_approved,
             "auto_rejected_count": auto_rejected,
             "manual_rejected_count": manual_rejected,
+            "auto_total_count": auto_total,
+            "manual_total_count": manual_total,
             "auto_approved_percentage": pct(auto_approved),
             "manual_approved_percentage": pct(manual_approved),
             "auto_rejected_percentage": pct(auto_rejected),
             "manual_rejected_percentage": pct(manual_rejected),
+            "auto_total_percentage": pct(auto_total),
+            "manual_total_percentage": pct(manual_total),
         },
         "applications": rows,
     }
