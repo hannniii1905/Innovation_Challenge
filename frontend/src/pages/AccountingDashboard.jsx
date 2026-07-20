@@ -8,6 +8,10 @@ import {
   Tooltip,
   useMediaQuery,
   useTheme,
+  Modal,
+  Select,
+  MenuItem,
+  FormControl,
 } from "@mui/material";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import AccountBalanceRoundedIcon from "@mui/icons-material/AccountBalanceRounded";
@@ -30,6 +34,9 @@ import NotificationsRoundedIcon from "@mui/icons-material/NotificationsRounded";
 import AttachMoneyRoundedIcon from "@mui/icons-material/AttachMoneyRounded";
 import AddCardRoundedIcon from "@mui/icons-material/AddCardRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
+import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
+import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import Drawer from "@mui/material/Drawer";
 
 const SIDEBAR_WIDTH = 72;
@@ -275,7 +282,7 @@ function TopNavbar({ onMenuClick, isMobile, onBack }) {
   );
 }
 
-function LoanPromotionBanner() {
+function LoanPromotionBanner({ onGetStarted }) {
   return (
     <Box
       sx={{
@@ -310,6 +317,7 @@ function LoanPromotionBanner() {
         </Typography>
       </Box>
       <Box
+        onClick={onGetStarted}
         sx={{
           display: "flex",
           alignItems: "center",
@@ -332,6 +340,490 @@ function LoanPromotionBanner() {
         <ArrowForwardRoundedIcon sx={{ fontSize: 16 }} />
       </Box>
     </Box>
+  );
+}
+
+function FinancingPortalModal({ open, onClose }) {
+  const [step, setStep] = useState(1);
+  const [sector, setSector] = useState("");
+  const [category, setCategory] = useState("");
+  const [subCategory, setSubCategory] = useState("");
+  const [consent, setConsent] = useState("");
+  const [agreed, setAgreed] = useState(false);
+
+  const canNext = sector && category && subCategory;
+  const canSubmit = consent === "yes" && agreed;
+
+  const handleBackToStep1 = () => setStep(1);
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Box
+        sx={{
+          position: "fixed",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          bgcolor: "rgba(0,0,0,0.45)",
+          p: 2,
+        }}
+      >
+        <Box
+          sx={{
+            width: 720,
+            maxWidth: "90vw",
+            bgcolor: "#ffffff",
+            borderRadius: 4,
+            p: 4,
+            boxShadow: "0 16px 48px rgba(0,0,0,0.18)",
+            fontFamily: "'Inter', 'Roboto', sans-serif",
+            outline: "none",
+          }}
+        >
+          <Typography sx={{ fontSize: 32, fontWeight: 700, color: "#222", mb: 3 }}>
+            Financing Portal
+          </Typography>
+
+          {step === 1 ? (
+            <>
+              <Box sx={{ mb: 3 }}>
+                <Typography sx={{ fontSize: 20, fontWeight: 600, mb: 1 }}>
+                  <Box component="span" sx={{ color: "#555" }}>Step 1 of 2: </Box>
+                  <Box component="span" sx={{ color: "#2E7BEF" }}>Nature of business</Box>
+                </Typography>
+                <Box
+                  sx={{
+                    height: 8,
+                    borderRadius: "999px",
+                    bgcolor: "#ECECEC",
+                    overflow: "hidden",
+                  }}
+                >
+                  <Box sx={{ width: "50%", height: "100%", bgcolor: "#2E7BEF", borderRadius: "999px" }} />
+                </Box>
+              </Box>
+
+              <Typography sx={{ fontSize: 16, lineHeight: 1.6, color: "#444", mb: 4 }}>
+                Tell us about your nature of business and stand a bigger chance of getting pre-approved
+                financing options. Select the most relevant one if you&apos;re in multiple lines of business.
+              </Typography>
+
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                <FormControl fullWidth>
+                  <Typography sx={{ fontSize: 16, fontWeight: 500, color: "#333", mb: 0.5 }}>
+                    <Box component="span" sx={{ color: "#d32f2f", mr: 0.5 }}>*</Box>
+                    Sector
+                  </Typography>
+                  <Select
+                    value={sector}
+                    onChange={(e) => {
+                      setSector(e.target.value);
+                      setCategory("");
+                      setSubCategory("");
+                    }}
+                    displayEmpty
+                    IconComponent={KeyboardArrowDownRoundedIcon}
+                    sx={{
+                      height: 52,
+                      borderRadius: 2,
+                      fontSize: 16,
+                      color: sector ? "#333" : "#A8A8A8",
+                      "& .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "#D8DDE6",
+                        borderRadius: 2,
+                      },
+                      "&:hover .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "#2E7BEF",
+                      },
+                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "#2E7BEF",
+                        boxShadow: "0 0 0 3px rgba(46,123,239,0.12)",
+                      },
+                    }}
+                  >
+                    <MenuItem value="" disabled>Select Sector</MenuItem>
+                    <MenuItem value="manufacturing">Manufacturing</MenuItem>
+                    <MenuItem value="services">Services</MenuItem>
+                    <MenuItem value="retail">Retail</MenuItem>
+                    <MenuItem value="technology">Technology</MenuItem>
+                    <MenuItem value="construction">Construction</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <FormControl fullWidth>
+                  <Typography sx={{ fontSize: 16, fontWeight: 500, color: "#333", mb: 0.5 }}>
+                    <Box component="span" sx={{ color: "#d32f2f", mr: 0.5 }}>*</Box>
+                    Category
+                  </Typography>
+                  <Select
+                    value={category}
+                    onChange={(e) => {
+                      setCategory(e.target.value);
+                      setSubCategory("");
+                    }}
+                    displayEmpty
+                    disabled={!sector}
+                    IconComponent={KeyboardArrowDownRoundedIcon}
+                    sx={{
+                      height: 52,
+                      borderRadius: 2,
+                      fontSize: 16,
+                      color: category ? "#333" : "#A8A8A8",
+                      bgcolor: !sector ? "#F5F5F5" : "#fff",
+                      "& .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "#D8DDE6",
+                        borderRadius: 2,
+                      },
+                      "&:hover .MuiOutlinedInput-notchedOutline": {
+                        borderColor: sector ? "#2E7BEF" : "#D8DDE6",
+                      },
+                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "#2E7BEF",
+                        boxShadow: "0 0 0 3px rgba(46,123,239,0.12)",
+                      },
+                      "&.Mui-disabled .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "#D8DDE6",
+                      },
+                      "&.Mui-disabled": {
+                        color: "#A8A8A8",
+                      },
+                    }}
+                  >
+                    <MenuItem value="" disabled>Select Category</MenuItem>
+                    <MenuItem value="electronics">Electronics</MenuItem>
+                    <MenuItem value="textiles">Textiles</MenuItem>
+                    <MenuItem value="food">Food & Beverage</MenuItem>
+                    <MenuItem value="consulting">Consulting</MenuItem>
+                    <MenuItem value="software">Software</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <FormControl fullWidth>
+                  <Typography sx={{ fontSize: 16, fontWeight: 500, color: "#333", mb: 0.5 }}>
+                    <Box component="span" sx={{ color: "#d32f2f", mr: 0.5 }}>*</Box>
+                    Sub-category
+                  </Typography>
+                  <Select
+                    value={subCategory}
+                    onChange={(e) => setSubCategory(e.target.value)}
+                    displayEmpty
+                    disabled={!category}
+                    IconComponent={KeyboardArrowDownRoundedIcon}
+                    sx={{
+                      height: 52,
+                      borderRadius: 2,
+                      fontSize: 16,
+                      color: subCategory ? "#333" : "#A8A8A8",
+                      bgcolor: !category ? "#F5F5F5" : "#fff",
+                      "& .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "#D8DDE6",
+                        borderRadius: 2,
+                      },
+                      "&:hover .MuiOutlinedInput-notchedOutline": {
+                        borderColor: category ? "#2E7BEF" : "#D8DDE6",
+                      },
+                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "#2E7BEF",
+                        boxShadow: "0 0 0 3px rgba(46,123,239,0.12)",
+                      },
+                      "&.Mui-disabled .MuiOutlinedInput-notchedOutline": {
+                        borderColor: "#D8DDE6",
+                      },
+                      "&.Mui-disabled": {
+                        color: "#A8A8A8",
+                      },
+                    }}
+                  >
+                    <MenuItem value="" disabled>Select Sub-category</MenuItem>
+                    <MenuItem value="components">Components</MenuItem>
+                    <MenuItem value="assembly">Assembly</MenuItem>
+                    <MenuItem value="organic">Organic</MenuItem>
+                    <MenuItem value="imported">Imported</MenuItem>
+                    <MenuItem value="custom">Custom</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+
+              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mt: 5 }}>
+                <Box
+                  onClick={onClose}
+                  sx={{
+                    height: 44,
+                    px: 3,
+                    borderRadius: 2,
+                    border: "1px solid #D0D5DD",
+                    bgcolor: "#ffffff",
+                    color: "#555",
+                    fontWeight: 500,
+                    fontSize: 15,
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    "&:hover": { bgcolor: "#f5f5f5" },
+                    transition: "all 0.15s",
+                  }}
+                >
+                  Back to Dashboard
+                </Box>
+                <Box
+                  onClick={() => canNext && setStep(2)}
+                  sx={{
+                    height: 44,
+                    px: 3.5,
+                    borderRadius: 2,
+                    bgcolor: canNext ? "#2E7BEF" : "#ccc",
+                    color: "#fff",
+                    fontWeight: 500,
+                    fontSize: 15,
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: canNext ? "pointer" : "not-allowed",
+                    "&:hover": canNext ? { bgcolor: "#2563d1" } : {},
+                    transition: "all 0.15s",
+                  }}
+                >
+                  Next
+                </Box>
+              </Box>
+            </>
+          ) : (
+            <>
+              <Box sx={{ mb: 3 }}>
+                <Typography sx={{ fontSize: 20, fontWeight: 600, mb: 1 }}>
+                  <Box component="span" sx={{ color: "#555" }}>Step 2 of 2: </Box>
+                  <Box component="span" sx={{ color: "#2E7BEF" }}>Consent</Box>
+                </Typography>
+                <Box
+                  sx={{
+                    height: 8,
+                    borderRadius: "999px",
+                    bgcolor: "#ECECEC",
+                    overflow: "hidden",
+                  }}
+                >
+                  <Box sx={{ width: "100%", height: "100%", bgcolor: "#2E7BEF", borderRadius: "999px" }} />
+                </Box>
+              </Box>
+
+              <Typography sx={{ fontSize: 16, lineHeight: 1.6, color: "#444", mb: 3.5 }}>
+                By giving consent, your <Box component="span" sx={{ fontWeight: 700 }}>non-identifiable data</Box> might
+                be shared with our lending partners. This can increase your chance of getting loan
+                approval and speed up your loan applications.
+              </Typography>
+
+              <Box sx={{ display: "flex", mb: 3.5 }}>
+                <Box
+                  sx={{
+                    height: 48,
+                    border: "1px solid #D8DDE6",
+                    borderRadius: 2,
+                    overflow: "hidden",
+                    display: "flex",
+                    width: "fit-content",
+                  }}
+                >
+                  <Box
+                    onClick={() => setConsent("no")}
+                    sx={{
+                      px: 3,
+                      display: "flex",
+                      alignItems: "center",
+                      cursor: "pointer",
+                      bgcolor: consent === "no" ? "#2E7BEF" : "#ffffff",
+                      color: consent === "no" ? "#ffffff" : "#333",
+                      fontWeight: 500,
+                      fontSize: 15,
+                      transition: "all 0.2s",
+                      borderRight: "1px solid #D8DDE6",
+                      userSelect: "none",
+                    }}
+                  >
+                    No Consent
+                  </Box>
+                  <Box
+                    onClick={() => setConsent("yes")}
+                    sx={{
+                      px: 3,
+                      display: "flex",
+                      alignItems: "center",
+                      cursor: "pointer",
+                      bgcolor: consent === "yes" ? "#2E7BEF" : "#ffffff",
+                      color: consent === "yes" ? "#ffffff" : "#333",
+                      fontWeight: 500,
+                      fontSize: 15,
+                      transition: "all 0.2s",
+                      userSelect: "none",
+                    }}
+                  >
+                    Consent on Non-Identifiable Data
+                  </Box>
+                </Box>
+              </Box>
+
+              <Box
+                sx={{
+                  bgcolor: "#F6FFF0",
+                  border: "1px solid #CFEAB2",
+                  borderRadius: 3,
+                  p: 3,
+                  display: "flex",
+                  gap: 2,
+                  mb: 3.5,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 1,
+                    border: "1.5px solid #59B947",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    mt: 0.25,
+                  }}
+                >
+                  <LockOutlinedIcon sx={{ color: "#59B947", fontSize: 18 }} />
+                </Box>
+                <Box>
+                  <Typography sx={{ fontSize: 16, fontWeight: 600, color: "#333", mb: 1 }}>
+                    The following <Box component="span" sx={{ fontWeight: 700 }}>non-identifiable data</Box> might be shared with our lending partners:
+                  </Typography>
+                  <Box component="ul" sx={{ m: 0, pl: 2.5, listStyle: "disc" }}>
+                    <Box component="li" sx={{ fontSize: 16, lineHeight: 1.6, color: "#333", mb: 0.5 }}>
+                      Your company&apos;s nature of business.
+                    </Box>
+                    <Box component="li" sx={{ fontSize: 16, lineHeight: 1.6, color: "#333" }}>
+                      Your company&apos;s aggregated financials up to 12 months.
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+
+              <Typography sx={{ fontSize: 16, color: "#777", mb: 2.5 }}>
+                You may update your info and consent any time in the portal.
+              </Typography>
+
+              <Box
+                onClick={() => setAgreed(!agreed)}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  cursor: "pointer",
+                  mb: 1,
+                  userSelect: "none",
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 1,
+                    border: agreed ? "none" : "2px solid #D8DDE6",
+                    bgcolor: agreed ? "#2E7BEF" : "transparent",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {agreed && <CheckRoundedIcon sx={{ color: "#fff", fontSize: 16 }} />}
+                </Box>
+                <Typography sx={{ fontSize: 16, color: "#333" }}>
+                  I agree to Bukku&apos;s{" "}
+                  <Box
+                    component="span"
+                    sx={{
+                      color: "#2E7BEF",
+                      textDecoration: "underline",
+                      "&:hover": { color: "#2563d1" },
+                    }}
+                  >
+                    Terms of Service
+                  </Box>{" "}
+                  &{" "}
+                  <Box
+                    component="span"
+                    sx={{
+                      color: "#2E7BEF",
+                      textDecoration: "underline",
+                      "&:hover": { color: "#2563d1" },
+                    }}
+                  >
+                    Privacy Policy
+                  </Box>
+                  .
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mt: 5 }}>
+                <Box
+                  onClick={onClose}
+                  sx={{
+                    height: 44,
+                    px: 3,
+                    borderRadius: 2,
+                    border: "1px solid #D0D5DD",
+                    bgcolor: "#ffffff",
+                    color: "#555",
+                    fontWeight: 500,
+                    fontSize: 15,
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    "&:hover": { bgcolor: "#f5f5f5" },
+                    transition: "all 0.15s",
+                  }}
+                >
+                  Back to Dashboard
+                </Box>
+                <Box
+                  onClick={handleBackToStep1}
+                  sx={{
+                    height: 44,
+                    px: 3,
+                    borderRadius: 2,
+                    border: "1px solid #D0D5DD",
+                    bgcolor: "#ffffff",
+                    color: "#555",
+                    fontWeight: 500,
+                    fontSize: 15,
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    "&:hover": { bgcolor: "#f5f5f5" },
+                    transition: "all 0.15s",
+                  }}
+                >
+                  Back
+                </Box>
+                <Box
+                  sx={{
+                    height: 44,
+                    px: 3.5,
+                    borderRadius: 2,
+                    bgcolor: canSubmit ? "#2E7BEF" : "#ccc",
+                    color: "#fff",
+                    fontWeight: 500,
+                    fontSize: 15,
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: canSubmit ? "pointer" : "not-allowed",
+                    "&:hover": canSubmit ? { bgcolor: "#2563d1" } : {},
+                    transition: "all 0.15s",
+                  }}
+                >
+                  Submit
+                </Box>
+              </Box>
+            </>
+          )}
+        </Box>
+      </Box>
+    </Modal>
   );
 }
 
@@ -460,6 +952,7 @@ function ChartCard({ title, data }) {
 export default function AccountingDashboard({ goBack }) {
   const [activeNav, setActiveNav] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [financingModalOpen, setFinancingModalOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -494,7 +987,7 @@ export default function AccountingDashboard({ goBack }) {
           gap: 3,
         }}
       >
-        <LoanPromotionBanner />
+        <LoanPromotionBanner onGetStarted={() => setFinancingModalOpen(true)} />
 
         <Box
           sx={{
@@ -571,6 +1064,11 @@ export default function AccountingDashboard({ goBack }) {
           <ChatBubbleRoundedIcon sx={{ color: "#fff", fontSize: 24 }} />
         </Box>
       )}
+
+      <FinancingPortalModal
+        open={financingModalOpen}
+        onClose={() => setFinancingModalOpen(false)}
+      />
     </Box>
   );
 }
