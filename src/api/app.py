@@ -1415,6 +1415,8 @@ Personal Guarantors ({len(pgs)}):
         return {
             "decision": app_record.system_decision or "PENDING_REVIEW",
             "rationale": app_record.system_reason or "LLM not configured. Set HF_TOKEN to enable AI decision generation.",
+            "key_factors": [],
+            "additional_info_needed": [],
             "provider": "fallback",
         }
 
@@ -1431,15 +1433,28 @@ Personal Guarantors ({len(pgs)}):
 Return ONLY valid JSON with these fields:
 {{
   "decision": "APPROVED" or "REJECTED" or "SUBJECT TO APPROVAL",
-  "rationale": "A detailed 3-5 sentence professional rationale explaining the decision, covering key strengths, weaknesses, and risk factors.",
-  "key_factors": ["Factor 1", "Factor 2", "Factor 3"]
+  "rationale": "A detailed 3-5 sentence professional rationale explaining the decision. Clearly state what helps the application and what hurts it.",
+  "key_factors": [
+    {{"text": "Factor description", "impact": "positive"}},
+    {{"text": "Factor description", "impact": "negative"}}
+  ],
+  "additional_info_needed": ["Information 1", "Information 2"]
 }}
 
-Rules:
+Rules for key_factors:
+- Each factor must have a "text" (string) and "impact" field
+- impact must be "positive" if the factor supports approval, or "negative" if it works against approval
+- Include 4-6 factors, covering both strengths and weaknesses
+- Be specific to the actual data (e.g. "Strong credit bureau grade AA" not "Good credit")
+
+Rules for additional_info_needed:
+- If decision is "SUBJECT TO APPROVAL", list 2-4 specific pieces of information or actions that would help resolve the application (e.g. "6 months of additional bank statements", "Clarification on recent large transactions", "Updated financial statements")
+- If decision is APPROVED or REJECTED, return an empty list []
+
+Rules for decision:
 - decision must be one of: APPROVED, REJECTED, SUBJECT TO APPROVAL
 - If PD > 30% or credit kiting score > 30 or AML is high risk, lean toward REJECTED or SUBJECT TO APPROVAL
 - If DSCR < 1.2, flag concern about debt serviceability
-- key_factors must have 3-5 items
 - Be specific to the actual data, not generic"""
 
         response = client.chat_completion(
@@ -1462,17 +1477,32 @@ Rules:
         if data.get("decision") not in ("APPROVED", "REJECTED", "SUBJECT TO APPROVAL"):
             data["decision"] = app_record.system_decision or "PENDING_REVIEW"
 
+        factors = data.get("key_factors", [])
+        clean_factors = []
+        for f in factors:
+            if isinstance(f, dict):
+                clean_factors.append({
+                    "text": f.get("text", str(f)),
+                    "impact": f.get("impact", "neutral"),
+                })
+            else:
+                clean_factors.append({"text": str(f), "impact": "neutral"})
+
         return {
             "decision": data["decision"],
             "rationale": data.get("rationale", ""),
-            "key_factors": data.get("key_factors", []),
+            "key_factors": clean_factors,
+            "additional_info_needed": data.get("additional_info_needed", []),
             "provider": "huggingface",
+            "model": "Hugging Face Qwen",
         }
 
     except Exception:
         return {
             "decision": app_record.system_decision or "PENDING_REVIEW",
             "rationale": app_record.system_reason or "AI decision generation failed. Displaying system assessment.",
+            "key_factors": [],
+            "additional_info_needed": [],
             "provider": "fallback",
         }
 

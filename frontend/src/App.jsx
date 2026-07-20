@@ -16,6 +16,7 @@ import TamperingDetailsPage from "./pages/TamperingDetailsPage";
 import LitigationDetailsPage from "./pages/LitigationDetailsPage";
 import RiskFlagDetailsPage from "./pages/RiskFlagDetailsPage";
 import LoanLandingPage from "./pages/LoanLandingPage";
+import AccountingDashboard from "./pages/AccountingDashboard";
 
 export default function App() {
   const [screen, setScreen] = useState("profile");
@@ -67,6 +68,11 @@ export default function App() {
               return;
             }
 
+            if (profile === "__ACCOUNTING__") {
+              setScreen("accountingDashboard");
+              return;
+            }
+
             setApplication({
               profile,
               singpass: null,
@@ -89,6 +95,10 @@ export default function App() {
           }}
         />
       );
+      break;
+
+    case "accountingDashboard":
+      page = <AccountingDashboard goBack={() => setScreen("profile")} />;
       break;
 
     case "loanLandingPage":
@@ -290,7 +300,7 @@ export default function App() {
   return (
     <>
       {page}
-      {screen !== "loanLandingPage" && (
+      {screen !== "loanLandingPage" && screen !== "accountingDashboard" && (
         <Box
           component="img"
           src="/uob-logo.png"

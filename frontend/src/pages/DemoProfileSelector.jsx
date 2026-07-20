@@ -196,7 +196,7 @@ const profiles = [
       entityStatus: "Live Company",
       primarySsic: "66301 — Fund/Asset Management",
       registeredAddress: "8 Changi South Lane, #02-01, Singapore 486113",
-      issuedCapital: "SGD 500,000",
+      issuedCapital: "SGD 20,000",
     },
     keymen: [
       {
@@ -312,25 +312,46 @@ export default function DemoProfileSelector({ onSelect }) {
             </Typography>
           </Box>
 
-          <Button
-            variant="outlined"
-            sx={{
-              borderRadius: 3,
-              fontWeight: 800,
-              bgcolor: "white",
-              color: "#005EB8",
-              borderColor: "white",
-              px: 3,
-              py: 1.2,
-              "&:hover": {
-                bgcolor: "#f8fafc",
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              sx={{
+                borderRadius: 3,
+                fontWeight: 800,
+                bgcolor: "white",
+                color: "#005EB8",
                 borderColor: "white",
-              },
-            }}
-            onClick={() => onSelect("__APPROVER__")}
-          >
-            Enter Credit Approver Portal
-          </Button>
+                px: 3,
+                py: 1.2,
+                "&:hover": {
+                  bgcolor: "#f8fafc",
+                  borderColor: "white",
+                },
+              }}
+              onClick={() => onSelect("__APPROVER__")}
+            >
+              Enter Credit Approver Portal
+            </Button>
+            <Button
+              variant="outlined"
+              sx={{
+                borderRadius: 3,
+                fontWeight: 800,
+                bgcolor: "rgba(255,255,255,0.15)",
+                color: "white",
+                borderColor: "rgba(255,255,255,0.4)",
+                px: 3,
+                py: 1.2,
+                "&:hover": {
+                  bgcolor: "rgba(255,255,255,0.25)",
+                  borderColor: "rgba(255,255,255,0.6)",
+                },
+              }}
+              onClick={() => onSelect("__ACCOUNTING__")}
+            >
+              Enter Bukku Portal
+            </Button>
+          </Stack>
         </Box>
       </Box>
 

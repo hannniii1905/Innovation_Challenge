@@ -350,12 +350,16 @@ function FinalAssessmentSummary({
   aiLoading,
 }) {
   const decisionConfig = {
-    APPROVED: { color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", icon: "✓" },
-    REJECTED: { color: "#dc2626", bg: "#fef2f2", border: "#fecaca", icon: "✕" },
-    "SUBJECT TO APPROVAL": { color: "#d97706", bg: "#fffbeb", border: "#fde68a", icon: "!" },
+    APPROVED: { color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0", icon: "✓", label: "Auto-Approved" },
+    REJECTED: { color: "#dc2626", bg: "#fef2f2", border: "#fecaca", icon: "✕", label: "Auto-Rejected" },
+    "SUBJECT TO APPROVAL": { color: "#d97706", bg: "#fffbeb", border: "#fde68a", icon: "!", label: "Subject to Approval" },
   };
 
   const cfg = decisionConfig[aiDecision?.decision] || decisionConfig["SUBJECT TO APPROVAL"];
+
+  const positiveFactors = (aiDecision?.key_factors || []).filter(f => f.impact === "positive");
+  const negativeFactors = (aiDecision?.key_factors || []).filter(f => f.impact === "negative");
+  const additionalInfo = aiDecision?.additional_info_needed || [];
 
   return (
     <Panel title="Final Assessment Summary">
@@ -377,7 +381,7 @@ function FinalAssessmentSummary({
           {aiLoading ? (
             <Box
               sx={{
-                p: 3,
+                p: 3.5,
                 borderRadius: 3,
                 bgcolor: "#f8fafc",
                 border: "1px dashed #cbd5e1",
@@ -396,49 +400,51 @@ function FinalAssessmentSummary({
               {/* Decision card */}
               <Box
                 sx={{
-                  p: 2.5,
+                  p: 3,
                   borderRadius: 3,
                   bgcolor: cfg.bg,
                   border: `1.5px solid ${cfg.border}`,
-                  mb: 2,
+                  mb: 2.5,
                 }}
               >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 0.5 }}>
                   <Box
                     sx={{
-                      width: 32,
-                      height: 32,
+                      width: 36,
+                      height: 36,
                       borderRadius: "50%",
                       bgcolor: cfg.color,
                       color: "white",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: 16,
+                      fontSize: 18,
                       fontWeight: 900,
                     }}
                   >
                     {cfg.icon}
                   </Box>
-                  <Typography sx={{ fontSize: 20, fontWeight: 900, color: cfg.color, letterSpacing: "-0.01em" }}>
-                    {aiDecision.decision}
-                  </Typography>
+                  <Box>
+                    <Typography sx={{ fontSize: 22, fontWeight: 900, color: cfg.color, letterSpacing: "-0.01em", lineHeight: 1.1 }}>
+                      {cfg.label}
+                    </Typography>
+                  </Box>
                 </Box>
                 {aiDecision.provider === "huggingface" && (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 1, ml: 0.3 }}>
                     <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "#005EB8" }} />
                     <Typography fontSize={11} color="#64748b" sx={{ fontWeight: 500 }}>
-                      Powered by AI
+                      Powered by {aiDecision.model || "Hugging Face LLM"}
                     </Typography>
                   </Box>
                 )}
               </Box>
 
               {/* Rationale */}
-              <Box sx={{ px: 0.5, mb: 2.5 }}>
+              <Box sx={{ px: 0.5, mb: 3 }}>
                 <Typography
                   color="#334155"
-                  sx={{ lineHeight: 1.85, fontSize: 14, fontWeight: 400 }}
+                  sx={{ lineHeight: 1.9, fontSize: 14, fontWeight: 400 }}
                 >
                   {aiDecision.rationale}
                 </Typography>
@@ -446,37 +452,148 @@ function FinalAssessmentSummary({
 
               {/* Key factors */}
               {aiDecision.key_factors?.length > 0 && (
-                <Box>
+                <Box sx={{ mb: 3 }}>
                   <Typography
                     fontSize={12}
                     fontWeight={900}
                     color="#64748b"
-                    sx={{ mb: 1, textTransform: "uppercase", letterSpacing: ".06em" }}
+                    sx={{ mb: 1.5, textTransform: "uppercase", letterSpacing: ".06em" }}
                   >
-                    Key Factors
+                    Contributing Factors
                   </Typography>
-                  <Stack direction="row" flexWrap="wrap" gap={0.8}>
-                    {aiDecision.key_factors.map((f, i) => {
-                      const isRisk = f.toLowerCase().includes("high") || f.toLowerCase().includes("risk") || f.toLowerCase().includes("kiting") || f.toLowerCase().includes("suspicious");
-                      const isGood = f.toLowerCase().includes("strong") || f.toLowerCase().includes("good") || f.toLowerCase().includes("approved");
-                      const chipColor = isRisk ? "#dc2626" : isGood ? "#16a34a" : "#475569";
-                      const chipBg = isRisk ? "#fef2f2" : isGood ? "#f0fdf4" : "#f1f5f9";
-                      return (
-                        <Chip
-                          key={i}
-                          label={f}
-                          size="small"
-                          sx={{
-                            fontWeight: 600,
-                            fontSize: 12,
-                            bgcolor: chipBg,
-                            color: chipColor,
-                            border: `1px solid ${chipColor}22`,
-                            height: 28,
-                          }}
-                        />
-                      );
-                    })}
+
+                  {positiveFactors.length > 0 && (
+                    <Box sx={{ mb: 1.5 }}>
+                      <Typography fontSize={11} fontWeight={700} color="#16a34a" sx={{ mb: 0.75, textTransform: "uppercase", letterSpacing: ".05em" }}>
+                        Strengths
+                      </Typography>
+                      <Stack spacing={0.6}>
+                        {positiveFactors.map((f, i) => (
+                          <Box
+                            key={`pos-${i}`}
+                            sx={{
+                              display: "flex",
+                              alignItems: "flex-start",
+                              gap: 1.2,
+                              py: 1,
+                              px: 1.5,
+                              borderRadius: 2,
+                              bgcolor: "#f0fdf4",
+                              border: "1px solid #dcfce7",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: "50%",
+                                bgcolor: "#16a34a",
+                                color: "white",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 11,
+                                fontWeight: 900,
+                                flexShrink: 0,
+                                mt: 0.25,
+                              }}
+                            >
+                              +
+                            </Box>
+                            <Typography fontSize={13} color="#15803d" sx={{ fontWeight: 500, lineHeight: 1.5 }}>
+                              {f.text}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
+
+                  {negativeFactors.length > 0 && (
+                    <Box>
+                      <Typography fontSize={11} fontWeight={700} color="#dc2626" sx={{ mb: 0.75, textTransform: "uppercase", letterSpacing: ".05em" }}>
+                        Concerns
+                      </Typography>
+                      <Stack spacing={0.6}>
+                        {negativeFactors.map((f, i) => (
+                          <Box
+                            key={`neg-${i}`}
+                            sx={{
+                              display: "flex",
+                              alignItems: "flex-start",
+                              gap: 1.2,
+                              py: 1,
+                              px: 1.5,
+                              borderRadius: 2,
+                              bgcolor: "#fef2f2",
+                              border: "1px solid #fecaca",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: "50%",
+                                bgcolor: "#dc2626",
+                                color: "white",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 13,
+                                fontWeight: 900,
+                                flexShrink: 0,
+                                mt: 0.25,
+                              }}
+                            >
+                              −
+                            </Box>
+                            <Typography fontSize={13} color="#991b1b" sx={{ fontWeight: 500, lineHeight: 1.5 }}>
+                              {f.text}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
+                </Box>
+              )}
+
+              {/* Additional info needed (SUBJECT TO APPROVAL only) */}
+              {aiDecision.decision === "SUBJECT TO APPROVAL" && additionalInfo.length > 0 && (
+                <Box
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 3,
+                    bgcolor: "#f0f9ff",
+                    border: "1.5px solid #bae6fd",
+                  }}
+                >
+                  <Typography
+                    fontSize={12}
+                    fontWeight={900}
+                    color="#0369a1"
+                    sx={{ mb: 1.2, textTransform: "uppercase", letterSpacing: ".06em" }}
+                  >
+                    Information Needed to Proceed
+                  </Typography>
+                  <Stack spacing={0.8}>
+                    {additionalInfo.map((info, i) => (
+                      <Box
+                        key={i}
+                        sx={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 1.2,
+                        }}
+                      >
+                        <Typography fontSize={13} color="#0c4a6e" sx={{ fontWeight: 800, mt: 0.1 }}>
+                          {i + 1}.
+                        </Typography>
+                        <Typography fontSize={13} color="#0c4a6e" sx={{ fontWeight: 400, lineHeight: 1.5 }}>
+                          {info}
+                        </Typography>
+                      </Box>
+                    ))}
                   </Stack>
                 </Box>
               )}
