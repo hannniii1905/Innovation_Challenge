@@ -27,22 +27,29 @@ export default function CreditApproverDashboard({ openApplication, onViewHistory
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    async function loadApplications() {
-      try {
-        const allData = await getApproverApplications();
+  const loadApplications = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const allData = await getApproverApplications();
 
-        setSummary(allData.summary || {});
-        setApplications(allData.applications || []);
-      } catch (err) {
-        setError(err.message || "Unable to load applications.");
-      } finally {
-        setLoading(false);
-      }
+      setSummary(allData.summary || {});
+      setApplications(allData.applications || []);
+    } catch (err) {
+      setError(err.message || "Unable to load applications.");
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     loadApplications();
   }, []);
+
+  useEffect(() => {
+    if (!decidedApplications || decidedApplications.length === 0) return;
+    loadApplications();
+  }, [decidedApplications]);
 
   const decidedIds = useMemo(() => new Set(decidedApplications?.map((a) => a.application_id)), [decidedApplications]);
 

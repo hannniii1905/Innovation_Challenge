@@ -1003,7 +1003,13 @@ def list_approver_applications(
         risk_flags = app.risk_flags or []
         risk_text = " ".join(str(x).lower() for x in risk_flags)
 
-        if system_decision == "APPROVED":
+        if app.approver_decision == "APPROVED":
+            review_category = "APPROVED"
+        elif app.approver_decision == "REJECTED":
+            review_category = "REJECTED"
+        elif app.approver_decision == "SUBJECT TO APPROVAL":
+            review_category = "SUBJECT_TO_APPROVAL"
+        elif system_decision == "APPROVED":
             review_category = "APPROVED"
         elif system_decision == "REJECTED" or app.status == "REJECTED":
             review_category = "REJECTED"
@@ -1049,9 +1055,13 @@ def list_approver_applications(
         x for x in rows
         if x["review_category"] == "REJECTED" and x["approver_decision"] is not None
     ])
+    subject_to_approval = len([
+        x for x in rows
+        if x["review_category"] == "SUBJECT_TO_APPROVAL"
+    ])
 
     auto_total = auto_approved + auto_rejected
-    manual_total = manual_approved + manual_rejected
+    manual_total = manual_approved + manual_rejected + subject_to_approval
 
     def pct(n):
         return round((n / total) * 100, 1) if total else 0
@@ -1071,10 +1081,12 @@ def list_approver_applications(
             "manual_rejected_count": manual_rejected,
             "auto_total_count": auto_total,
             "manual_total_count": manual_total,
+            "subject_to_approval_count": subject_to_approval,
             "auto_approved_percentage": pct(auto_approved),
             "manual_approved_percentage": pct(manual_approved),
             "auto_rejected_percentage": pct(auto_rejected),
             "manual_rejected_percentage": pct(manual_rejected),
+            "subject_to_approval_percentage": pct(subject_to_approval),
             "auto_total_percentage": pct(auto_total),
             "manual_total_percentage": pct(manual_total),
         },
