@@ -12,6 +12,7 @@ import {
   Select,
   MenuItem,
   FormControl,
+  Menu,
 } from "@mui/material";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
 import AccountBalanceRoundedIcon from "@mui/icons-material/AccountBalanceRounded";
@@ -443,11 +444,14 @@ function FinancingPortalModal({ open, onClose }) {
                     }}
                   >
                     <MenuItem value="" disabled>Select Sector</MenuItem>
-                    <MenuItem value="manufacturing">Manufacturing</MenuItem>
-                    <MenuItem value="services">Services</MenuItem>
-                    <MenuItem value="retail">Retail</MenuItem>
-                    <MenuItem value="technology">Technology</MenuItem>
-                    <MenuItem value="construction">Construction</MenuItem>
+                    <MenuItem value="A - Agriculture, forestry and fishing">A - Agriculture, forestry and fishing</MenuItem>
+                    <MenuItem value="B - Mining and Quarrying">B - Mining and Quarrying</MenuItem>
+                    <MenuItem value="C - Manufacturing">C - Manufacturing</MenuItem>
+                    <MenuItem value="D - Electricity,gas,steam and air conditioning supply">D - Electricity,gas,steam and air conditioning supply</MenuItem>
+                    <MenuItem value="E - Water supply; sewerage, waste management and remediation activities">E - Water supply; sewerage, waste management and remediation activities</MenuItem>
+                    <MenuItem value="F - Construction">F - Construction</MenuItem>
+                    <MenuItem value="G - Wholesale and retail trade; repair of motor vehicles and motorcycles">G - Wholesale and retail trade; repair of motor vehicles and motorcycles</MenuItem>
+                    <MenuItem value="H - Transportation and storage">H - Transportation and storage</MenuItem>
                   </Select>
                 </FormControl>
 
@@ -491,11 +495,11 @@ function FinancingPortalModal({ open, onClose }) {
                     }}
                   >
                     <MenuItem value="" disabled>Select Category</MenuItem>
-                    <MenuItem value="electronics">Electronics</MenuItem>
-                    <MenuItem value="textiles">Textiles</MenuItem>
-                    <MenuItem value="food">Food & Beverage</MenuItem>
-                    <MenuItem value="consulting">Consulting</MenuItem>
-                    <MenuItem value="software">Software</MenuItem>
+                    <MenuItem value="49 - Land Transportation and transport via pipelines">49 - Land Transportation and transport via pipelines</MenuItem>
+                    <MenuItem value="50 - Water Transport">50 - Water Transport</MenuItem>
+                    <MenuItem value="51 - Air Transport">51 - Air Transport</MenuItem>
+                    <MenuItem value="52 - Warehousing and support activities for transportation">52 - Warehousing and support activities for transportation</MenuItem>
+                    <MenuItem value="53 - Postal and courier activities">53 - Postal and courier activities</MenuItem>
                   </Select>
                 </FormControl>
 
@@ -536,11 +540,8 @@ function FinancingPortalModal({ open, onClose }) {
                     }}
                   >
                     <MenuItem value="" disabled>Select Sub-category</MenuItem>
-                    <MenuItem value="components">Components</MenuItem>
-                    <MenuItem value="assembly">Assembly</MenuItem>
-                    <MenuItem value="organic">Organic</MenuItem>
-                    <MenuItem value="imported">Imported</MenuItem>
-                    <MenuItem value="custom">Custom</MenuItem>
+                    <MenuItem value="531 - Postal Activities">531 - Postal Activities</MenuItem>
+                    <MenuItem value="532 - Courier Activities">532 - Courier Activities</MenuItem>
                   </Select>
                 </FormControl>
               </Box>
