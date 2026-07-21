@@ -363,7 +363,8 @@ function FinalAssessmentSummary({
 
   return (
     <Panel title="Final Assessment Summary">
-      <Grid container spacing={3}>
+      <Grid container spacing={3} alignItems="flex-start">
+        {/* LEFT: AI DECISION + RATIONALE */}
         <Grid size={{ xs: 12, md: 7 }}>
           <Typography
             sx={{
@@ -387,17 +388,35 @@ function FinalAssessmentSummary({
                 border: "1px dashed #cbd5e1",
               }}
             >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                  mb: 2,
+                }}
+              >
                 <CircularProgress size={22} sx={{ color: "#005EB8" }} />
-                <Typography color="text.secondary" fontSize={14} fontWeight={500}>
+
+                <Typography
+                  color="text.secondary"
+                  fontSize={14}
+                  fontWeight={500}
+                >
                   Generating AI assessment...
                 </Typography>
               </Box>
-              <LinearProgress sx={{ borderRadius: 2, height: 6, bgcolor: "#e2e8f0" }} />
+
+              <LinearProgress
+                sx={{
+                  borderRadius: 2,
+                  height: 6,
+                  bgcolor: "#e2e8f0",
+                }}
+              />
             </Box>
           ) : aiDecision ? (
             <Stack spacing={0}>
-              {/* Decision card */}
               <Box
                 sx={{
                   p: 3,
@@ -407,11 +426,19 @@ function FinalAssessmentSummary({
                   mb: 2.5,
                 }}
               >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 0.5 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    mb: 1,
+                  }}
+                >
                   <Box
                     sx={{
-                      width: 36,
-                      height: 36,
+                      width: 32,
+                      height: 32,
+                      flexShrink: 0,
                       borderRadius: "50%",
                       bgcolor: cfg.color,
                       color: "white",
@@ -424,187 +451,77 @@ function FinalAssessmentSummary({
                   >
                     {cfg.icon}
                   </Box>
-                  <Box>
-                    <Typography sx={{ fontSize: 22, fontWeight: 900, color: cfg.color, letterSpacing: "-0.01em", lineHeight: 1.1 }}>
-                      {cfg.label}
-                    </Typography>
-                  </Box>
+
+                  <Typography
+                    sx={{
+                      fontSize: 20,
+                      fontWeight: 900,
+                      color: cfg.color,
+                      letterSpacing: "-0.01em",
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {aiDecision.decision}
+                  </Typography>
                 </Box>
+
                 {aiDecision.provider === "huggingface" && (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 1, ml: 0.3 }}>
-                    <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "#005EB8" }} />
-                    <Typography fontSize={11} color="#64748b" sx={{ fontWeight: 500 }}>
-                      Powered by {aiDecision.model || "Hugging Face LLM"}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 0.5,
+                      mt: 0.5,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        bgcolor: "#005EB8",
+                      }}
+                    />
+
+                    <Typography
+                      fontSize={11}
+                      color="#64748b"
+                      sx={{ fontWeight: 500 }}
+                    >
+                      Powered by AI
                     </Typography>
                   </Box>
                 )}
               </Box>
 
-              {/* Rationale */}
-              <Box sx={{ px: 0.5, mb: 3 }}>
+              <Box sx={{ px: 0.5 }}>
                 <Typography
                   color="#334155"
-                  sx={{ lineHeight: 1.9, fontSize: 14, fontWeight: 400 }}
+                  sx={{
+                    lineHeight: 1.85,
+                    fontSize: 14,
+                    fontWeight: 400,
+                    overflowWrap: "anywhere",
+                  }}
                 >
                   {aiDecision.rationale}
                 </Typography>
               </Box>
-
-              {/* Key factors */}
-              {aiDecision.key_factors?.length > 0 && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography
-                    fontSize={12}
-                    fontWeight={900}
-                    color="#64748b"
-                    sx={{ mb: 1.5, textTransform: "uppercase", letterSpacing: ".06em" }}
-                  >
-                    Contributing Factors
-                  </Typography>
-
-                  {positiveFactors.length > 0 && (
-                    <Box sx={{ mb: 1.5 }}>
-                      <Typography fontSize={11} fontWeight={700} color="#16a34a" sx={{ mb: 0.75, textTransform: "uppercase", letterSpacing: ".05em" }}>
-                        Strengths
-                      </Typography>
-                      <Stack spacing={0.6}>
-                        {positiveFactors.map((f, i) => (
-                          <Box
-                            key={`pos-${i}`}
-                            sx={{
-                              display: "flex",
-                              alignItems: "flex-start",
-                              gap: 1.2,
-                              py: 1,
-                              px: 1.5,
-                              borderRadius: 2,
-                              bgcolor: "#f0fdf4",
-                              border: "1px solid #dcfce7",
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                width: 20,
-                                height: 20,
-                                borderRadius: "50%",
-                                bgcolor: "#16a34a",
-                                color: "white",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 11,
-                                fontWeight: 900,
-                                flexShrink: 0,
-                                mt: 0.25,
-                              }}
-                            >
-                              +
-                            </Box>
-                            <Typography fontSize={13} color="#15803d" sx={{ fontWeight: 500, lineHeight: 1.5 }}>
-                              {f.text}
-                            </Typography>
-                          </Box>
-                        ))}
-                      </Stack>
-                    </Box>
-                  )}
-
-                  {negativeFactors.length > 0 && (
-                    <Box>
-                      <Typography fontSize={11} fontWeight={700} color="#dc2626" sx={{ mb: 0.75, textTransform: "uppercase", letterSpacing: ".05em" }}>
-                        Concerns
-                      </Typography>
-                      <Stack spacing={0.6}>
-                        {negativeFactors.map((f, i) => (
-                          <Box
-                            key={`neg-${i}`}
-                            sx={{
-                              display: "flex",
-                              alignItems: "flex-start",
-                              gap: 1.2,
-                              py: 1,
-                              px: 1.5,
-                              borderRadius: 2,
-                              bgcolor: "#fef2f2",
-                              border: "1px solid #fecaca",
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                width: 20,
-                                height: 20,
-                                borderRadius: "50%",
-                                bgcolor: "#dc2626",
-                                color: "white",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 13,
-                                fontWeight: 900,
-                                flexShrink: 0,
-                                mt: 0.25,
-                              }}
-                            >
-                              −
-                            </Box>
-                            <Typography fontSize={13} color="#991b1b" sx={{ fontWeight: 500, lineHeight: 1.5 }}>
-                              {f.text}
-                            </Typography>
-                          </Box>
-                        ))}
-                      </Stack>
-                    </Box>
-                  )}
-                </Box>
-              )}
-
-              {/* Additional info needed (SUBJECT TO APPROVAL only) */}
-              {aiDecision.decision === "SUBJECT TO APPROVAL" && additionalInfo.length > 0 && (
-                <Box
-                  sx={{
-                    p: 2.5,
-                    borderRadius: 3,
-                    bgcolor: "#f0f9ff",
-                    border: "1.5px solid #bae6fd",
-                  }}
-                >
-                  <Typography
-                    fontSize={12}
-                    fontWeight={900}
-                    color="#0369a1"
-                    sx={{ mb: 1.2, textTransform: "uppercase", letterSpacing: ".06em" }}
-                  >
-                    Information Needed to Proceed
-                  </Typography>
-                  <Stack spacing={0.8}>
-                    {additionalInfo.map((info, i) => (
-                      <Box
-                        key={i}
-                        sx={{
-                          display: "flex",
-                          alignItems: "flex-start",
-                          gap: 1.2,
-                        }}
-                      >
-                        <Typography fontSize={13} color="#0c4a6e" sx={{ fontWeight: 800, mt: 0.1 }}>
-                          {i + 1}.
-                        </Typography>
-                        <Typography fontSize={13} color="#0c4a6e" sx={{ fontWeight: 400, lineHeight: 1.5 }}>
-                          {info}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Stack>
-                </Box>
-              )}
             </Stack>
           ) : (
-            <Typography color="text.secondary" sx={{ lineHeight: 1.8, fontSize: 14 }}>
+            <Typography
+              color="text.secondary"
+              sx={{
+                lineHeight: 1.8,
+                fontSize: 14,
+              }}
+            >
               {application.system_reason}
             </Typography>
           )}
         </Grid>
 
+        {/* RIGHT: RISK FLAGS */}
         <Grid size={{ xs: 12, md: 5 }}>
           <Typography
             sx={{
@@ -613,7 +530,7 @@ function FinalAssessmentSummary({
               color: "#64748b",
               textTransform: "uppercase",
               letterSpacing: ".06em",
-              mb: 1,
+              mb: 1.5,
             }}
           >
             Key Risk Flags
@@ -647,9 +564,12 @@ function FinalAssessmentSummary({
                       }
                     }}
                     sx={{
-                      p: 1.35,
+                      px: 1.6,
+                      py: 1.25,
+                      minHeight: 50,
                       borderRadius: 2.5,
                       justifyContent: "flex-start",
+                      alignItems: "flex-start",
                       textTransform: "none",
                       borderColor: "#fecaca",
                       bgcolor: "#fffafa",
@@ -660,10 +580,15 @@ function FinalAssessmentSummary({
                     }}
                   >
                     <Typography
-                      fontSize={13}
-                      fontWeight={800}
-                      color="#b91c1c"
-                      textAlign="left"
+                      sx={{
+                        fontSize: 13,
+                        fontWeight: 800,
+                        color: "#b91c1c",
+                        textAlign: "left",
+                        lineHeight: 1.45,
+                        whiteSpace: "normal",
+                        overflowWrap: "anywhere",
+                      }}
                     >
                       ⚠ {flag}
                     </Typography>
@@ -686,11 +611,90 @@ function FinalAssessmentSummary({
             </Box>
           )}
         </Grid>
+
+        {/* FULL-WIDTH KEY FACTORS ROW */}
+        {aiDecision?.key_factors?.length > 0 && (
+          <Grid size={{ xs: 12 }}>
+            <Divider sx={{ mt: 0.5, mb: 2.2 }} />
+
+            <Typography
+              sx={{
+                mb: 1.2,
+                fontSize: 12,
+                fontWeight: 900,
+                color: "#64748b",
+                textTransform: "uppercase",
+                letterSpacing: ".06em",
+              }}
+            >
+              Key Factors
+            </Typography>
+
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 1,
+              }}
+            >
+              {aiDecision.key_factors.map((factor, index) => {
+                const factorLower = factor.toLowerCase();
+
+                const isRisk =
+                  factorLower.includes("high") ||
+                  factorLower.includes("risk") ||
+                  factorLower.includes("kiting") ||
+                  factorLower.includes("suspicious");
+
+                const isGood =
+                  factorLower.includes("strong") ||
+                  factorLower.includes("good") ||
+                  factorLower.includes("approved");
+
+                const chipColor = isRisk
+                  ? "#dc2626"
+                  : isGood
+                  ? "#16a34a"
+                  : "#475569";
+
+                const chipBg = isRisk
+                  ? "#fef2f2"
+                  : isGood
+                  ? "#f0fdf4"
+                  : "#f8fafc";
+
+                return (
+                  <Chip
+                    key={`${factor}-${index}`}
+                    label={factor}
+                    sx={{
+                      height: "auto",
+                      maxWidth: "100%",
+                      bgcolor: chipBg,
+                      color: chipColor,
+                      border: `1px solid ${chipColor}33`,
+                      borderRadius: 2,
+                      fontWeight: 600,
+                      fontSize: 12,
+                      "& .MuiChip-label": {
+                        display: "block",
+                        px: 1.3,
+                        py: 0.8,
+                        whiteSpace: "normal",
+                        lineHeight: 1.35,
+                        overflowWrap: "anywhere",
+                      },
+                    }}
+                  />
+                );
+              })}
+            </Box>
+          </Grid>
+        )}
       </Grid>
     </Panel>
   );
 }
-
 function Panel({ title, children }) {
   return (
     <Paper
