@@ -17,6 +17,7 @@ import LitigationDetailsPage from "./pages/LitigationDetailsPage";
 import RiskFlagDetailsPage from "./pages/RiskFlagDetailsPage";
 import LoanLandingPage from "./pages/LoanLandingPage";
 import AccountingDashboard from "./pages/AccountingDashboard";
+import { profiles } from "./pages/DemoProfileSelector";
 
 export default function App() {
   const [screen, setScreen] = useState("profile");
@@ -98,7 +99,35 @@ export default function App() {
       break;
 
     case "accountingDashboard":
-      page = <AccountingDashboard goBack={() => setScreen("profile")} />;
+      page = (
+        <AccountingDashboard
+          goBack={() => setScreen("profile")}
+          onContinueToUob={() => {
+            // Bukku lane: company identity + bank data come from the partner
+            // feed, so we seed a profile and skip Singpass / upload / consent.
+            const bukkuProfile = profiles[0];
+            setApplication({
+              profile: bukkuProfile,
+              lane: "BUKKU",
+              singpass: null,
+              authMethod: "BUKKU_PARTNER",
+              applicant: { name: "Bukku Authorised Contact" },
+              loanAmount: 50000,
+              tenure: 24,
+              interestRate: 6,
+              monthlyInstallment: 0,
+              loanPurpose: "Working Capital",
+              declarations: { positiveEBITDA: "", positiveTNW: "", existingLoans: "", existingLoanDetails: "", recentDefault: "", industry: "" },
+              uploads: { bankStatements: [], incomeStatement: null, ic: null, financials: null },
+              consent: { screening: true, declaration: true, singpassSigned: true },
+              applicationId: null,
+              referenceNumber: null,
+              assessment: null,
+            });
+            setScreen("myInfoReview");
+          }}
+        />
+      );
       break;
 
     case "loanLandingPage":
@@ -142,7 +171,11 @@ export default function App() {
           application={application}
           setApplication={setApplication}
           next={() => setScreen("pgVerification")}
-          back={() => setScreen("singpass")}
+          back={() =>
+            setScreen(
+              application.lane === "BUKKU" ? "accountingDashboard" : "singpass"
+            )
+          }
           goHome={() => setScreen("profile")}
         />
       );

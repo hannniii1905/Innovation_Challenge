@@ -4,14 +4,14 @@
 
 PROPERTY_RECORDS = [
     {
-        "address": "71 Ayer Rajah Crescent, #03-12, Singapore 139951",
-        "lat": 1.2969,
-        "lng": 103.7874,
-        "building_name": "Blk 71 Ayer Rajah Crescent",
+        "address": "1 Fusionopolis Way, #12-01, Connexis, Singapore 138632",
+        "lat": 1.299640,
+        "lng": 103.787690,
+        "building_name": "Connexis @ Fusionopolis",
         "building_owner": "JTC Corporation",
-        "property_type": "Business Park (B1)",
-        "land_tenure": "30-year leasehold from 2010",
-        "owner_info": "Government-held industrial land — JTC Corporation is the master lessor. Sub-tenancy held by Singapore Science Park."
+        "property_type": "Commercial / Office (one-north)",
+        "land_tenure": "99-year leasehold from 2005",
+        "owner_info": "one-north infocomm & media hub — JTC Corporation is the master lessor. Grade A office space tenanted by technology and R&D firms."
     },
     {
         "address": "6 Bishan Street 13, #10-32, Singapore 579798",
@@ -74,14 +74,14 @@ PROPERTY_RECORDS = [
         "owner_info": "Privately-owned commercial strata office tower. One Raffles Place is a landmark Grade A office development in the heart of Singapore's CBD."
     },
     {
-        "address": "Ayer Rajah Crescent, #03-12, Singapore 139951",
-        "lat": 1.2969,
-        "lng": 103.7874,
-        "building_name": "Blk 71 Ayer Rajah Crescent",
+        "address": "1 Fusionopolis Way, Connexis, Singapore 138632",
+        "lat": 1.299640,
+        "lng": 103.787690,
+        "building_name": "Connexis @ Fusionopolis",
         "building_owner": "JTC Corporation",
-        "property_type": "Business Park (B1)",
-        "land_tenure": "30-year leasehold from 2010",
-        "owner_info": "Government-held industrial land — JTC Corporation is the master lessor."
+        "property_type": "Commercial / Office (one-north)",
+        "land_tenure": "99-year leasehold from 2005",
+        "owner_info": "one-north infocomm & media hub — JTC Corporation is the master lessor."
     },
 ]
 

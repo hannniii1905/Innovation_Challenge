@@ -25,6 +25,8 @@ import {
   getAiDecision,
 } from "../api/client";
 
+import VerifiedRoundedIcon from "@mui/icons-material/VerifiedRounded";
+
 import LightKycPanel from "../components/LightKycPanel";
 
 export default function CreditDecisionWorkbench({ applicationSummary, back, onDecision, onViewTampering, onViewLitigation, onViewRiskFlag, goHome }) {
@@ -731,6 +733,10 @@ function CompanyOverview({
   registeredAddress,
 }) {
   const cbs = application?.underwriting?.credit_bureau || {};
+  // Applications sourced through the Bukku partner feed carry a data_source
+  // marker; bank data is pulled from the verified ledger rather than uploaded.
+  const isBukkuSourced =
+    (application?.data_source || "").toLowerCase() === "bukku";
   const bankStatementDocuments = Array.isArray(
     application?.files?.bank_statements
   )
@@ -822,6 +828,19 @@ function CompanyOverview({
           useFlexGap
           justifyContent={{ xs: "flex-start", md: "flex-end" }}
         >
+          {isBukkuSourced && (
+            <Chip
+              icon={<VerifiedRoundedIcon sx={{ fontSize: 18, color: "#15803d !important" }} />}
+              label="Data source: Bukku · Verified partner feed"
+              sx={{
+                fontWeight: 800,
+                bgcolor: "#f0fdf4",
+                color: "#15803d",
+                border: "1px solid #bbf7d0",
+              }}
+            />
+          )}
+
           <Chip
             label={decisionLabel}
             color={decisionColor}

@@ -13,6 +13,7 @@ from src.ocr_engine import OCREngine
 from src.loan_detector import LoanDetector
 from src.fraud_detector import FraudDetector
 from src.credit_kiting import CreditKitingDetector
+from src.extraction_agent import BankStatementExtractionAgent
 from src.mock_data.company_profiles import COMPANY_PROFILES
 from src.parsers.iras_noa_parser import IrasNoaParser
 from src.statement_period_detector import detect_statement_period
@@ -107,7 +108,12 @@ class UnderwritingEngine:
                 "credit_kiting_findings": [],
                 "transactions": [],
                 "documents": [],
+                "ledger_checks": [],
             }
+
+        extraction_agent = BankStatementExtractionAgent()
+        agent_suspicious_credits = []
+        ledger_checks = []
 
         for statement_path in statement_paths:
             try:
@@ -118,10 +124,29 @@ class UnderwritingEngine:
                 router = DocumentRouter(pages)
                 detected_bank = router.identify()
 
-                parser_class = router.get_parser_class()
-                parser = parser_class()
+                # AI extraction agent first; static parsers as fallback so the
+                # pipeline still works without HF_TOKEN or on LLM failure.
+                transactions = []
+                agent_payload = extraction_agent.run(text)
+                if agent_payload is not None:
+                    extraction = extraction_agent.to_pipeline(agent_payload)
+                    transactions = extraction["transactions"]
+                    agent_suspicious_credits.extend(
+                        extraction["suspicious_credits"]
+                    )
+                    warnings.extend(extraction["warnings"])
+                    if extraction["bank_name"]:
+                        detected_bank = extraction["bank_name"]
+                    ledger_checks.append({
+                        "filename": statement_path.split("/")[-1].split("\\")[-1],
+                        **extraction["ledger"],
+                    })
 
-                transactions = parser.extract_transactions(text) or []
+                if not transactions:
+                    parser_class = router.get_parser_class()
+                    parser = parser_class()
+                    transactions = parser.extract_transactions(text) or []
+
                 statement_period = detect_statement_period(text)
 
                 if bank_type is None:
@@ -186,6 +211,27 @@ class UnderwritingEngine:
                 combined_statement_period,
             ) or []
 
+            # Merge in credits the AI extraction agent flagged (window
+            # dressing indicators), skipping duplicates already caught by
+            # the rule-based FraudDetector.
+            already_flagged = {
+                (
+                    item.transaction.date,
+                    item.transaction.description,
+                    round(float(item.transaction.amount or 0), 2),
+                )
+                for item in all_suspicious_credits
+            }
+            for item in agent_suspicious_credits:
+                key = (
+                    item.transaction.date,
+                    item.transaction.description,
+                    round(float(item.transaction.amount or 0), 2),
+                )
+                if key not in already_flagged:
+                    all_suspicious_credits.append(item)
+                    already_flagged.add(key)
+
             if all_suspicious_credits:
                 has_fraud_tampering = True
                 flagged_kiting_volume = sum(
@@ -222,6 +268,7 @@ class UnderwritingEngine:
             "credit_kiting_findings": all_credit_kiting_findings,
             "transactions": all_transactions,
             "documents": statement_results,
+            "ledger_checks": ledger_checks,
         }
 
     def _analyse_income_statement(self, app_record):

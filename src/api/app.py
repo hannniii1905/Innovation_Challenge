@@ -23,6 +23,11 @@ import tempfile
 import threading
 from typing import List, Optional, Tuple
 
+from dotenv import load_dotenv
+
+# Load secrets (e.g. HF_TOKEN) from a gitignored .env at the project root.
+load_dotenv()
+
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -65,6 +70,7 @@ from src.mock_data.light_kyc import run_light_kyc
 
 from src.fraud_detector import FraudDetector
 from src.loan_detector import LoanDetector
+from src.extraction_agent import BankStatementExtractionAgent
 from src.ocr_engine import OCREngine, OCREngineError
 from src.parsers.base_parser import Transaction
 from src.parsers.iras_noa_parser import IrasNoaParser
@@ -808,27 +814,78 @@ async def submit_client_application(
         )
         auto_reject_screening = cif_blacklist_failed or industry_blacklist_failed or on_us_off_us_failed
 
-        if auto_reject_screening:
-            # Immediate auto-reject for CIF blacklist, industry blacklist, or on-us/off-us failure
-            ai_recommendation = "REJECTED"
-            app_status = "REJECTED"
-            failed_reasons = []
-            if cif_blacklist_failed:
-                failed_reasons.append("Bank-wide CIF Blacklist hit")
-            if industry_blacklist_failed:
-                failed_reasons.append("Industry Blacklist exclusion")
-            if on_us_off_us_failed:
-                failed_reasons.append("On-us/Off-us adverse conduct")
-            reason = "Auto-rejected: " + "; ".join(failed_reasons) + "."
-        elif not cbs_ok or not aml_ok or pd > 30:
-            ai_recommendation = "REJECTED"
-            app_status = "REJECTED"
-            reason = "Adverse credit bureau grade / screening or high probability of default. Declined."
-        elif pd >= 12 or lit.get("high_risk") or drivers:
+        # ------------------------------------------------------------------
+        # Decision routing by requested amount.
+        #   < $200k  -> fully automated: auto-approve or auto-reject only.
+        #               A soft-fail (elevated but non-disqualifying risk) is
+        #               auto-rejected but remains eligible for appeal.
+        #   >= $200k -> always routed to manual credit review, even hard fails.
+        # ------------------------------------------------------------------
+        MANUAL_REVIEW_THRESHOLD = 200_000
+
+        # Hard disqualifiers: compliance / creditworthiness blocks (not appealable).
+        hard_fail_reasons = []
+        if cif_blacklist_failed:
+            hard_fail_reasons.append("Bank-wide CIF Blacklist hit")
+        if industry_blacklist_failed:
+            hard_fail_reasons.append("Industry Blacklist exclusion")
+        if on_us_off_us_failed:
+            hard_fail_reasons.append("On-us/Off-us adverse conduct")
+        if not cbs_ok:
+            hard_fail_reasons.append("Adverse credit bureau grade")
+        if not aml_ok:
+            hard_fail_reasons.append("AML / screening failure")
+        if pd > 30:
+            hard_fail_reasons.append("Probability of default above 30%")
+        has_hard_fail = bool(hard_fail_reasons)
+
+        # Soft-fail risk signals: elevated but not outright disqualifying.
+        soft_fail_reasons = []
+        if pd >= 12:
+            soft_fail_reasons.append("Elevated probability of default")
+        if lit.get("high_risk"):
+            soft_fail_reasons.append("Outstanding litigation")
+        if drivers:
+            soft_fail_reasons.extend(drivers)
+        has_soft_fail = bool(soft_fail_reasons)
+
+        appeal_eligible = False
+
+        if requested_quantum >= MANUAL_REVIEW_THRESHOLD:
+            # Large exposure: a human always makes the final call.
             ai_recommendation = "NEEDS_FURTHER_REVIEW"
             app_status = "PENDING"
-            reason = "Elevated risk indicators require manual credit review."
+            if has_hard_fail:
+                reason = (
+                    f"Loan amount ≥ ${MANUAL_REVIEW_THRESHOLD:,.0f} with risk flags "
+                    f"({'; '.join(hard_fail_reasons)}) — routed to manual credit review."
+                )
+            elif has_soft_fail:
+                reason = (
+                    f"Loan amount ≥ ${MANUAL_REVIEW_THRESHOLD:,.0f} with elevated risk "
+                    f"({'; '.join(soft_fail_reasons)}) — routed to manual credit review."
+                )
+            else:
+                reason = (
+                    f"Loan amount ≥ ${MANUAL_REVIEW_THRESHOLD:,.0f} requires manual credit review."
+                )
+        elif has_hard_fail:
+            # Small loan with a hard disqualifier -> auto-reject, not appealable.
+            ai_recommendation = "REJECTED"
+            app_status = "REJECTED"
+            reason = "Auto-rejected: " + "; ".join(hard_fail_reasons) + "."
+        elif has_soft_fail:
+            # Small loan with soft-fail risk -> auto-reject but appealable.
+            ai_recommendation = "REJECTED"
+            app_status = "REJECTED"
+            appeal_eligible = True
+            reason = (
+                "Auto-rejected on elevated risk indicators ("
+                + "; ".join(soft_fail_reasons)
+                + "). Eligible for appeal / manual review on request."
+            )
         else:
+            # Small loan, clean profile -> auto-approve.
             ai_recommendation = "APPROVED"
             app_status = "APPROVED"
             reason = "Clean bureau grade and low probability of default. Auto-approved within risk tolerance."
@@ -838,6 +895,15 @@ async def submit_client_application(
         application.system_reason = reason
         application.risk_flags = drivers
         application.status = app_status
+
+        # Record appeal eligibility in the evidence bundle (non-breaking; no migration).
+        if isinstance(application.underwriting_json, dict):
+            merged = dict(application.underwriting_json)
+            merged["appeal"] = {
+                "eligible": appeal_eligible,
+                "reasons": soft_fail_reasons if appeal_eligible else [],
+            }
+            application.underwriting_json = merged
         application.approved_amount = (
             flash_limit if flash_limit is not None else requested_quantum
         )
@@ -1749,9 +1815,23 @@ def _run_extraction(session: OCRSession, pdf_bytes: bytes) -> None:
             parser = router.get_parser_class()()
             session.bank = doc_type
             session.company_name = parser.extract_company_name(text)
-            
+
             session.progress = 90
             session.progress_message = "Extracting transactions…"
+
+            # AI extraction agent first; static parser as fallback so the
+            # flow still works without HF_TOKEN or on LLM failure.
+            extracted = []
+            agent = BankStatementExtractionAgent()
+            payload = agent.run(text)
+            if payload is not None:
+                extraction = agent.to_pipeline(payload)
+                extracted = extraction["transactions"]
+                if extraction["bank_name"]:
+                    session.bank = extraction["bank_name"]
+            if not extracted:
+                extracted = parser.extract_transactions(text)
+
             session.transactions = [
                 TransactionModel(
                     date=t.date,
@@ -1761,7 +1841,7 @@ def _run_extraction(session: OCRSession, pdf_bytes: bytes) -> None:
                     raw_text=t.raw_text,
                     is_corrected=False,
                 )
-                for t in parser.extract_transactions(text)
+                for t in extracted
             ]
         print("Detected:", doc_type)
         print("Company:", session.company_name)

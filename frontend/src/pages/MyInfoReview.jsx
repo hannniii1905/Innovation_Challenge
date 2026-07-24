@@ -54,6 +54,8 @@ export default function MyInfoReview({ application, setApplication, next, back, 
   const profile = application.profile || {};
   const business = profile.businessInfo || {};
   const keymen = profile.keymen || [];
+  const isBukku = application.lane === "BUKKU";
+  const dataSource = isBukku ? "Bukku" : "MyInfo Business";
 
   // Shared personal-guarantor selection (ranking, mandatory >= 25%, minimal
   // default to reach coverage). See components/application/PgSelection.
@@ -99,14 +101,15 @@ export default function MyInfoReview({ application, setApplication, next, back, 
           }}
         >
           <Typography sx={{ fontSize: 13, fontWeight: 800, opacity: 0.9 }}>
-            {"RETRIEVED VIA SINGPASS / ACRA"}
+            {isBukku ? "RETRIEVED VIA BUKKU PARTNER FEED" : "RETRIEVED VIA SINGPASS / ACRA"}
           </Typography>
           <Typography sx={{ fontSize: 26, fontWeight: 900, mt: 0.5, letterSpacing: "-0.02em" }}>
             Here's what we retrieved
           </Typography>
           <Typography sx={{ opacity: 0.92, mt: 0.5 }}>
-            Review the information pulled on your behalf. We'll use this to
-            pre-fill your application — no manual filling needed.
+            {isBukku
+              ? "Your company profile and 6 months of bank data were shared securely by Bukku. No Singpass login or document upload needed — just confirm and continue."
+              : "Review the information pulled on your behalf. We'll use this to pre-fill your application — no manual filling needed."}
           </Typography>
         </Paper>
 
@@ -121,7 +124,7 @@ export default function MyInfoReview({ application, setApplication, next, back, 
           {/* Applicant (the logged-in person — not necessarily a guarantor).
               Login retrieves company data only, so we show name + role only;
               no personal MyInfo is available at this stage. */}
-          <SectionCard title="Applicant" source="Singpass login">
+          <SectionCard title="Applicant" source={isBukku ? "Bukku" : "Singpass login"}>
             <Box sx={{ py: 1 }}>
               <Field label="Name" value={applicant.name || "Authorised Applicant"} />
               <Field label="Role" value="Submitting on behalf of the company" />
@@ -139,7 +142,7 @@ export default function MyInfoReview({ application, setApplication, next, back, 
           
 
           {/* Business (MyInfo Business) */}
-          <SectionCard title="Business profile" source="MyInfo Business">
+          <SectionCard title="Business profile" source={dataSource}>
             <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 3 }}>
               <Field label="Entity Name" value={profile.companyName} />
               <Field label="UEN" value={profile.uen} />
@@ -152,8 +155,26 @@ export default function MyInfoReview({ application, setApplication, next, back, 
             <Field label="Registered Address" value={business.registeredAddress} />
           </SectionCard>
 
+          {isBukku && (
+            <Box sx={{ gridColumn: { md: "1 / -1" } }}>
+              <SectionCard title="Bank data on file" source="Bukku">
+                <Stack direction="row" alignItems="center" spacing={2} sx={{ py: 1 }}>
+                  <Chip
+                    label="6 months"
+                    sx={{ bgcolor: "#dcfce7", color: "#15803d", fontWeight: 900 }}
+                  />
+                  <Typography fontSize={14} color="text.secondary" sx={{ lineHeight: 1.5 }}>
+                    6 months of corporate bank statements (Jan–Jun 2026) have been
+                    shared directly by Bukku and are ready for underwriting. You do
+                    not need to upload anything.
+                  </Typography>
+                </Stack>
+              </SectionCard>
+            </Box>
+          )}
+
           <Box sx={{ gridColumn: { md: "1 / -1" } }}>
-            <SectionCard title="Property Ownership" source="MyInfo Business">
+            <SectionCard title="Property Ownership" source={dataSource}>
               <FormControl component="fieldset">
                 <RadioGroup
                   value={propertyOwnership}

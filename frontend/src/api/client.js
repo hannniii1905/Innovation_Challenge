@@ -124,6 +124,37 @@ export async function getResults(sessionId) {
 
 const API_BASE = "http://127.0.0.1:8000";
 
+// Pre-staged monthly statements the Bukku partner feed "supplies" on the
+// customer's behalf. Served as static assets from frontend/public.
+const BUKKU_STATEMENTS = [
+  { file: "bank_statement_january_2026.pdf", month: 1, year: 2026, label: "January 2026" },
+  { file: "bank_statement_february_2026.pdf", month: 2, year: 2026, label: "February 2026" },
+  { file: "bank_statement_march_2026.pdf", month: 3, year: 2026, label: "March 2026" },
+  { file: "bank_statement_april_2026.pdf", month: 4, year: 2026, label: "April 2026" },
+  { file: "bank_statement_may_2026.pdf", month: 5, year: 2026, label: "May 2026" },
+  { file: "bank_statement_june_2026.pdf", month: 6, year: 2026, label: "June 2026" },
+];
+
+async function loadBukkuStatements() {
+  return Promise.all(
+    BUKKU_STATEMENTS.map(async (s) => {
+      const res = await fetch(`/bukku_statements/${s.file}`);
+      if (!res.ok) {
+        throw new Error(`Could not load Bukku statement ${s.file}.`);
+      }
+      const blob = await res.blob();
+      const file = new File([blob], s.file, { type: "application/pdf" });
+      return {
+        file,
+        filename: s.file,
+        month: s.month,
+        year: s.year,
+        periodLabel: s.label,
+      };
+    })
+  );
+}
+
 export async function submitApplication(application) {
   const formData = new FormData();
 
@@ -193,7 +224,14 @@ export async function submitApplication(application) {
 
   // Bank statement is mandatory; supporting docs are optional and may be
   // uploaded later, so only append the ones that are present.
-  const bankStatements = application.uploads?.bankStatements || [];
+  let bankStatements = application.uploads?.bankStatements || [];
+
+  // Bukku lane: the customer uploads nothing. Bank data is supplied by the
+  // partner feed, so we attach the 6 pre-staged monthly statements served
+  // from /public and let real OCR + underwriting run on them.
+  if (application.lane === "BUKKU" && bankStatements.length !== 6) {
+    bankStatements = await loadBukkuStatements();
+  }
 
   if (bankStatements.length !== 6) {
     throw new Error(

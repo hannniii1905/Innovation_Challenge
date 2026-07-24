@@ -1,6 +1,6 @@
 import { Box, Paper, Typography, Button, Stack } from "@mui/material";
 
-const profiles = [
+export const profiles = [
   {
     id: 1,
     caseLabel: "Case 1",
@@ -18,7 +18,7 @@ const profiles = [
       entityType: "Local Company (Private Limited)",
       entityStatus: "Live Company",
       primarySsic: "62011 — Development of software & applications",
-      registeredAddress: "71 Ayer Rajah Crescent, #03-12, Singapore 139951",
+      registeredAddress: "1 Fusionopolis Way, #12-01, Connexis, Singapore 138632",
       issuedCapital: "SGD 100,000",
     },
     // --- Appointments (MyInfo Business) + personal particulars (MyInfo Person) ---
@@ -53,7 +53,7 @@ const profiles = [
         dob: "1978-06-22",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
-        registeredAddress: "Ayer Rajah Crescent, #03-12, Singapore 139951",
+        registeredAddress: "128 Clementi Avenue 3, #07-215, Singapore 120128",
       },
       {
         name: "Grace Chua Hui Min",
@@ -63,7 +63,7 @@ const profiles = [
         dob: "1988-12-03",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
-        registeredAddress: "Ayer Rajah Crescent, #03-12, Singapore 139951",
+        registeredAddress: "52 Dover Crescent, #11-88, Singapore 130052",
 
       },
       {
@@ -74,7 +74,7 @@ const profiles = [
         dob: "1995-02-17",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
-        registeredAddress: "Ayer Rajah Crescent, #03-12, Singapore 139951",
+        registeredAddress: "301 Ubi Avenue 1, #05-124, Singapore 400301",
 
       },
       {
@@ -85,7 +85,7 @@ const profiles = [
         dob: "1965-08-09",
         nationality: "Singapore Citizen",
         residentialStatus: "Citizen",
-        registeredAddress: "Ayer Rajah Crescent, #03-12, Singapore 139951",
+        registeredAddress: "19 Ghim Moh Road, #12-40, Singapore 270019",
 
       },
     ],

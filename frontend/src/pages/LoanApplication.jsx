@@ -7,10 +7,15 @@ import ConsentSection from "../components/application/ConsentSection";
 import PortalShell from "../components/PortalShell";
 import { Button, Box, Typography, Paper, Stack } from "@mui/material";
 
-const steps = ["Loan Details", "Additional Declarations", "Documents", "Consent"];
+const FULL_STEPS = ["Loan Details", "Additional Declarations", "Documents", "Consent"];
+// Bukku lane: bank data comes from the partner feed and identity is already
+// verified, so the Documents and Consent steps are dropped.
+const BUKKU_STEPS = ["Loan Details", "Additional Declarations"];
 
 export default function LoanApplication({ application, setApplication, next, back, goHome }) {
   const [step, setStep] = useState(0);
+  const isBukku = application.lane === "BUKKU";
+  const steps = isBukku ? BUKKU_STEPS : FULL_STEPS;
 
   const validateDocuments = () => {
     // Only the corporate bank statement is mandatory. IC, financials and the
@@ -51,6 +56,17 @@ export default function LoanApplication({ application, setApplication, next, bac
 
   const handleNext = () => {
     if (step === 1 && !validateDeclarations()) return;
+
+    // Bukku lane ends after Declarations — no Documents / Consent steps.
+    if (isBukku) {
+      if (step === steps.length - 1) {
+        next();
+        return;
+      }
+      setStep((prev) => prev + 1);
+      return;
+    }
+
     if (step === 2 && !validateDocuments()) return;
     if (step === 3) {
       if (!validateConsent()) return;
@@ -194,7 +210,7 @@ export default function LoanApplication({ application, setApplication, next, bac
               }}
               onClick={handleNext}
             >
-              {step === 4 ? "Submit Application" : "Continue"}
+              {step === steps.length - 1 ? "Submit Application" : "Continue"}
             </Button>
           </Stack>
         </Paper>

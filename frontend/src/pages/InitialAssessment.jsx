@@ -155,26 +155,34 @@ export default function InitialAssessment({
   let title;
   let subtitle;
   let chipColor;
+  let statusLabel;
+  let isApproved = false;
+  let isRejected = false;
 
   if (recommendation === "APPROVE" || recommendation === "APPROVED") {
+    isApproved = true;
     icon = <div style={{ fontSize: 80 }}>✅</div>;
     title = "Automatically Approved";
     subtitle =
       "Congratulations! Based on our initial automated assessment, your application has been automatically approved.\n\nYour application is now pending a final review by one of our Credit Approvers before the facility can be formally approved.";
     chipColor = "success";
+    statusLabel = "Pending Final Credit Approval";
   } else if (recommendation === "REJECTED") {
-    icon = <div style={{ fontSize: 80 }}>🟡</div>;
-    title = "Pending Final Credit Approval";
+    isRejected = true;
+    icon = <div style={{ fontSize: 80 }}>💙</div>;
+    title = "Application Not Approved";
     subtitle =
-      "Your application has successfully completed its initial assessment.\n\nA Credit Approver will review your application and contact you if any additional information is required.";
-    chipColor = "warning";
+      "Thank you for your interest in UOB BizMoney.\n\nAfter careful review, we regret to inform you that we are currently unable to approve your loan application as it does not meet our credit criteria at this time.\n\nYour business may qualify in the future — we warmly encourage you to reapply once your financial position has strengthened. Our team is here to support your growth journey.";
+    chipColor = "default";
+    statusLabel = "Not Approved";
   } else {
-    icon = <div style={{ fontSize: 80 }}>🟡</div>;
-    title = "Needs Further Review";
+    icon = <div style={{ fontSize: 80 }}>🔎</div>;
+    title = "Under Credit Specialist Review";
     subtitle =
-      "Your application has successfully completed its initial assessment.\n\nA Credit Approver will review your application and contact you if any additional information is required.";
-    chipColor = "warning";
-  } 
+      "Thank you for your interest in UOB BizMoney.\n\nYour application has been routed to a Credit Specialist for further review. Our team will contact you within 1 business day.";
+    chipColor = "info";
+    statusLabel = "Routed to Credit Specialist";
+  }
 
   return (
     <Box
@@ -238,11 +246,11 @@ export default function InitialAssessment({
             Current Status
           </Typography>
 
-          <Typography variant="h6" color="primary">
-            Pending Final Credit Approval
+          <Typography variant="h6" color={isRejected ? "text.secondary" : "primary"}>
+            {statusLabel}
           </Typography>
 
-          {assessment.recommended_amount && (
+          {isApproved && assessment.recommended_amount && (
             <>
               <Typography color="text.secondary" sx={{ mt: 3 }}>
                 Indicative Facility Amount
@@ -255,27 +263,31 @@ export default function InitialAssessment({
           )}
         </Paper>
 
-        <Typography color="text.secondary" fontSize={14} sx={{ mt: 5 }}>
-          Didn't upload everything? You can add supporting documents (IC,
-          financials, income statement) now or any time before final approval.
-        </Typography>
+        {!isRejected && (
+          <Typography color="text.secondary" fontSize={14} sx={{ mt: 5 }}>
+            Didn't upload everything? You can add supporting documents (IC,
+            financials, income statement) now or any time before final approval.
+          </Typography>
+        )}
 
         <Box
           sx={{
-            mt: 2,
+            mt: isRejected ? 5 : 2,
             display: "flex",
             gap: 2,
             justifyContent: "center",
             flexWrap: "wrap",
           }}
         >
-          <Button
-            variant="outlined"
-            size="large"
-            onClick={uploadSupportingDocs}
-          >
-            Upload Supporting Documents
-          </Button>
+          {!isRejected && (
+            <Button
+              variant="outlined"
+              size="large"
+              onClick={uploadSupportingDocs}
+            >
+              Upload Supporting Documents
+            </Button>
+          )}
 
           <Button variant="contained" size="large" onClick={backToHome}>
             Return Home

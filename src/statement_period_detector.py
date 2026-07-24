@@ -72,6 +72,26 @@ _LABELED_FROM_TO_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Some statements state the period as a month name only, e.g.
+# "Statement Period: June 2026" or "Statement Period: May 2026 - June 2026".
+_MONTH_NAMES = (
+    "january|february|march|april|may|june|july|august|september|october|"
+    "november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec"
+)
+_MONTH_YEAR_TOKEN = rf"(?:{_MONTH_NAMES})\.?\s+\d{{4}}"
+
+_LABELED_MONTH_RANGE_RE = re.compile(
+    rf"{_PERIOD_LABEL}\s*[:;|.\-]*\s*(?:from\s*)?"
+    rf"(?P<start>{_MONTH_YEAR_TOKEN})\s*{_RANGE_SEPARATOR}\s*"
+    rf"(?P<end>{_MONTH_YEAR_TOKEN})",
+    re.IGNORECASE,
+)
+
+_LABELED_MONTH_RE = re.compile(
+    rf"{_PERIOD_LABEL}\s*[:;|.\-]*\s*(?P<month>{_MONTH_YEAR_TOKEN})",
+    re.IGNORECASE,
+)
+
 _DATE_FORMATS = (
     "%d %b %Y",
     "%d %B %Y",
@@ -100,6 +120,25 @@ def _normalise_text(text: str) -> str:
         .replace("\u00a0", " ")
     )
     return re.sub(r"\s+", " ", value).strip()
+
+
+def _parse_month_year(value: str) -> Optional[tuple]:
+    """Parse "June 2026" / "Jun. 2026" into (year, month), or None."""
+    cleaned = re.sub(r"\s+", " ", value.strip()).replace(".", "")
+    for fmt in ("%B %Y", "%b %Y"):
+        try:
+            parsed = datetime.strptime(cleaned, fmt)
+            if 1990 <= parsed.year <= 2100:
+                return parsed.year, parsed.month
+        except ValueError:
+            continue
+    # "Sept" is common but not a strptime abbreviation.
+    match = re.match(r"(?i)sept\s+(\d{4})$", cleaned)
+    if match:
+        year = int(match.group(1))
+        if 1990 <= year <= 2100:
+            return year, 9
+    return None
 
 
 def _parse_date(value: str) -> Optional[date]:
@@ -157,6 +196,37 @@ def extract_statement_period(text: str) -> Optional[StatementPeriod]:
             end_date=end_date,
             raw_match=match.group(0),
         )
+
+    # Month-only fallbacks: "Statement Period: June 2026" (or a month range)
+    # means the full calendar month(s).
+    match = _LABELED_MONTH_RANGE_RE.search(normalised)
+    if match:
+        start_ym = _parse_month_year(match.group("start"))
+        end_ym = _parse_month_year(match.group("end"))
+        if start_ym and end_ym:
+            start_date = date(start_ym[0], start_ym[1], 1)
+            end_date = date(
+                end_ym[0],
+                end_ym[1],
+                calendar.monthrange(end_ym[0], end_ym[1])[1],
+            )
+            if start_date <= end_date and (end_date - start_date).days <= 400:
+                return StatementPeriod(
+                    start_date=start_date,
+                    end_date=end_date,
+                    raw_match=match.group(0),
+                )
+
+    match = _LABELED_MONTH_RE.search(normalised)
+    if match:
+        month_year = _parse_month_year(match.group("month"))
+        if month_year:
+            year, month = month_year
+            return StatementPeriod(
+                start_date=date(year, month, 1),
+                end_date=date(year, month, calendar.monthrange(year, month)[1]),
+                raw_match=match.group(0),
+            )
 
     return None
 

@@ -344,7 +344,7 @@ function LoanPromotionBanner({ onGetStarted }) {
   );
 }
 
-function FinancingPortalModal({ open, onClose }) {
+function FinancingPortalModal({ open, onClose, onContinue }) {
   const [step, setStep] = useState(1);
   const [sector, setSector] = useState("");
   const [category, setCategory] = useState("");
@@ -357,8 +357,19 @@ function FinancingPortalModal({ open, onClose }) {
 
   const handleBackToStep1 = () => setStep(1);
 
+  const handleClose = () => {
+    onClose();
+    // Reset after the close transition so the next open starts fresh.
+    setStep(1);
+    setSector("");
+    setCategory("");
+    setSubCategory("");
+    setConsent("");
+    setAgreed(false);
+  };
+
   return (
-    <Modal open={open} onClose={onClose}>
+    <Modal open={open} onClose={handleClose}>
       <Box
         sx={{
           position: "fixed",
@@ -548,7 +559,7 @@ function FinancingPortalModal({ open, onClose }) {
 
               <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mt: 5 }}>
                 <Box
-                  onClick={onClose}
+                  onClick={handleClose}
                   sx={{
                     height: 44,
                     px: 3,
@@ -588,7 +599,7 @@ function FinancingPortalModal({ open, onClose }) {
                 </Box>
               </Box>
             </>
-          ) : (
+          ) : step === 2 ? (
             <>
               <Box sx={{ mb: 3 }}>
                 <Typography sx={{ fontSize: 20, fontWeight: 600, mb: 1 }}>
@@ -762,7 +773,7 @@ function FinancingPortalModal({ open, onClose }) {
 
               <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mt: 5 }}>
                 <Box
-                  onClick={onClose}
+                  onClick={handleClose}
                   sx={{
                     height: 44,
                     px: 3,
@@ -802,6 +813,7 @@ function FinancingPortalModal({ open, onClose }) {
                   Back
                 </Box>
                 <Box
+                  onClick={() => canSubmit && setStep(3)}
                   sx={{
                     height: 44,
                     px: 3.5,
@@ -818,6 +830,136 @@ function FinancingPortalModal({ open, onClose }) {
                   }}
                 >
                   Submit
+                </Box>
+              </Box>
+            </>
+          ) : (
+            <>
+              <Box sx={{ textAlign: "center", py: 1 }}>
+                <Box
+                  sx={{
+                    width: 76,
+                    height: 76,
+                    borderRadius: "50%",
+                    bgcolor: "#EAF7E6",
+                    border: "2px solid #59B947",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    mx: "auto",
+                    mb: 3,
+                  }}
+                >
+                  <CheckRoundedIcon sx={{ color: "#59B947", fontSize: 40 }} />
+                </Box>
+
+                <Typography sx={{ fontSize: 26, fontWeight: 700, color: "#222", mb: 1 }}>
+                  You&apos;re pre-approved!
+                </Typography>
+                <Typography sx={{ fontSize: 16, lineHeight: 1.6, color: "#555", mb: 4, maxWidth: 480, mx: "auto" }}>
+                  Based on your verified Bukku financials, our lending partner
+                  <Box component="span" sx={{ fontWeight: 700 }}> UOB </Box>
+                  has an indicative offer for you — no document upload needed.
+                </Typography>
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 2,
+                    justifyContent: "center",
+                    mb: 4,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {[
+                    { label: "Indicative limit", value: "S$120,000" },
+                    { label: "Indicative rate", value: "6.0% p.a." },
+                    { label: "Tenure", value: "up to 24 mo" },
+                  ].map((stat) => (
+                    <Box
+                      key={stat.label}
+                      sx={{
+                        flex: "1 1 150px",
+                        maxWidth: 200,
+                        bgcolor: "#F5F9FF",
+                        border: "1px solid #D8E6FB",
+                        borderRadius: 3,
+                        py: 2.5,
+                        px: 2,
+                      }}
+                    >
+                      <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#6B7B93", mb: 0.75 }}>
+                        {stat.label}
+                      </Typography>
+                      <Typography sx={{ fontSize: 24, fontWeight: 700, color: "#2E7BEF" }}>
+                        {stat.value}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+
+                <Box
+                  sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 1,
+                    bgcolor: "#F6FFF0",
+                    border: "1px solid #CFEAB2",
+                    borderRadius: "999px",
+                    px: 2,
+                    py: 1,
+                    mb: 4,
+                  }}
+                >
+                  <LockOutlinedIcon sx={{ color: "#59B947", fontSize: 16 }} />
+                  <Typography sx={{ fontSize: 13, color: "#4A7A38", fontWeight: 500 }}>
+                    Shared securely with UOB via verified partner feed
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 1 }}>
+                <Box
+                  onClick={handleClose}
+                  sx={{
+                    height: 46,
+                    px: 4,
+                    borderRadius: 2,
+                    border: "1px solid #D0D5DD",
+                    bgcolor: "#ffffff",
+                    color: "#555",
+                    fontWeight: 500,
+                    fontSize: 15,
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    "&:hover": { bgcolor: "#f5f5f5" },
+                    transition: "all 0.15s",
+                  }}
+                >
+                  Back to Dashboard
+                </Box>
+                <Box
+                  onClick={() => {
+                    handleClose();
+                    onContinue?.();
+                  }}
+                  sx={{
+                    height: 46,
+                    px: 5,
+                    borderRadius: 2,
+                    bgcolor: "#2E7BEF",
+                    color: "#fff",
+                    fontWeight: 600,
+                    fontSize: 15,
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    "&:hover": { bgcolor: "#2563d1" },
+                    transition: "all 0.15s",
+                  }}
+                >
+                  Continue to UOB Application →
                 </Box>
               </Box>
             </>
@@ -950,7 +1092,7 @@ function ChartCard({ title, data }) {
   );
 }
 
-export default function AccountingDashboard({ goBack }) {
+export default function AccountingDashboard({ goBack, onContinueToUob }) {
   const [activeNav, setActiveNav] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [financingModalOpen, setFinancingModalOpen] = useState(false);
@@ -1069,6 +1211,7 @@ export default function AccountingDashboard({ goBack }) {
       <FinancingPortalModal
         open={financingModalOpen}
         onClose={() => setFinancingModalOpen(false)}
+        onContinue={onContinueToUob}
       />
     </Box>
   );
