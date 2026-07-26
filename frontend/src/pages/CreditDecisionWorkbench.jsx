@@ -640,15 +640,23 @@ function FinalAssessmentSummary({
               }}
             >
               {aiDecision.key_factors.map((factor, index) => {
-                const factorLower = factor.toLowerCase();
+                // key_factors are objects ({ text, impact }) from the backend,
+                // but tolerate a plain string too so we never crash the page.
+                const factorText =
+                  typeof factor === "string" ? factor : factor?.text || "";
+                const factorImpact =
+                  typeof factor === "object" ? factor?.impact : null;
+                const factorLower = factorText.toLowerCase();
 
                 const isRisk =
+                  factorImpact === "negative" ||
                   factorLower.includes("high") ||
                   factorLower.includes("risk") ||
                   factorLower.includes("kiting") ||
                   factorLower.includes("suspicious");
 
                 const isGood =
+                  factorImpact === "positive" ||
                   factorLower.includes("strong") ||
                   factorLower.includes("good") ||
                   factorLower.includes("approved");
@@ -667,8 +675,8 @@ function FinalAssessmentSummary({
 
                 return (
                   <Chip
-                    key={`${factor}-${index}`}
-                    label={factor}
+                    key={`${factorText}-${index}`}
+                    label={factorText}
                     sx={{
                       height: "auto",
                       maxWidth: "100%",

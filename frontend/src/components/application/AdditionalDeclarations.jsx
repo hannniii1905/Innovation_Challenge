@@ -88,6 +88,39 @@ export default function AdditionalDeclarations({ application, setApplication }) 
     </Box>
   );
 
+  // Plain-language explainer shown under jargon-heavy questions so applicants
+  // who aren't finance-savvy understand what's being asked.
+  const PlainTerms = ({ children }) => (
+    <Box
+      sx={{
+        display: "flex",
+        gap: 1.2,
+        p: 1.75,
+        borderRadius: 2,
+        bgcolor: "#eff6ff",
+        border: "1px solid #bfdbfe",
+      }}
+    >
+      <Box component="span" sx={{ fontSize: 16, lineHeight: 1.4 }} aria-hidden>
+        💡
+      </Box>
+      <Box>
+        <Typography
+          component="span"
+          sx={{ fontWeight: 800, color: "#1e40af", fontSize: 13.5 }}
+        >
+          In plain terms:{" "}
+        </Typography>
+        <Typography
+          component="span"
+          sx={{ color: "#334155", fontSize: 13.5, lineHeight: 1.6 }}
+        >
+          {children}
+        </Typography>
+      </Box>
+    </Box>
+  );
+
   const DetailsField = ({ field, label, placeholder }) => (
     <TextField
       fullWidth
@@ -402,16 +435,33 @@ const SmallInfoList = ({ title, items }) => (
           <Grid container spacing={2.5}>
             <Grid size={{ xs: 12 }}>
               <QuestionCard
-                title="Has your company recorded a positive EBITDA in the latest financial year?"
+                title="Was your business profitable in the latest financial year (positive EBITDA)?"
                 field="positiveEBITDA"
-              />
+              >
+                <PlainTerms>
+                  Did your business earn more than it spent on running costs —
+                  before paying interest, taxes, and equipment wear-and-tear
+                  (depreciation)? If your day-to-day operations made money,
+                  answer <strong>Yes</strong>. EBITDA is just a common way to
+                  measure that operating profit.
+                </PlainTerms>
+              </QuestionCard>
             </Grid>
 
             <Grid size={{ xs: 12 }}>
               <QuestionCard
-                title="Does your company have a positive Net Worth (Paid Up Capital + Retained Earnings) in the latest financial year?"
+                title="Does your business own more than it owes (positive Net Worth)?"
                 field="positiveTNW"
-              />
+              >
+                <PlainTerms>
+                  If you added up everything the company owns (cash, equipment,
+                  money owed to you) and subtracted everything it owes (loans,
+                  bills, debts), would the result be a positive number? In short:
+                  the money you and your shareholders put in, plus profits kept in
+                  the business, is more than its debts. If so, answer{" "}
+                  <strong>Yes</strong>.
+                </PlainTerms>
+              </QuestionCard>
             </Grid>
 
             <Grid size={{ xs: 12 }}>

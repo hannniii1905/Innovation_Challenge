@@ -126,6 +126,14 @@ class BankStatementExtractionAgent:
 
     @property
     def available(self) -> bool:
+        # The LLM extraction agent is disabled by default: the remote HF
+        # inference calls were unreliable (frequent failures/timeouts) and
+        # ran 6x sequentially per submit, dominating response time. The
+        # static parsers produce the same pipeline output. Re-enable by
+        # setting ENABLE_LLM_EXTRACTION=1 (or true/yes) in the environment.
+        flag = os.environ.get("ENABLE_LLM_EXTRACTION", "").strip().lower()
+        if flag not in ("1", "true", "yes", "on"):
+            return False
         return bool(self.api_key)
 
     # ------------------------------------------------------------------ #
