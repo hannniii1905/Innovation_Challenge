@@ -40,6 +40,8 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import Drawer from "@mui/material/Drawer";
 
+import { NACE_SECTIONS } from "../data/naceSections";
+
 const SIDEBAR_WIDTH = 72;
 const TOPNAV_HEIGHT = 72;
 
@@ -355,6 +357,18 @@ function FinancingPortalModal({ open, onClose, onContinue }) {
   const canNext = sector && category && subCategory;
   const canSubmit = consent === "yes" && agreed;
 
+  // Cascading NACE options: the Category list depends on the chosen Sector,
+  // and the Sub-category list on the chosen Category. Stored values keep the
+  // "CODE - Label" string shape used elsewhere.
+  const selectedSection = NACE_SECTIONS.find(
+    (s) => `${s.code} - ${s.label}` === sector
+  );
+  const divisionOptions = selectedSection?.divisions || [];
+  const selectedDivision = divisionOptions.find(
+    (d) => `${d.code} - ${d.label}` === category
+  );
+  const groupOptions = selectedDivision?.groups || [];
+
   const handleBackToStep1 = () => setStep(1);
 
   const handleClose = () => {
@@ -455,14 +469,14 @@ function FinancingPortalModal({ open, onClose, onContinue }) {
                     }}
                   >
                     <MenuItem value="" disabled>Select Sector</MenuItem>
-                    <MenuItem value="A - Agriculture, forestry and fishing">A - Agriculture, forestry and fishing</MenuItem>
-                    <MenuItem value="B - Mining and Quarrying">B - Mining and Quarrying</MenuItem>
-                    <MenuItem value="C - Manufacturing">C - Manufacturing</MenuItem>
-                    <MenuItem value="D - Electricity,gas,steam and air conditioning supply">D - Electricity,gas,steam and air conditioning supply</MenuItem>
-                    <MenuItem value="E - Water supply; sewerage, waste management and remediation activities">E - Water supply; sewerage, waste management and remediation activities</MenuItem>
-                    <MenuItem value="F - Construction">F - Construction</MenuItem>
-                    <MenuItem value="G - Wholesale and retail trade; repair of motor vehicles and motorcycles">G - Wholesale and retail trade; repair of motor vehicles and motorcycles</MenuItem>
-                    <MenuItem value="H - Transportation and storage">H - Transportation and storage</MenuItem>
+                    {NACE_SECTIONS.map((s) => {
+                      const value = `${s.code} - ${s.label}`;
+                      return (
+                        <MenuItem key={s.code} value={value}>
+                          {value}
+                        </MenuItem>
+                      );
+                    })}
                   </Select>
                 </FormControl>
 
@@ -506,11 +520,14 @@ function FinancingPortalModal({ open, onClose, onContinue }) {
                     }}
                   >
                     <MenuItem value="" disabled>Select Category</MenuItem>
-                    <MenuItem value="49 - Land Transportation and transport via pipelines">49 - Land Transportation and transport via pipelines</MenuItem>
-                    <MenuItem value="50 - Water Transport">50 - Water Transport</MenuItem>
-                    <MenuItem value="51 - Air Transport">51 - Air Transport</MenuItem>
-                    <MenuItem value="52 - Warehousing and support activities for transportation">52 - Warehousing and support activities for transportation</MenuItem>
-                    <MenuItem value="53 - Postal and courier activities">53 - Postal and courier activities</MenuItem>
+                    {divisionOptions.map((d) => {
+                      const value = `${d.code} - ${d.label}`;
+                      return (
+                        <MenuItem key={d.code} value={value}>
+                          {value}
+                        </MenuItem>
+                      );
+                    })}
                   </Select>
                 </FormControl>
 
@@ -551,8 +568,14 @@ function FinancingPortalModal({ open, onClose, onContinue }) {
                     }}
                   >
                     <MenuItem value="" disabled>Select Sub-category</MenuItem>
-                    <MenuItem value="531 - Postal Activities">531 - Postal Activities</MenuItem>
-                    <MenuItem value="532 - Courier Activities">532 - Courier Activities</MenuItem>
+                    {groupOptions.map((g) => {
+                      const value = `${g.code} - ${g.label}`;
+                      return (
+                        <MenuItem key={g.code} value={value}>
+                          {value}
+                        </MenuItem>
+                      );
+                    })}
                   </Select>
                 </FormControl>
               </Box>
