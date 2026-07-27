@@ -642,13 +642,13 @@ function FinancingPortalModal({ open, onClose, onContinue }) {
               </Box>
 
               <Typography sx={{ fontSize: 16, lineHeight: 1.6, color: "#444", mb: 3.5 }}>
-                By giving consent, your <Box component="span" sx={{ fontWeight: 700 }}>non-identifiable data</Box> might
-                be shared with our lending partners. This can increase your chance of getting loan
-                approval and speed up your loan applications.
+                By giving consent, your data might be shared with United Overseas Bank Limited (UOB).
+                This can increase your chance of getting loan approval and speed up your loan applications.
               </Typography>
 
               <Box sx={{ display: "flex", mb: 3.5 }}>
                 <Box
+                  onClick={() => setConsent(consent === "yes" ? "" : "yes")}
                   sx={{
                     height: 48,
                     border: "1px solid #D8DDE6",
@@ -656,28 +656,10 @@ function FinancingPortalModal({ open, onClose, onContinue }) {
                     overflow: "hidden",
                     display: "flex",
                     width: "fit-content",
+                    cursor: "pointer",
                   }}
                 >
                   <Box
-                    onClick={() => setConsent("no")}
-                    sx={{
-                      px: 3,
-                      display: "flex",
-                      alignItems: "center",
-                      cursor: "pointer",
-                      bgcolor: consent === "no" ? "#2E7BEF" : "#ffffff",
-                      color: consent === "no" ? "#ffffff" : "#333",
-                      fontWeight: 500,
-                      fontSize: 15,
-                      transition: "all 0.2s",
-                      borderRight: "1px solid #D8DDE6",
-                      userSelect: "none",
-                    }}
-                  >
-                    No Consent
-                  </Box>
-                  <Box
-                    onClick={() => setConsent("yes")}
                     sx={{
                       px: 3,
                       display: "flex",
@@ -691,7 +673,7 @@ function FinancingPortalModal({ open, onClose, onContinue }) {
                       userSelect: "none",
                     }}
                   >
-                    Consent on Non-Identifiable Data
+                    Consent on Data
                   </Box>
                 </Box>
               </Box>
@@ -724,7 +706,7 @@ function FinancingPortalModal({ open, onClose, onContinue }) {
                 </Box>
                 <Box>
                   <Typography sx={{ fontSize: 16, fontWeight: 600, color: "#333", mb: 1 }}>
-                    The following <Box component="span" sx={{ fontWeight: 700 }}>non-identifiable data</Box> might be shared with our lending partners:
+                    The following data might be shared with United Overseas Bank Limited (UOB):
                   </Typography>
                   <Box component="ul" sx={{ m: 0, pl: 2.5, listStyle: "disc" }}>
                     <Box component="li" sx={{ fontSize: 16, lineHeight: 1.6, color: "#333", mb: 0.5 }}>
