@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
+  Button,
   Typography,
   IconButton,
   Avatar,
@@ -39,6 +40,7 @@ import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownR
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import Drawer from "@mui/material/Drawer";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 
 import { NACE_SECTIONS } from "../data/naceSections";
 
@@ -345,6 +347,385 @@ function LoanPromotionBanner({ onGetStarted }) {
     </Box>
   );
 }
+
+
+function UobBizMoneyCampaignModal({ open, onClose, onApply }) {
+  const benefits = [
+    {
+      title: "Fast digital application",
+      description: "Apply in minutes through a simple and secure digital journey.",
+    },
+    {
+      title: "No additional bank statement upload",
+      description: "Your verified Bukku financial data helps speed up the assessment.",
+    },
+    {
+      title: "Financing tailored to your business",
+      description: "Explore financing options designed around your business needs.",
+    },
+  ];
+
+  const handleClose = (event) => {
+    event?.stopPropagation();
+    onClose();
+  };
+
+  const handleApply = (event) => {
+    event?.stopPropagation();
+    onApply();
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      aria-labelledby="uob-bizmoney-campaign-title"
+      aria-describedby="uob-bizmoney-campaign-description"
+    >
+      <Box
+        sx={{
+          position: "fixed",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          px: { xs: 1.5, sm: 3 },
+          py: 3,
+          bgcolor: "rgba(7, 18, 36, 0.70)",
+          backdropFilter: "blur(5px)",
+        }}
+      >
+        <Box
+          role="dialog"
+          aria-modal="true"
+          onClick={handleApply}
+          sx={{
+            position: "relative",
+            width: { xs: "100%", sm: 780, md: 900 },
+            maxWidth: "96vw",
+            maxHeight: "94vh",
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", md: "1.08fr 0.92fr" },
+            overflow: { xs: "auto", md: "hidden" },
+            borderRadius: { xs: 4, md: 5 },
+            bgcolor: "#ffffff",
+            boxShadow: "0 36px 100px rgba(0, 0, 0, 0.42)",
+            outline: "none",
+            cursor: "pointer",
+            isolation: "isolate",
+          }}
+        >
+          <IconButton
+            aria-label="Close UOB BizMoney campaign"
+            onClick={handleClose}
+            sx={{
+              position: "absolute",
+              top: { xs: 14, md: 18 },
+              right: { xs: 14, md: 18 },
+              zIndex: 20,
+              width: 46,
+              height: 46,
+              bgcolor: "rgba(255,255,255,0.96)",
+              color: "#24364b",
+              border: "1px solid rgba(148,163,184,0.28)",
+              boxShadow: "0 8px 24px rgba(15,23,42,0.18)",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                bgcolor: "#ffffff",
+                transform: "scale(1.06)",
+              },
+            }}
+          >
+            <CloseRoundedIcon />
+          </IconButton>
+
+          {/* Left: campaign visual */}
+          <Box
+            sx={{
+              position: "relative",
+              minHeight: { xs: 560, md: 680 },
+              overflow: "hidden",
+              color: "#ffffff",
+              backgroundImage: `
+                linear-gradient(
+                  180deg,
+                  rgba(0, 30, 76, 0.36) 0%,
+                  rgba(0, 59, 130, 0.66) 44%,
+                  rgba(0, 33, 85, 0.88) 100%
+                ),
+                url("/UOB_building.jpg")
+              `,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          >
+            <Box
+              sx={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  "radial-gradient(circle at 72% 22%, rgba(57,189,248,0.28), transparent 36%), linear-gradient(135deg, rgba(0,94,184,0.32), transparent 52%)",
+                pointerEvents: "none",
+              }}
+            />
+
+            <Box
+              sx={{
+                position: "relative",
+                zIndex: 2,
+                height: "100%",
+                minHeight: { xs: 560, md: 680 },
+                p: { xs: 4, sm: 5, md: 5.5 },
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <Box
+                component="img"
+                src="/UOB_white_logo.png"
+                alt="UOB"
+                sx={{
+                  width: { xs: 158, sm: 180 },
+                  height: "auto",
+                  objectFit: "contain",
+                  objectPosition: "left center",
+                  display: "block",
+                  mb: 4.5,
+                  filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.18))",
+                }}
+              />
+
+              <Box
+                sx={{
+                  display: "inline-flex",
+                  alignSelf: "flex-start",
+                  alignItems: "center",
+                  gap: 1,
+                  px: 1.8,
+                  py: 0.9,
+                  mb: 2.8,
+                  borderRadius: 999,
+                  bgcolor: "rgba(14,165,233,0.18)",
+                  border: "1px solid rgba(186,230,253,0.58)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14)",
+                  backdropFilter: "blur(8px)",
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    bgcolor: "#7dd3fc",
+                    boxShadow: "0 0 14px rgba(125,211,252,0.9)",
+                  }}
+                />
+                <Typography
+                  sx={{
+                    fontSize: { xs: 10.5, sm: 11.5 },
+                    fontWeight: 800,
+                    lineHeight: 1,
+                    letterSpacing: "0.07em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Exclusive for Bukku customers
+                </Typography>
+              </Box>
+
+              <Typography
+                id="uob-bizmoney-campaign-title"
+                sx={{
+                  maxWidth: 430,
+                  mb: 2.5,
+                  fontSize: { xs: 39, sm: 47, md: 52 },
+                  fontWeight: 800,
+                  lineHeight: 1.04,
+                  letterSpacing: "-0.045em",
+                  textShadow: "0 8px 28px rgba(0,0,0,0.22)",
+                }}
+              >
+                Grow your business with UOB BizMoney
+              </Typography>
+
+              <Typography
+                id="uob-bizmoney-campaign-description"
+                sx={{
+                  maxWidth: 390,
+                  fontSize: { xs: 16, sm: 17.5 },
+                  lineHeight: 1.68,
+                  color: "rgba(255,255,255,0.92)",
+                  textShadow: "0 3px 14px rgba(0,0,0,0.18)",
+                }}
+              >
+                Get quick access to business financing using your verified Bukku
+                financial information.
+              </Typography>
+
+              <Box
+                sx={{
+                  mt: "auto",
+                  pt: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.2,
+                  color: "rgba(255,255,255,0.82)",
+                }}
+              >
+                <LockOutlinedIcon sx={{ fontSize: 17 }} />
+                <Typography sx={{ fontSize: 12.5, fontWeight: 600 }}>
+                  Secure application powered by Bukku and UOB
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Right: product benefits */}
+          <Box
+            sx={{
+              position: "relative",
+              minHeight: { xs: "auto", md: 680 },
+              p: { xs: 4, sm: 5, md: 5.5 },
+              pt: { xs: 5.5, md: 6.5 },
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              bgcolor: "#ffffff",
+            }}
+          >
+            <Box
+              sx={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 5,
+                background: "linear-gradient(90deg, #ed1b2f 0 34%, #005eb8 34% 100%)",
+              }}
+            />
+
+            <Typography
+              sx={{
+                mb: 1,
+                color: "#005eb8",
+                fontSize: 28,
+                fontWeight: 1000,
+                letterSpacing: "0.035em",
+                textTransform: "uppercase",
+              }}
+            >
+              UOB BizMoney
+            </Typography>
+
+            <Typography
+              sx={{
+                mb: 4.2,
+                color: "#64748b",
+                fontSize: 13.5,
+                lineHeight: 1.55,
+              }}
+            >
+              Business financing made simpler with your Bukku records.
+            </Typography>
+
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3.2 }}>
+              {benefits.map((benefit) => (
+                <Box
+                  key={benefit.title}
+                  sx={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 2,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 44,
+                      height: 44,
+                      flexShrink: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "50%",
+                      bgcolor: "#eaf4ff",
+                      color: "#0066c2",
+                      border: "1px solid #d7eaff",
+                    }}
+                  >
+                    <CheckRoundedIcon sx={{ fontSize: 24 }} />
+                  </Box>
+
+                  <Box sx={{ pt: 0.1 }}>
+                    <Typography
+                      sx={{
+                        mb: 0.65,
+                        color: "#1e293b",
+                        fontSize: 18,
+                        fontWeight: 900,
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      {benefit.title}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: "#64748b",
+                        fontSize: 15,
+                        lineHeight: 1.62,
+                      }}
+                    >
+                      {benefit.description}
+                    </Typography>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={handleApply}
+              endIcon={<ArrowForwardRoundedIcon />}
+              sx={{
+                mt: 5,
+                minHeight: 58,
+                borderRadius: 3,
+                bgcolor: "#005eb8",
+                color: "#ffffff",
+                fontSize: 18,
+                fontWeight: 800,
+                textTransform: "none",
+                boxShadow: "0 14px 28px rgba(0,94,184,0.24)",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  bgcolor: "#004a91",
+                  boxShadow: "0 18px 34px rgba(0,74,145,0.3)",
+                  transform: "translateY(-2px)",
+                },
+              }}
+            >
+              Check my financing options
+            </Button>
+
+            <Typography
+              sx={{
+                mt: 2.2,
+                px: 1,
+                textAlign: "center",
+                color: "#94a3b8",
+                fontSize: 11.5,
+                lineHeight: 1.55,
+              }}
+            >
+              Click anywhere on this campaign to open the financing portal.
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+    </Modal>
+  );
+}
+
 
 function FinancingPortalModal({ open, onClose, onContinue }) {
   const [step, setStep] = useState(1);
@@ -1119,8 +1500,23 @@ export default function AccountingDashboard({ goBack, onContinueToUob }) {
   const [activeNav, setActiveNav] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [financingModalOpen, setFinancingModalOpen] = useState(false);
+  const [campaignModalOpen, setCampaignModalOpen] = useState(false);
+
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  useEffect(() => {
+    const campaignTimer = window.setTimeout(() => {
+      setCampaignModalOpen(true);
+    }, 1500);
+
+    return () => window.clearTimeout(campaignTimer);
+  }, []);
+
+  const openFinancingPortal = () => {
+    setCampaignModalOpen(false);
+    setFinancingModalOpen(true);
+  };
 
   return (
     <Box
@@ -1153,7 +1549,7 @@ export default function AccountingDashboard({ goBack, onContinueToUob }) {
           gap: 3,
         }}
       >
-        <LoanPromotionBanner onGetStarted={() => setFinancingModalOpen(true)} />
+        <LoanPromotionBanner onGetStarted={openFinancingPortal} />
 
         <Box
           sx={{
@@ -1230,6 +1626,12 @@ export default function AccountingDashboard({ goBack, onContinueToUob }) {
           <ChatBubbleRoundedIcon sx={{ color: "#fff", fontSize: 24 }} />
         </Box>
       )}
+      <UobBizMoneyCampaignModal
+        open={campaignModalOpen}
+        onClose={() => setCampaignModalOpen(false)}
+        onApply={openFinancingPortal}
+      />
+
 
       <FinancingPortalModal
         open={financingModalOpen}
