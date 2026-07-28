@@ -889,7 +889,6 @@ async def submit_client_application(
             ai_recommendation = "APPROVED"
             app_status = "APPROVED"
             reason = "Clean bureau grade and low probability of default. Auto-approved within risk tolerance."
-            application.approver_decision = "APPROVED"
 
         application.system_decision = ai_recommendation
         application.system_reason = reason
