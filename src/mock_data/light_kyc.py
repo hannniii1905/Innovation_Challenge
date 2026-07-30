@@ -1,11 +1,10 @@
 """Mock Light KYC screening data for the demo credit workbench.
 
 This keeps all demo screening logic in one place so the frontend can render the
-same four checks consistently:
+same three checks consistently:
   1. AML
   2. Bank-wide CIF Blacklist
   3. Industry Blacklist
-  4. On-us / Off-us Check
 """
 
 from __future__ import annotations
@@ -37,11 +36,6 @@ BANK_WIDE_CIF_BLACKLIST = {
     "201844192K": "Internal blacklist record found for applicant CIF.",
 }
 
-ON_US_OFF_US_ADVERSE = {
-    # "202012345R": "Off-us bureau shows unresolved returned-cheque / delinquency indicator.",
-    "202012345R": "On-us conduct shows material excesses and repeated arrears.",
-}
-
 
 def _norm(value: Any) -> str:
     return str(value or "").strip().upper()
@@ -70,7 +64,6 @@ def run_light_kyc(app_record: Any) -> dict:
 
     aml_reason = lookup(AML_HITS)
     cif_reason = lookup(BANK_WIDE_CIF_BLACKLIST)
-    exposure_reason = lookup(ON_US_OFF_US_ADVERSE)
     industry_blocked, matched_industry = _contains_excluded_industry(industry)
 
     checks = [
@@ -104,15 +97,6 @@ def run_light_kyc(app_record: Any) -> dict:
                 if industry_blocked
                 else ""
             ),
-        },
-        {
-            "key": "on_us_off_us",
-            "label": "On-us / Off-us Check",
-            "passed": not bool(exposure_reason),
-            "status": "Clear" if not exposure_reason else "Review",
-            "description": "Checks existing UOB conduct and external/off-us banking exposure indicators.",
-            "source": "Mock bank conduct + bureau exposure file",
-            "reason": exposure_reason,
         },
     ]
 
