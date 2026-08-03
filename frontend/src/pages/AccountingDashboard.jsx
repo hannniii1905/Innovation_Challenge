@@ -10,9 +10,6 @@ import {
   useMediaQuery,
   useTheme,
   Modal,
-  Select,
-  MenuItem,
-  FormControl,
   Menu,
 } from "@mui/material";
 import DashboardRoundedIcon from "@mui/icons-material/DashboardRounded";
@@ -36,13 +33,10 @@ import NotificationsRoundedIcon from "@mui/icons-material/NotificationsRounded";
 import AttachMoneyRoundedIcon from "@mui/icons-material/AttachMoneyRounded";
 import AddCardRoundedIcon from "@mui/icons-material/AddCardRounded";
 import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
-import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
 import Drawer from "@mui/material/Drawer";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-
-import { NACE_SECTIONS } from "../data/naceSections";
 
 const SIDEBAR_WIDTH = 72;
 const TOPNAV_HEIGHT = 72;
@@ -728,38 +722,15 @@ function UobBizMoneyCampaignModal({ open, onClose, onApply }) {
 
 
 function FinancingPortalModal({ open, onClose, onContinue }) {
-  const [step, setStep] = useState(1);
-  const [sector, setSector] = useState("");
-  const [category, setCategory] = useState("");
-  const [subCategory, setSubCategory] = useState("");
   const [consent, setConsent] = useState("yes");
   const [agreed, setAgreed] = useState(false);
 
-  const canNext = sector && category && subCategory;
   const canSubmit = consent === "yes" && agreed;
-
-  // Cascading NACE options: the Category list depends on the chosen Sector,
-  // and the Sub-category list on the chosen Category. Stored values keep the
-  // "CODE - Label" string shape used elsewhere.
-  const selectedSection = NACE_SECTIONS.find(
-    (s) => `${s.code} - ${s.label}` === sector
-  );
-  const divisionOptions = selectedSection?.divisions || [];
-  const selectedDivision = divisionOptions.find(
-    (d) => `${d.code} - ${d.label}` === category
-  );
-  const groupOptions = selectedDivision?.groups || [];
-
-  const handleBackToStep1 = () => setStep(1);
 
   const handleClose = () => {
     onClose();
     // Reset after the close transition so the next open starts fresh.
-    setStep(1);
-    setSector("");
-    setCategory("");
-    setSubCategory("");
-    setConsent("");
+    setConsent("yes");
     setAgreed(false);
   };
 
@@ -792,223 +763,47 @@ function FinancingPortalModal({ open, onClose, onContinue }) {
             Financing Portal
           </Typography>
 
-          {step === 1 ? (
-            <>
-              <Box sx={{ mb: 3 }}>
-                <Typography sx={{ fontSize: 20, fontWeight: 600, mb: 1 }}>
-                  <Box component="span" sx={{ color: "#555" }}>Step 1 of 2: </Box>
-                  <Box component="span" sx={{ color: "#2E7BEF" }}>Nature of business</Box>
-                </Typography>
+              <Box
+                sx={{
+                  bgcolor: "#F6FFF0",
+                  border: "1px solid #CFEAB2",
+                  borderRadius: 3,
+                  p: 3,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                  mb: 3.5,
+                }}
+              >
                 <Box
                   sx={{
-                    height: 8,
-                    borderRadius: "999px",
-                    bgcolor: "#ECECEC",
-                    overflow: "hidden",
-                  }}
-                >
-                  <Box sx={{ width: "50%", height: "100%", bgcolor: "#2E7BEF", borderRadius: "999px" }} />
-                </Box>
-              </Box>
-
-              <Typography sx={{ fontSize: 16, lineHeight: 1.6, color: "#444", mb: 4 }}>
-                Tell us about your nature of business and stand a bigger chance of getting pre-approved
-                financing options. Select the most relevant one if you&apos;re in multiple lines of business.
-              </Typography>
-
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                <FormControl fullWidth>
-                  <Typography sx={{ fontSize: 16, fontWeight: 500, color: "#333", mb: 0.5 }}>
-                    <Box component="span" sx={{ color: "#d32f2f", mr: 0.5 }}>*</Box>
-                    Sector
-                  </Typography>
-                  <Select
-                    value={sector}
-                    onChange={(e) => {
-                      setSector(e.target.value);
-                      setCategory("");
-                      setSubCategory("");
-                    }}
-                    displayEmpty
-                    IconComponent={KeyboardArrowDownRoundedIcon}
-                    sx={{
-                      height: 52,
-                      borderRadius: 2,
-                      fontSize: 16,
-                      color: sector ? "#333" : "#A8A8A8",
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#D8DDE6",
-                        borderRadius: 2,
-                      },
-                      "&:hover .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#2E7BEF",
-                      },
-                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#2E7BEF",
-                        boxShadow: "0 0 0 3px rgba(46,123,239,0.12)",
-                      },
-                    }}
-                  >
-                    <MenuItem value="" disabled>Select Sector</MenuItem>
-                    {NACE_SECTIONS.map((s) => {
-                      const value = `${s.code} - ${s.label}`;
-                      return (
-                        <MenuItem key={s.code} value={value}>
-                          {value}
-                        </MenuItem>
-                      );
-                    })}
-                  </Select>
-                </FormControl>
-
-                <FormControl fullWidth>
-                  <Typography sx={{ fontSize: 16, fontWeight: 500, color: "#333", mb: 0.5 }}>
-                    <Box component="span" sx={{ color: "#d32f2f", mr: 0.5 }}>*</Box>
-                    Category
-                  </Typography>
-                  <Select
-                    value={category}
-                    onChange={(e) => {
-                      setCategory(e.target.value);
-                      setSubCategory("");
-                    }}
-                    displayEmpty
-                    disabled={!sector}
-                    IconComponent={KeyboardArrowDownRoundedIcon}
-                    sx={{
-                      height: 52,
-                      borderRadius: 2,
-                      fontSize: 16,
-                      color: category ? "#333" : "#A8A8A8",
-                      bgcolor: !sector ? "#F5F5F5" : "#fff",
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#D8DDE6",
-                        borderRadius: 2,
-                      },
-                      "&:hover .MuiOutlinedInput-notchedOutline": {
-                        borderColor: sector ? "#2E7BEF" : "#D8DDE6",
-                      },
-                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#2E7BEF",
-                        boxShadow: "0 0 0 3px rgba(46,123,239,0.12)",
-                      },
-                      "&.Mui-disabled .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#D8DDE6",
-                      },
-                      "&.Mui-disabled": {
-                        color: "#A8A8A8",
-                      },
-                    }}
-                  >
-                    <MenuItem value="" disabled>Select Category</MenuItem>
-                    {divisionOptions.map((d) => {
-                      const value = `${d.code} - ${d.label}`;
-                      return (
-                        <MenuItem key={d.code} value={value}>
-                          {value}
-                        </MenuItem>
-                      );
-                    })}
-                  </Select>
-                </FormControl>
-
-                <FormControl fullWidth>
-                  <Typography sx={{ fontSize: 16, fontWeight: 500, color: "#333", mb: 0.5 }}>
-                    <Box component="span" sx={{ color: "#d32f2f", mr: 0.5 }}>*</Box>
-                    Sub-category
-                  </Typography>
-                  <Select
-                    value={subCategory}
-                    onChange={(e) => setSubCategory(e.target.value)}
-                    displayEmpty
-                    disabled={!category}
-                    IconComponent={KeyboardArrowDownRoundedIcon}
-                    sx={{
-                      height: 52,
-                      borderRadius: 2,
-                      fontSize: 16,
-                      color: subCategory ? "#333" : "#A8A8A8",
-                      bgcolor: !category ? "#F5F5F5" : "#fff",
-                      "& .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#D8DDE6",
-                        borderRadius: 2,
-                      },
-                      "&:hover .MuiOutlinedInput-notchedOutline": {
-                        borderColor: category ? "#2E7BEF" : "#D8DDE6",
-                      },
-                      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#2E7BEF",
-                        boxShadow: "0 0 0 3px rgba(46,123,239,0.12)",
-                      },
-                      "&.Mui-disabled .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#D8DDE6",
-                      },
-                      "&.Mui-disabled": {
-                        color: "#A8A8A8",
-                      },
-                    }}
-                  >
-                    <MenuItem value="" disabled>Select Sub-category</MenuItem>
-                    {groupOptions.map((g) => {
-                      const value = `${g.code} - ${g.label}`;
-                      return (
-                        <MenuItem key={g.code} value={value}>
-                          {value}
-                        </MenuItem>
-                      );
-                    })}
-                  </Select>
-                </FormControl>
-              </Box>
-
-              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mt: 5 }}>
-                <Box
-                  onClick={handleClose}
-                  sx={{
-                    height: 44,
-                    px: 3,
-                    borderRadius: 2,
-                    border: "1px solid #D0D5DD",
-                    bgcolor: "#ffffff",
-                    color: "#555",
-                    fontWeight: 500,
-                    fontSize: 15,
+                    width: 40,
+                    height: 40,
+                    borderRadius: "50%",
+                    bgcolor: "#59B947",
                     display: "flex",
                     alignItems: "center",
-                    cursor: "pointer",
-                    "&:hover": { bgcolor: "#f5f5f5" },
-                    transition: "all 0.15s",
+                    justifyContent: "center",
+                    flexShrink: 0,
                   }}
                 >
-                  Back to Dashboard
+                  <CheckRoundedIcon sx={{ color: "#fff", fontSize: 22 }} />
                 </Box>
-                <Box
-                  onClick={() => canNext && setStep(2)}
-                  sx={{
-                    height: 44,
-                    px: 3.5,
-                    borderRadius: 2,
-                    bgcolor: canNext ? "#2E7BEF" : "#ccc",
-                    color: "#fff",
-                    fontWeight: 500,
-                    fontSize: 15,
-                    display: "flex",
-                    alignItems: "center",
-                    cursor: canNext ? "pointer" : "not-allowed",
-                    "&:hover": canNext ? { bgcolor: "#2563d1" } : {},
-                    transition: "all 0.15s",
-                  }}
-                >
-                  Next
+                <Box>
+                  <Typography sx={{ fontSize: 18, fontWeight: 700, color: "#2E6B1E", mb: 0.5 }}>
+                    Congratulations! You&apos;ve been approved in principle
+                  </Typography>
+                  <Typography sx={{ fontSize: 15, lineHeight: 1.6, color: "#3D6B33" }}>
+                    Your company qualifies for business financing of up to{" "}
+                    <Box component="span" sx={{ fontWeight: 700 }}>RM200,000</Box>.
+                    Review your consent to proceed with the application.
+                  </Typography>
                 </Box>
               </Box>
-            </>
-          ) : (
-            <>
+
               <Box sx={{ mb: 3 }}>
                 <Typography sx={{ fontSize: 20, fontWeight: 600, mb: 1 }}>
-                  <Box component="span" sx={{ color: "#555" }}>Step 2 of 2: </Box>
-                  <Box component="span" sx={{ color: "#2E7BEF" }}>Consent</Box>
+                  <Box component="span" sx={{ color: "#555" }}>Consent</Box>
                 </Typography>
                 <Box
                   sx={{
@@ -1191,26 +986,6 @@ function FinancingPortalModal({ open, onClose, onContinue }) {
                   Back to Dashboard
                 </Box>
                 <Box
-                  onClick={handleBackToStep1}
-                  sx={{
-                    height: 44,
-                    px: 3,
-                    borderRadius: 2,
-                    border: "1px solid #D0D5DD",
-                    bgcolor: "#ffffff",
-                    color: "#555",
-                    fontWeight: 500,
-                    fontSize: 15,
-                    display: "flex",
-                    alignItems: "center",
-                    cursor: "pointer",
-                    "&:hover": { bgcolor: "#f5f5f5" },
-                    transition: "all 0.15s",
-                  }}
-                >
-                  Back
-                </Box>
-                <Box
                   onClick={() => canSubmit && onContinue?.()}
                   sx={{
                     height: 44,
@@ -1230,8 +1005,6 @@ function FinancingPortalModal({ open, onClose, onContinue }) {
                   Submit
                 </Box>
               </Box>
-            </>
-          )}
         </Box>
       </Box>
     </Modal>

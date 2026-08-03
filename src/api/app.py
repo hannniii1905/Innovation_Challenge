@@ -808,11 +808,7 @@ async def submit_client_application(
             c.get("key") == "industry_blacklist" and not c.get("passed", True)
             for c in lkyc_checks
         )
-        on_us_off_us_failed = any(
-            c.get("key") == "on_us_off_us" and not c.get("passed", True)
-            for c in lkyc_checks
-        )
-        auto_reject_screening = cif_blacklist_failed or industry_blacklist_failed or on_us_off_us_failed
+        auto_reject_screening = cif_blacklist_failed or industry_blacklist_failed
 
         # ------------------------------------------------------------------
         # Decision routing by requested amount.
@@ -829,8 +825,6 @@ async def submit_client_application(
             hard_fail_reasons.append("Bank-wide CIF Blacklist hit")
         if industry_blacklist_failed:
             hard_fail_reasons.append("Industry Blacklist exclusion")
-        if on_us_off_us_failed:
-            hard_fail_reasons.append("On-us/Off-us adverse conduct")
         if not cbs_ok:
             hard_fail_reasons.append("Adverse credit bureau grade")
         if not aml_ok:

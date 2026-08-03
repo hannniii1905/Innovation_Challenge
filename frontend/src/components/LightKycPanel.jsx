@@ -31,19 +31,11 @@ export default function LightKycPanel({ lightKyc, aml }) {
       reason: "",
       description: "Business activity checked against excluded industries.",
     },
-    {
-      key: "on_us_off_us",
-      label: "On-us / Off-us Check",
-      passed: true,
-      reason: "",
-      description:
-        "Checks existing UOB conduct and external/off-us banking exposure indicators.",
-    },
   ];
 
   const checks =
     Array.isArray(lightKyc?.checks) && lightKyc.checks.length > 0
-      ? lightKyc.checks
+      ? lightKyc.checks.filter((c) => c.key !== "on_us_off_us")
       : fallbackChecks;
 
   const normalizedChecks = checks.map((check) => ({
