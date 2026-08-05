@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Opening — The $2B Untapped Market</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   OPENING — script-synced hook animation
+   1920x1080 · autoplays · light UOB theme (matches solution-pitch.html)
+   Space = play/pause · R = restart · ?t=ms seek · ?s=n jump to scene n
+   4 beats mapped to the opening voiceover.
+   ============================================================ */
+
+:root{
+  --bg:#f7f8fa; --ink:#0f172a; --sub:#64748b; --dim:#94a3b8;
+  --line:#cbd5e1; --stroke:#e4e8ee;
+  --blue:#005EB8; --blueDeep:#002E5D; --blueSoft:#3b8ede; --blueLite:#0072CE;
+  --blueTint:#eaf3fc; --blueGlow:rgba(0,94,184,.32);
+  --red:#c1272d; --redSoft:#e0575c; --redTint:#fdf3f3;
+  --amber:#b45309; --amberTint:#fdf3e7;
+  --green:#12855a; --greenSoft:#3aa77a; --greenTint:#e9f6f0;
+  --gold:#b7791f;
+  --sans:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ width:100%; height:100%; background:#0b0f16; overflow:hidden;
+  font-family:var(--sans); -webkit-font-smoothing:antialiased; }
+#viewport{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+#stage{
+  position:relative; width:1920px; height:1080px; flex:0 0 auto;
+  transform-origin:center center; color:var(--ink); background:var(--bg);
+  background-image:
+    radial-gradient(1300px 760px at 84% -14%, rgba(0,94,184,.06), transparent 60%),
+    radial-gradient(1000px 640px at 8% 112%, rgba(18,133,90,.05), transparent 60%);
+  overflow:hidden;
+}
+#stage::before{ content:''; position:absolute; inset:0; opacity:.6; pointer-events:none;
+  background-image:linear-gradient(rgba(15,23,42,.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15,23,42,.028) 1px, transparent 1px);
+  background-size:52px 52px; }
+
+/* ---------------- scene container ---------------- */
+.scene{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .6s ease, transform .6s cubic-bezier(.2,.8,.3,1); }
+.scene.shown{ opacity:1; }
+.scene.gone{ opacity:0; transform:translateY(-30px) scale(.975); }
+.wrap{ width:1760px; }
+.wrap.center{ text-align:center; }
+
+/* entrance helpers */
+.rise{ opacity:0; transform:translateY(26px);
+  transition:opacity .7s ease, transform .7s cubic-bezier(.2,.8,.3,1); }
+.scene.shown .rise{ opacity:1; transform:none; }
+.pop{ opacity:0; transform:scale(.82);
+  transition:opacity .6s ease, transform .6s cubic-bezier(.2,1.5,.35,1); }
+.scene.shown .pop{ opacity:1; transform:none; }
+
+/* ---------------- shared type ---------------- */
+.eyebrow{ font-family:var(--mono); font-size:18px; font-weight:600; letter-spacing:.34em;
+  text-transform:uppercase; color:var(--blue); }
+.eyebrow .dot{ display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--blue);
+  margin-right:14px; vertical-align:2px; box-shadow:0 0 0 0 rgba(0,94,184,.5); animation:beat 1.9s infinite; }
+.eyebrow.g{ color:var(--green); } .eyebrow.g .dot{ background:var(--green); }
+.eyebrow.r{ color:var(--red);  } .eyebrow.r .dot{ background:var(--red); }
+h1.huge{ font-size:82px; font-weight:900; letter-spacing:-.03em; line-height:1.02; color:var(--ink); margin-top:26px; }
+h1.huge em{ font-style:normal; color:var(--blue); }
+h1.huge em.grn{ color:var(--green); }
+h1.huge em.red{ color:var(--red); }
+.lede{ font-size:27px; font-weight:500; color:var(--sub); margin-top:24px; line-height:1.4; }
+
+/* ================= SCENE 1 — ecosystem dot field ================= */
+.dotfield{ display:grid; grid-template-columns:repeat(20,1fr); gap:11px; width:820px; margin:54px auto 0; }
+.tile{ width:100%; aspect-ratio:1/1; border-radius:7px; background:#e7ecf3; opacity:0; transform:scale(.35);
+  transition:opacity .5s ease, transform .55s cubic-bezier(.2,1.5,.4,1); }
+#s1.shown .tile{ opacity:1; transform:none; }
+.tile.b{ background:var(--blue); box-shadow:0 5px 14px -4px var(--blueGlow); }
+.tile.g{ background:var(--green); box-shadow:0 5px 14px -4px rgba(18,133,90,.4); }
+.tile.gold{ background:var(--gold); box-shadow:0 5px 14px -4px rgba(183,121,31,.4); }
+
+/* ================= SCENE 2 — the need ================= */
+.needrow{ display:flex; justify-content:center; gap:30px; margin-top:52px; }
+.ncard{ width:440px; border-radius:22px; background:#fff; border:1.5px solid var(--stroke); padding:38px 34px; text-align:left;
+  box-shadow:0 4px 10px rgba(15,23,42,.05), 0 30px 60px -34px rgba(15,23,42,.4); }
+.ncard .nic{ width:70px; height:70px; border-radius:17px; background:var(--blueTint); border:1px solid rgba(0,94,184,.2);
+  color:var(--blue); display:flex; align-items:center; justify-content:center; } .ncard .nic svg{ width:38px; height:38px; }
+.ncard.grn .nic{ background:var(--greenTint); border-color:rgba(18,133,90,.25); color:var(--green); }
+.ncard.gld .nic{ background:#fbf6e9; border-color:rgba(183,121,31,.25); color:var(--gold); }
+.ncard .nt{ font-size:30px; font-weight:800; letter-spacing:-.01em; color:var(--ink); margin-top:24px; }
+.ncard .nd{ font-size:18px; font-weight:500; color:var(--sub); margin-top:8px; line-height:1.4; }
+
+/* ================= SCENE 3 — $1B untapped market ================= */
+#s3 .kicker{ font-size:26px; font-weight:600; color:var(--sub); margin-top:16px; }
+.bigmoney{ font-size:250px; font-weight:900; letter-spacing:-.06em; line-height:.86; margin-top:6px;
+  background:linear-gradient(118deg,var(--blueLite) 8%,var(--blue) 42%,var(--green) 92%);
+  -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; }
+#s3 .under{ font-size:30px; font-weight:700; color:var(--ink); margin-top:4px; }
+#s3 .under em{ font-style:normal; color:var(--green); }
+.segbar{ display:flex; gap:9px; justify-content:center; margin-top:42px; }
+.seg{ width:48px; height:22px; border-radius:6px; border:1.7px dashed var(--line); background:transparent;
+  opacity:0; transform:scale(.6); transition:opacity .4s ease, transform .45s cubic-bezier(.2,1.5,.4,1); }
+#s3.shown .seg{ opacity:1; transform:none; }
+.seg.on{ background:var(--green); border:1.7px solid var(--green); box-shadow:0 5px 12px -3px rgba(18,133,90,.5); }
+.seglabel{ display:flex; justify-content:space-between; width:922px; margin:16px auto 0;
+  font-family:var(--mono); font-size:15px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; }
+.seglabel .l{ color:var(--green); } .seglabel .r{ color:var(--dim); }
+
+/* ================= SCENE 4 — the gap ================= */
+.gaprow{ display:flex; justify-content:center; gap:32px; margin-top:44px; }
+.gcard{ width:560px; border-radius:22px; background:#fff; border:1.5px solid var(--stroke); border-left:5px solid var(--red);
+  padding:34px 36px; text-align:left; box-shadow:0 4px 10px rgba(15,23,42,.05), 0 30px 60px -34px rgba(15,23,42,.4); }
+.gcard.amb{ border-left-color:var(--amber); }
+.gcard .gh{ display:flex; align-items:center; gap:18px; }
+.gic{ width:62px; height:62px; border-radius:15px; background:var(--redTint); border:1px solid rgba(193,39,45,.22);
+  color:var(--red); display:flex; align-items:center; justify-content:center; flex:0 0 auto; } .gic svg{ width:34px; height:34px; }
+.gcard.amb .gic{ background:var(--amberTint); border-color:rgba(180,83,9,.22); color:var(--amber); }
+.gt{ font-size:27px; font-weight:800; color:var(--ink); letter-spacing:-.01em; }
+.gd{ font-size:17px; font-weight:500; color:var(--sub); margin-top:18px; line-height:1.45; }
+.capbar{ height:11px; border-radius:6px; background:#f1f5f9; margin-top:20px; position:relative; overflow:hidden; }
+.capfill{ position:absolute; left:0; top:0; bottom:0; width:0; border-radius:6px;
+  background:linear-gradient(90deg,var(--redSoft),var(--red)); transition:width 1.1s cubic-bezier(.3,.7,.3,1) .5s; }
+#s4.shown .capfill{ width:97%; }
+.caplbl{ display:flex; justify-content:space-between; margin-top:10px; font-family:var(--mono);
+  font-size:13px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--sub); }
+.legrow{ margin-top:6px; }
+.legrow .li{ display:flex; align-items:center; gap:12px; margin-top:14px; font-size:18px; font-weight:600; color:var(--ink); }
+.legrow .li .x{ width:24px; height:24px; border-radius:50%; background:var(--amberTint); color:var(--amber);
+  display:flex; align-items:center; justify-content:center; flex:0 0 auto; } .legrow .li .x svg{ width:14px; height:14px; }
+#s4 .kombo{ font-size:26px; font-weight:600; color:var(--sub); margin-top:44px; }
+#s4 .kombo b{ color:var(--red); font-weight:800; }
+
+/* ---------------- footer progress ---------------- */
+#bar{ position:absolute; left:0; right:0; bottom:0; height:6px; background:rgba(15,23,42,.06); z-index:50; }
+#fill{ position:absolute; left:0; top:0; bottom:0; width:0; background:linear-gradient(90deg,var(--blueLite),var(--blue)); }
+#hint{ position:absolute; right:26px; bottom:22px; font-family:var(--mono); font-size:12px; letter-spacing:.1em;
+  color:var(--dim); z-index:50; transition:opacity .6s ease; }
+
+@keyframes beat{ 0%,100%{ box-shadow:0 0 0 0 rgba(0,94,184,.5);} 60%{ box-shadow:0 0 0 10px rgba(0,94,184,0);} }
+</style>
+</head>
+<body>
+<div id="viewport"><div id="stage">
+
+  <!-- ============ SCENE 1 — thriving ecosystem ============ -->
+  <section class="scene" id="s1"><div class="wrap center">
+    <div class="eyebrow rise"><span class="dot"></span>Singapore &middot; SME Landscape</div>
+    <h1 class="huge rise" style="transition-delay:.12s">A <em class="grn">thriving</em> business ecosystem.</h1>
+    <p class="lede rise" style="transition-delay:.24s">Thousands of small businesses &mdash; each reaching for their next stage of growth.</p>
+    <div class="dotfield" id="dotfield"></div>
+  </div></section>
+
+  <!-- ============ SCENE 2 — the need ============ -->
+  <section class="scene" id="s2"><div class="wrap center">
+    <div class="eyebrow rise"><span class="dot"></span>What They Need</div>
+    <h1 class="huge rise" style="transition-delay:.1s; font-size:62px;">Fast, accessible <em>working capital</em>.</h1>
+    <div class="needrow">
+      <div class="ncard pop" style="transition-delay:.22s">
+        <div class="nic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div>
+        <div class="nt">Fast</div><div class="nd">Funding in time to act on the opportunity in front of them.</div>
+      </div>
+      <div class="ncard grn pop" style="transition-delay:.34s">
+        <div class="nic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7-2.6"/></svg></div>
+        <div class="nt">Accessible</div><div class="nd">Within reach for a small business, not just large borrowers.</div>
+      </div>
+      <div class="ncard gld pop" style="transition-delay:.46s">
+        <div class="nic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg></div>
+        <div class="nt">To capture growth</div><div class="nd">Capital to take on the bigger order and scale up.</div>
+      </div>
+    </div>
+  </div></section>
+
+  <!-- ============ SCENE 3 — $1B untapped market ============ -->
+  <section class="scene" id="s3"><div class="wrap center">
+    <div class="eyebrow g rise"><span class="dot"></span>The Opportunity</div>
+    <p class="kicker rise" style="transition-delay:.1s">A massive market sits waiting &mdash; an estimated</p>
+    <div class="bigmoney pop" style="transition-delay:.2s">$2B</div>
+    <p class="under rise" style="transition-delay:.4s">untapped market for <em>small-ticket loans</em></p>
+    <div class="segbar" id="segbar"></div>
+    <div class="seglabel rise" style="transition-delay:.9s"><span class="l">Reached today</span><span class="r">Largely untapped</span></div>
+  </div></section>
+
+  <!-- ============ SCENE 4 — the gap / why ============ -->
+  <section class="scene" id="s4"><div class="wrap center">
+    <div class="eyebrow r rise"><span class="dot"></span>The Gap</div>
+    <h1 class="huge rise" style="transition-delay:.1s; font-size:60px;">Today, we simply <em class="red">can&rsquo;t reach them</em>.</h1>
+    <div class="gaprow">
+      <div class="gcard pop" style="transition-delay:.24s">
+        <div class="gh"><span class="gic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18a8 8 0 0 1 16 0"/><path d="M12 18l5.5-4.5"/><path d="M4 18h.01M20 18h.01"/></svg></span>
+          <span class="gt">Limited Capacity</span></div>
+        <div class="capbar"><div class="capfill"></div></div>
+        <div class="caplbl"><span>Throughput today</span><span>Maxed out</span></div>
+      </div>
+      <div class="gcard amb pop" style="transition-delay:.36s">
+        <div class="gh"><span class="gic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+          <span class="gt">Legacy Processes</span></div>
+        <div class="legrow">
+          <div class="li"><span class="x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>Manual, repetitive re-keying</div>
+          <div class="li"><span class="x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>Days of turnaround per case</div>
+          <div class="li"><span class="x"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>Simply won&rsquo;t scale</div>
+        </div>
+      </div>
+    </div>
+    <p class="kombo rise" style="transition-delay:.55s">Our capacity and legacy processes <b>can&rsquo;t scale</b> to reach them efficiently.</p>
+  </div></section>
+
+  <div id="hint">SPACE play/pause &middot; R restart</div>
+  <div id="bar"><div id="fill"></div></div>
+
+</div></div>
+
+<script>
+"use strict";
+const stage=document.getElementById('stage');
+function fit(){ const s=Math.min(innerWidth/1920, innerHeight/1080); stage.style.transform='scale('+s+')'; }
+addEventListener('resize', fit); fit();
+
+const scenes=[...document.querySelectorAll('.scene')];
+/* scene start times (ms) — paced to the opening narration */
+const START=[0, 6600, 13200, 20200];
+const END=27600;
+
+/* build the ecosystem dot field (scene 1) with a radial wave-in */
+(function(){
+  const df=document.getElementById('dotfield'), cols=20, rows=7;
+  const cxc=(cols-1)/2, cyc=(rows-1)/2;
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const el=document.createElement('div');
+    const h=(c*3+r*5)%17;                                   // deterministic scatter of "seeking capital"
+    el.className='tile'+(h===0?' b':h===6?' g':h===11?' gold':'');
+    const dx=c-cxc, dy=r-cyc, dist=Math.sqrt(dx*dx+dy*dy);
+    el.style.transitionDelay=(0.30+dist*0.055).toFixed(3)+'s';
+    df.appendChild(el);
+  }
+})();
+
+/* build the untapped-market segmented bar (scene 3) — 1 of 16 reached */
+(function(){
+  const sb=document.getElementById('segbar');
+  for(let i=0;i<16;i++){
+    const s=document.createElement('div'); s.className='seg'+(i===0?' on':'');
+    s.style.transitionDelay=(0.55+i*0.05).toFixed(3)+'s';
+    sb.appendChild(s);
+  }
+})();
+
+const fill=document.getElementById('fill'), hint=document.getElementById('hint');
+let clock=0, playing=false, lastTs=null;
+
+function render(t){
+  let cur=0; for(let i=0;i<START.length;i++){ if(t>=START[i]) cur=i; }
+  scenes.forEach(function(el,i){
+    el.classList.toggle('shown', i===cur);
+    el.classList.toggle('gone', i<cur);
+  });
+  fill.style.width=(Math.max(0,Math.min(1,t/END))*100)+'%';
+  hint.style.opacity = (t>2600 && playing) ? '0' : '.9';
+}
+function loop(ts){
+  if(lastTs===null) lastTs=ts;
+  const dt=ts-lastTs; lastTs=ts;
+  if(playing){ clock+=dt; if(clock>=END){ clock=END; playing=false; } }
+  render(clock);
+  requestAnimationFrame(loop);
+}
+function play(){ if(clock>=END) clock=0; playing=true; lastTs=null; }
+function pause(){ playing=false; }
+function restart(){ clock=0; lastTs=null; playing=true;
+  scenes.forEach(el=>el.classList.remove('shown','gone')); }
+
+addEventListener('keydown', function(e){
+  if(e.code==='Space'){ e.preventDefault(); playing?pause():play(); }
+  else if(e.key==='r'||e.key==='R'){ restart(); }
+});
+
+/* init — supports ?t=ms and ?s=sceneIndex for deterministic stills */
+const qp=new URLSearchParams(location.search);
+const qs=qp.get('s'), qt=qp.get('t');
+if(qs!==null || qt!==null){
+  clock = qs!==null ? (START[Math.max(0,Math.min(START.length-1,parseInt(qs,10)||0))]+2200)
+                    : Math.max(0,Math.min(END, parseInt(qt,10)||0));
+  playing=false; render(clock);
+}else{ playing=true; }
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

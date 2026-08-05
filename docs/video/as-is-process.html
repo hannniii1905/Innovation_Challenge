@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Current State — BizMoney Loan Submission (As-Is)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   AS-IS loan submission — interactive process flow
+   Single self-contained file (fonts from CDN, degrade gracefully).
+   Controls: Play / Pause / Restart / Highlight Pain Points
+   Keyboard: Space = play·pause · R = restart · H = highlight
+   Palette matched to solution-flow.html (light UOB theme).
+   ============================================================ */
+
+:root{
+  --bg:#f7f8fa; --ink:#0f172a; --sub:#64748b; --dim:#94a3b8;
+  --line:#cbd5e1; --stroke:#e4e8ee; --strokeH:#cbd5e1;
+  --blue:#005EB8; --blueDeep:#002E5D; --blueSoft:#3b8ede; --blueLite:#0072CE;
+  --blueTint:#eaf3fc; --blueGlow:rgba(0,94,184,.32);
+  --red:#c1272d; --redSoft:#e0575c; --redTint:#fdf3f3; --redBg:rgba(193,39,45,.09);
+  --amber:#d97706; --amberDeep:#b45309; --amberBg:rgba(217,119,6,.11);
+  --green:#12855a; --greenTint:#e9f6f0;
+  --sans:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ width:100%; height:100%; background:#0b0f16; overflow:hidden;
+  font-family:var(--sans); -webkit-font-smoothing:antialiased; }
+
+#viewport{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+#stage{
+  position:relative; width:1920px; height:1080px; flex:0 0 auto;
+  transform-origin:center center; color:var(--ink); background:var(--bg);
+  background-image:
+    radial-gradient(1200px 700px at 88% -12%, rgba(0,94,184,.05), transparent 62%),
+    radial-gradient(900px 600px at 4% 108%, rgba(0,94,184,.05), transparent 60%);
+  overflow:hidden;
+}
+/* faint grid */
+#stage::before{ content:''; position:absolute; inset:0; opacity:.7; pointer-events:none;
+  background-image:linear-gradient(rgba(15,23,42,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15,23,42,.03) 1px, transparent 1px);
+  background-size:48px 48px; }
+
+/* ---------------- header ---------------- */
+.eyebrow{ position:absolute; left:80px; top:52px; font-family:var(--mono);
+  font-size:16px; font-weight:600; letter-spacing:.32em; text-transform:uppercase; color:var(--red); }
+.eyebrow .dot{ display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--red);
+  margin-right:12px; vertical-align:1px; box-shadow:0 0 0 0 rgba(193,39,45,.55); animation:beat 1.8s infinite; }
+h1.title{ position:absolute; left:80px; top:84px; font-size:46px; font-weight:800;
+  letter-spacing:-.02em; color:var(--ink); }
+h1.title em{ font-style:normal; color:var(--red); }
+.sub{ position:absolute; left:80px; top:150px; font-size:21px; font-weight:500; color:var(--sub); }
+
+/* pain counter top-right */
+.painCount{ position:absolute; right:80px; top:56px; text-align:right; }
+.painCount .n{ font-size:72px; font-weight:800; line-height:.9; letter-spacing:-.04em;
+  color:var(--red); font-variant-numeric:tabular-nums; }
+.painCount .l{ margin-top:8px; font-family:var(--mono); font-size:13px; font-weight:600;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--sub); }
+
+/* ---------------- flow ---------------- */
+#flowSVG,#painSVG{ position:absolute; inset:0; width:1920px; height:1080px; overflow:visible; pointer-events:none; }
+.trk{ fill:none; stroke:var(--line); stroke-width:3; stroke-linecap:round; }
+.prg{ fill:none; stroke:url(#flowGrad); stroke-width:3.4; stroke-linecap:round; }
+.tarrow{ fill:var(--line); transition:fill .3s ease; }
+.tarrow.hot{ fill:var(--blue); }
+.pcon{ fill:none; stroke-width:2; stroke-dasharray:2 6; stroke-linecap:round; }
+.pcon.red{ stroke:rgba(193,39,45,.55); } .pcon.amber{ stroke:rgba(217,119,6,.55); }
+
+.card{ position:absolute; width:196px; height:232px; border-radius:18px;
+  background:#fff; border:1.5px solid var(--stroke); padding:20px 16px 16px; text-align:center;
+  box-shadow:0 2px 4px rgba(15,23,42,.05), 0 18px 34px -22px rgba(15,23,42,.30);
+  transition:transform .4s cubic-bezier(.2,.8,.3,1), border-color .35s ease, box-shadow .35s ease, opacity .35s ease, filter .35s ease; }
+.card .idx{ position:absolute; top:12px; left:14px; font-family:var(--mono); font-size:12px;
+  font-weight:600; color:var(--dim); letter-spacing:.1em; }
+.card .ico{ width:64px; height:64px; margin:6px auto 14px; border-radius:15px;
+  background:#f1f5f9; border:1px solid var(--stroke); color:var(--sub);
+  display:flex; align-items:center; justify-content:center; transition:all .35s ease; }
+.card .ico svg{ width:34px; height:34px; }
+.card .nm{ font-size:19px; font-weight:700; letter-spacing:-.01em; color:var(--ink); line-height:1.12; }
+.card .role{ margin-top:7px; font-family:var(--mono); font-size:11.5px; font-weight:600;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--blue); }
+.card .role.man{ color:var(--amberDeep); }
+.card .note{ margin-top:10px; font-size:12.5px; font-weight:500; color:var(--sub); line-height:1.35; }
+
+/* active / done states during playback */
+.card.active{ transform:translateY(-10px) scale(1.03); border-color:var(--blue);
+  box-shadow:0 0 0 1.5px var(--blue), 0 24px 46px -20px var(--blueGlow), 0 0 60px -14px var(--blueGlow); }
+.card.active .ico{ background:var(--blueTint); border-color:var(--blueSoft); color:var(--blue); }
+.card.done{ border-color:rgba(18,133,90,.45); }
+.card.done .ico{ background:var(--greenTint); border-color:rgba(18,133,90,.4); color:var(--green); }
+.card.done .check{ opacity:1; transform:scale(1); }
+.card .check{ position:absolute; top:12px; right:12px; width:22px; height:22px; border-radius:50%;
+  background:var(--green); color:#fff; display:flex; align-items:center; justify-content:center;
+  opacity:0; transform:scale(.4); transition:all .3s cubic-bezier(.2,1.5,.4,1); }
+.card .check svg{ width:13px; height:13px; }
+
+/* reveal on build */
+.card{ opacity:0; transform:translateY(22px) scale(.94); }
+.card.shown{ opacity:1; transform:translateY(0) scale(1); }
+.card.shown.active{ transform:translateY(-10px) scale(1.03); }
+
+/* the travelling packet */
+#packet{ position:absolute; top:534px; left:0; z-index:20; transform:translate(-50%,-50%);
+  display:flex; align-items:center; gap:9px; padding:11px 18px 11px 14px; border-radius:999px;
+  background:linear-gradient(90deg,var(--blueLite),var(--blue)); color:#fff; font-weight:800;
+  font-size:14px; letter-spacing:.06em; white-space:nowrap;
+  box-shadow:0 0 0 4px rgba(0,114,206,.16), 0 12px 30px -8px rgba(0,94,184,.7), 0 0 40px -8px var(--blueLite);
+  opacity:0; transition:opacity .4s ease; }
+#packet.live{ opacity:1; }
+#packet svg{ width:18px; height:18px; }
+#packet .pl{ font-family:var(--mono); font-size:12.5px; font-weight:700; letter-spacing:.12em; }
+
+/* ---------------- pain badges ---------------- */
+.badge{ position:absolute; top:712px; transform:translateX(-50%);
+  border-radius:14px; padding:13px 18px; text-align:left; background:#fff;
+  border:1.5px solid; box-shadow:0 2px 4px rgba(15,23,42,.05), 0 14px 28px -20px rgba(15,23,42,.35);
+  transition:transform .35s ease, box-shadow .35s ease, opacity .35s ease; }
+.badge .bt{ font-family:var(--mono); font-size:13px; font-weight:700; letter-spacing:.1em;
+  text-transform:uppercase; display:flex; align-items:center; gap:9px; }
+.badge .bd{ margin-top:6px; font-size:14px; font-weight:500; color:var(--sub); line-height:1.3; }
+.badge .bi{ width:9px; height:9px; border-radius:2px; flex:0 0 auto; }
+.badge.red{ background:var(--redTint); border-color:rgba(193,39,45,.4); }
+.badge.red .bt{ color:var(--red); } .badge.red .bi{ background:var(--red); }
+.badge.amber{ background:#fff8ee; border-color:rgba(217,119,6,.4); }
+.badge.amber .bt{ color:var(--amberDeep); } .badge.amber .bi{ background:var(--amber); }
+.badge{ opacity:0; }
+.badge.shown{ opacity:1; }
+.badge.fire{ box-shadow:0 0 0 2px currentColor, 0 0 30px -8px currentColor; transform:translateX(-50%) translateY(-4px); }
+
+/* summary chips */
+#chips{ position:absolute; left:0; right:0; top:872px; display:flex; justify-content:center; gap:16px; }
+#chips .chip{ display:flex; align-items:center; gap:10px; padding:12px 20px; border-radius:12px;
+  background:#fff; border:1px solid var(--stroke); box-shadow:0 2px 4px rgba(15,23,42,.04);
+  opacity:0; transform:translateY(12px); transition:opacity .5s ease, transform .5s ease; }
+#chips .chip.shown{ opacity:1; transform:none; }
+#chips .chip .cv{ font-size:22px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums; }
+#chips .chip .cv.bad{ color:var(--red); }
+#chips .chip .ck{ font-family:var(--mono); font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--sub); }
+
+/* ---------------- actor pills (who / what touches each step) ---------------- */
+#actors{ position:absolute; inset:0; pointer-events:none; z-index:15; }
+#actors .actor{ position:absolute; transform:translateX(-50%) translateY(9px);
+  display:inline-flex; align-items:center; gap:7px; height:31px; padding:0 12px 0 9px;
+  border-radius:999px; background:#fff; border:1.5px solid var(--stroke);
+  box-shadow:0 3px 9px -3px rgba(15,23,42,.16); white-space:nowrap;
+  font-family:var(--sans); font-size:12.5px; font-weight:600; color:var(--sub);
+  opacity:0; transition:opacity .45s ease, transform .45s cubic-bezier(.2,.8,.3,1),
+    background .35s ease, border-color .35s ease, color .35s ease, box-shadow .35s ease; }
+#actors .actor.shown{ opacity:1; transform:translateX(-50%) translateY(0); }
+#actors .actor .ai{ width:16px; height:16px; display:flex; align-items:center; justify-content:center; }
+#actors .actor .ai svg{ width:15px; height:15px; }
+#actors .actor.per .ai{ color:var(--red); }
+#actors .actor.sys .ai{ color:var(--blue); }
+#actors .actor .ao{ display:none; width:17px; height:17px; border-radius:50%;
+  align-items:center; justify-content:center; font-family:var(--mono); font-size:11px; font-weight:700; }
+/* connector tick down to the card */
+#actors .actor::after{ content:''; position:absolute; left:50%; bottom:-9px; width:1.5px; height:8px;
+  background:var(--line); transform:translateX(-50%); transition:background .35s ease, opacity .35s ease; }
+
+/* ---------------- highlight (pain) mode ---------------- */
+#stage.painmode .card:not(.pain){ opacity:.42; filter:grayscale(.55); }
+#stage.painmode #packet{ opacity:0 !important; }
+#stage.painmode #actors .actor{ opacity:.28; filter:grayscale(.5); }
+#stage.painmode .card.pain{ border-color:var(--red);
+  box-shadow:0 0 0 1.5px var(--red), 0 0 44px -10px rgba(193,39,45,.55); }
+#stage.painmode .card.pain .ico{ background:var(--redTint); border-color:rgba(193,39,45,.5); color:var(--red); }
+#stage.painmode .badge{ animation:painPulse 1.3s ease-in-out infinite; }
+#stage.painmode .trk,#stage.painmode .prg{ opacity:.3; }
+
+/* ---------------- highlight: 5 PEOPLE ---------------- */
+#stage.peoplemode .card, #stage.peoplemode .badge,
+#stage.peoplemode .trk, #stage.peoplemode .prg, #stage.peoplemode .tarrow{
+  opacity:.28; filter:grayscale(.5); }
+#stage.peoplemode #packet{ opacity:0 !important; }
+#stage.peoplemode #actors .actor.sys{ opacity:0 !important; }
+#stage.peoplemode #actors .actor.per{ transform:translateX(-50%) scale(1.16);
+  background:var(--red); border-color:var(--red); color:#fff;
+  animation:peoplePulse 1.7s ease-in-out infinite; }
+#stage.peoplemode #actors .actor.per .ai{ color:#fff; }
+#stage.peoplemode #actors .actor.per .ao{ display:inline-flex; background:#fff; color:var(--red); }
+#stage.peoplemode #actors .actor.per::after{ background:var(--red); opacity:.5; }
+
+/* ---------------- highlight: 3 SYSTEMS ---------------- */
+#stage.sysmode .card, #stage.sysmode .badge,
+#stage.sysmode .trk, #stage.sysmode .prg, #stage.sysmode .tarrow{
+  opacity:.28; filter:grayscale(.5); }
+#stage.sysmode #packet{ opacity:0 !important; }
+#stage.sysmode #actors .actor.per{ opacity:0 !important; }
+#stage.sysmode #actors .actor.sys{ transform:translateX(-50%) scale(1.16);
+  background:var(--blue); border-color:var(--blue); color:#fff;
+  animation:sysPulse 1.7s ease-in-out infinite; }
+#stage.sysmode #actors .actor.sys .ai{ color:#fff; }
+#stage.sysmode #actors .actor.sys .ao{ display:inline-flex; background:#fff; color:var(--blue); }
+#stage.sysmode #actors .actor.sys::after{ background:var(--blue); opacity:.5; }
+
+/* ---------------- control panel ---------------- */
+#panel{ position:absolute; left:56px; right:56px; bottom:34px; height:78px; border-radius:16px;
+  background:rgba(255,255,255,.92); border:1px solid var(--stroke); backdrop-filter:blur(10px);
+  display:flex; align-items:center; gap:16px; padding:0 22px;
+  box-shadow:0 20px 50px -26px rgba(15,23,42,.45); z-index:40; }
+.btn{ display:inline-flex; align-items:center; gap:9px; height:46px; padding:0 20px; border-radius:11px;
+  border:1px solid var(--stroke); background:#fff; color:var(--ink);
+  font-family:var(--sans); font-size:15px; font-weight:600; cursor:pointer; user-select:none;
+  transition:all .18s ease; }
+.btn:hover{ background:#f1f5f9; border-color:var(--strokeH); }
+.btn:active{ transform:translateY(1px); }
+.btn svg{ width:17px; height:17px; }
+.btn.primary{ background:linear-gradient(90deg,var(--blueLite),var(--blue)); border-color:transparent; color:#fff; }
+.btn.primary:hover{ filter:brightness(1.06); }
+.btn.tog.on{ background:var(--redTint); border-color:var(--red); color:var(--red); }
+#btnSys.on{ background:var(--blueTint); border-color:var(--blue); color:var(--blue); }
+#btnFlow.on{ background:var(--blueTint); border-color:var(--blue); color:var(--blue); }
+.chLbl{ font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--dim); padding-right:2px; }
+.btn .kbd{ font-family:var(--mono); font-size:11px; opacity:.5; }
+.sep{ width:1px; height:40px; background:var(--stroke); }
+#stepWrap{ flex:1; display:flex; align-items:center; gap:16px; min-width:0; }
+#stepLabel{ font-family:var(--mono); font-size:13px; letter-spacing:.08em; color:var(--sub);
+  white-space:nowrap; min-width:230px; }
+#stepLabel b{ color:var(--ink); font-weight:700; }
+#pbar{ flex:1; height:8px; border-radius:6px; background:#e2e8f0; cursor:pointer; position:relative; }
+#pfill{ position:absolute; left:0; top:0; bottom:0; width:0; border-radius:6px;
+  background:linear-gradient(90deg,var(--blueLite),var(--blue)); }
+#ptime{ font-family:var(--mono); font-size:13px; color:var(--sub); min-width:64px; text-align:right; }
+
+/* ---------------- keyframes ---------------- */
+@keyframes beat{ 0%,100%{ box-shadow:0 0 0 0 rgba(193,39,45,.55);} 60%{ box-shadow:0 0 0 8px rgba(193,39,45,0);} }
+@keyframes painPulse{ 0%,100%{ box-shadow:0 0 0 1px currentColor, 0 0 16px -8px currentColor; }
+  50%{ box-shadow:0 0 0 2px currentColor, 0 0 30px -6px currentColor; } }
+@keyframes peoplePulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(193,39,45,.45), 0 6px 16px -6px rgba(193,39,45,.6); }
+  50%{ box-shadow:0 0 0 6px rgba(193,39,45,0), 0 6px 16px -6px rgba(193,39,45,.6); } }
+@keyframes sysPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(0,94,184,.45), 0 6px 16px -6px rgba(0,94,184,.6); }
+  50%{ box-shadow:0 0 0 6px rgba(0,94,184,0), 0 6px 16px -6px rgba(0,94,184,.6); } }
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+
+    <div class="eyebrow"><span class="dot"></span>Current State &middot; As-Is Loan Submission</div>
+    <h1 class="title">One application, <em>changing hands 5 times</em> before a decision.</h1>
+    <p class="sub">Lengthy forms, the same data keyed into two systems, then manual eyeballing &mdash; every single case.</p>
+
+    <div class="painCount"><div class="n" id="painNum">4</div><div class="l" id="painLbl">Major friction points</div></div>
+
+    <svg id="flowSVG" viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="flowGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#3b8ede"/><stop offset="1" stop-color="#005EB8"/>
+        </linearGradient>
+      </defs>
+      <g id="conns"></g>
+    </svg>
+
+    <div id="flow"></div>
+    <div id="actors"></div>
+    <svg id="painSVG" viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true"><g id="pconns"></g></svg>
+    <div id="badges"></div>
+
+    <div id="packet">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h6l4 4v13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v4h4"/></svg>
+      <span class="pl">APPLICATION</span>
+    </div>
+
+    <div id="chips"></div>
+
+    <div id="panel">
+      <button class="btn primary" id="btnPlay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Play<span class="kbd">Space</span></button>
+      <button class="btn" id="btnPause"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>Pause</button>
+      <button class="btn" id="btnRestart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Restart<span class="kbd">R</span></button>
+      <div class="sep"></div>
+      <span class="chLbl">Chapters</span>
+      <button class="btn tog" id="btnFlow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h13M12 6l6 6-6 6"/></svg>1 &middot; Flow<span class="kbd">F</span></button>
+      <button class="btn tog" id="btnPeople"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3 2.4-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><circle cx="17.5" cy="9" r="2.5"/><path d="M16.2 14.2c2.6.3 4.3 2.2 4.3 4.8"/></svg>2 &middot; 5 People<span class="kbd">P</span></button>
+      <button class="btn tog" id="btnSys"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6M4.5 11.5v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6"/></svg>3 &middot; 3 Systems<span class="kbd">S</span></button>
+      <div class="sep"></div>
+      <button class="btn tog" id="btnHi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V4h11l-1.5 4L15 12H4"/></svg>Pain<span class="kbd">H</span></button>
+      <div class="sep"></div>
+      <div id="stepWrap">
+        <div id="stepLabel">&mdash;</div>
+        <div id="pbar"><div id="pfill"></div></div>
+        <div id="ptime">0.0s</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ---- icons (inline stroke SVG) ---- */
+const I = {
+  submit:'<path d="M8 3h6l4 4v13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 15.5h6M9 8.5h3"/>',
+  scan:'<path d="M4 8V5a1 1 0 0 1 1-1h3M20 8V5a1 1 0 0 0-1-1h-3M4 16v3a1 1 0 0 0 1 1h3M20 16v3a1 1 0 0 1-1 1h-3"/><path d="M4 12h16"/>',
+  keyboard:'<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 9.5h.01M9.5 9.5h.01M13 9.5h.01M16.5 9.5h.01M6 13h.01M8 15h8M13 13h.01M16.5 13h.01"/>',
+  database:'<ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6M4.5 11.5v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6"/>',
+  review:'<rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M8.5 3.5V6h7V3.5"/><path d="M8.5 11l2 2 4-4"/>',
+  team:'<circle cx="8" cy="9" r="3"/><path d="M2.5 19c0-3.2 2.5-5.6 5.5-5.6s5.5 2.4 5.5 5.6"/><circle cx="16.5" cy="10" r="2.4"/><path d="M15.4 15c2.9.2 5.1 2.3 5.1 5"/>',
+  eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>'
+};
+
+/* ---- small glyphs for the actor pills ---- */
+const AI = {
+  person:'<circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c0-3.6 2.9-6.3 6.5-6.3s6.5 2.7 6.5 6.3"/>',
+  shield:'<path d="M12 3l7 2.6v5c0 4.4-3 7.7-7 9.4-4-1.7-7-5-7-9.4v-5z"/>',
+  db:'<ellipse cx="12" cy="6" rx="7" ry="2.8"/><path d="M5 6v6c0 1.6 3.1 2.8 7 2.8s7-1.2 7-2.8V6M5 12v6c0 1.6 3.1 2.8 7 2.8s7-1.2 7-2.8v-6"/>'
+};
+
+/* ---- the 5 PEOPLE and 3 SYSTEMS that touch each case (mapped to the 7 steps) ---- */
+const ACTORS = [
+  { kind:'per', ord:1, label:'Sales',                 ico:'person', steps:[0] },
+  { kind:'sys', ord:1, label:'CIF &middot; World Check', ico:'shield', steps:[1] },
+  { kind:'sys', ord:2, label:'BizConnect',            ico:'db',     steps:[2] },
+  { kind:'per', ord:2, label:'BET',                   ico:'person', steps:[2,3] },
+  { kind:'sys', ord:3, label:'BCAS',                  ico:'db',     steps:[3] },
+  { kind:'per', ord:3, label:'Sales Team Lead',       ico:'person', steps:[4] },
+  { kind:'per', ord:4, label:'Credit Assessment Team',ico:'person', steps:[5] },
+  { kind:'per', ord:5, label:'Credit Approver',       ico:'person', steps:[6] }
+];
+
+/* ---- 7 as-is stages ---- */
+const STAGES = [
+  { nm:'Customer Submission', role:'Customer + Sales', man:false, ico:'submit',
+    note:'Documents + a 4 or 11-page form <br>(SingPass income docs on assisted OUL)', pain:false },
+  { nm:'Initial System Checks', role:'System', man:false, ico:'scan',
+    note:'Separate system-level checks<br>run on the submission', pain:false },
+  { nm:'Input to BizConnect', role:'Sales / BET · Manual', man:true, ico:'keyboard',
+    note:'Customer info keyed in<br>by hand', pain:true, stat:'Keying customer data' },
+  { nm:'Re-enter into BCAS', role:'Sales / BET · Manual', man:true, ico:'database',
+    note:'The <b>same</b> info typed again<br>into a second system', pain:true, stat:'Re-keying same data' },
+  { nm:'Team Lead Review', role:'Sales Team Lead · Manual', man:true, ico:'review',
+    note:'Manual check before it<br>leaves the branch', pain:true, stat:'Manual review' },
+  { nm:'Credit Assessment', role:'Credit Assessment Team', man:false, ico:'team',
+    note:'Case forwarded to the<br>assessment team', pain:false },
+  { nm:'Final Approval', role:'Credit Approver · Manual', man:true, ico:'eye',
+    note:'Final manual eyeball<br>&amp; credit decision', pain:true, stat:'Eyeballing the case' }
+];
+
+/* ---- pain badges ---- */
+const BADGES = [
+  { kind:'amber', t:'Lengthy Application', d:'4&ndash;11 pages &mdash; much never used for credit', link:[0] },
+  { kind:'red',   t:'Duplicate Manual Entry', d:'Same data keyed into BizConnect, then BCAS', link:[2,3], wide:true },
+  { kind:'amber', t:'Manual Review', d:'Eyeballed by the Sales Team Lead', link:[4] },
+  { kind:'red',   t:'Manual Eyeball Decision', d:'Approver reads every case by hand', link:[6] }
+];
+
+/* ---- summary chips ---- */
+const CHIPS = [
+  { v:'5', bad:true, k:'People touch it' },
+  { v:'3', bad:true, k:'Separate systems' },
+  { v:'2&times;', bad:true, k:'Data re-keyed' },
+  { v:'2', bad:true, k:'Manual eyeball checks' },
+  { v:'~7', bad:true, k:'Day credit TAT' }
+];
+
+/* ---- geometry ---- */
+const N=STAGES.length, W=196, H=232, TOP=418, CY=TOP+H/2, BOT=TOP+H;
+const FIRST=190, LAST=1730;
+const cx=[]; for(let i=0;i<N;i++) cx.push(Math.round(FIRST+(LAST-FIRST)*i/(N-1)));
+
+const stage=document.getElementById('stage');
+const flow=document.getElementById('flow');
+const conns=document.getElementById('conns');
+const pconns=document.getElementById('pconns');
+const badgesEl=document.getElementById('badges');
+const chipsEl=document.getElementById('chips');
+const actorsEl=document.getElementById('actors');
+const packet=document.getElementById('packet');
+
+const cardEls=[], prgEls=[], arrowEls=[], badgeEls=[], chipDom=[], actorEls=[];
+
+/* actor-pill rows: people ride an upper rail, systems a lower rail just above the cards */
+const ROW_PER=322, ROW_SYS=372;
+
+function fit(){ const s=Math.min(innerWidth/1920, innerHeight/1080); stage.style.transform='scale('+s+')'; }
+addEventListener('resize', fit); fit();
+
+function svg(tag,attrs){ const e=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+
+function build(){
+  flow.innerHTML=''; conns.innerHTML=''; pconns.innerHTML=''; badgesEl.innerHTML=''; chipsEl.innerHTML=''; actorsEl.innerHTML='';
+  cardEls.length=prgEls.length=arrowEls.length=badgeEls.length=chipDom.length=actorEls.length=0;
+
+  STAGES.forEach(function(s,i){
+    const el=document.createElement('div');
+    el.className='card'+(s.pain?' pain':'');
+    el.style.left=(cx[i]-W/2)+'px'; el.style.top=TOP+'px';
+    el.innerHTML=
+      '<div class="idx">0'+(i+1)+'</div>'+
+      '<div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">'+I.check+'</svg></div>'+
+      '<div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+I[s.ico]+'</svg></div>'+
+      '<div class="nm">'+s.nm+'</div>'+
+      '<div class="role'+(s.man?' man':'')+'">'+s.role+'</div>'+
+      '<div class="note">'+s.note+'</div>';
+    flow.appendChild(el); cardEls.push(el);
+  });
+
+  // actor pills — who / what touches each step (people upper rail, systems lower rail)
+  ACTORS.forEach(function(a){
+    const ax = a.steps.reduce((s,i)=>s+cx[i],0)/a.steps.length;   // centre over its step(s)
+    const el=document.createElement('div');
+    el.className='actor '+a.kind;
+    el.style.left=ax+'px';
+    el.style.top=(a.kind==='per'?ROW_PER:ROW_SYS)+'px';
+    el.innerHTML=
+      '<span class="ao">'+a.ord+'</span>'+
+      '<span class="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+AI[a.ico]+'</svg></span>'+
+      '<span class="al">'+a.label+'</span>';
+    actorsEl.appendChild(el); actorEls.push({el:el, steps:a.steps});
+  });
+
+  // connectors between card edges
+  for(let i=0;i<N-1;i++){
+    const x1=cx[i]+W/2, x2=cx[i+1]-W/2-13;
+    conns.appendChild(svg('path',{d:'M '+x1+' '+CY+' L '+x2+' '+CY, class:'trk'}));
+    const prg=svg('path',{d:'M '+x1+' '+CY+' L '+x2+' '+CY, class:'prg', pathLength:'1',
+      'stroke-dasharray':'1', 'stroke-dashoffset':'1'});
+    conns.appendChild(prg); prgEls.push(prg);
+    const ar=svg('path',{class:'tarrow', d:'M '+x2+' '+(CY-7)+' L '+(x2+13)+' '+CY+' L '+x2+' '+(CY+7)+' Z'});
+    conns.appendChild(ar); arrowEls.push(ar);
+  }
+
+  // pain badges + connectors
+  BADGES.forEach(function(b){
+    const bx = b.link.reduce((a,i)=>a+cx[i],0)/b.link.length;
+    const el=document.createElement('div');
+    el.className='badge '+b.kind; el.style.left=bx+'px'; el.style.width=(b.wide?360:250)+'px';
+    el.innerHTML='<div class="bt"><span class="bi"></span>'+b.t+'</div><div class="bd">'+b.d+'</div>';
+    badgesEl.appendChild(el); badgeEls.push({el:el, link:b.link});
+    const col=b.kind;
+    if(b.wide && b.link.length===2){
+      const xa=cx[b.link[0]], xb=cx[b.link[1]];
+      pconns.appendChild(svg('path',{class:'pcon '+col,
+        d:'M '+xa+' '+(BOT+6)+' L '+xa+' '+(BOT+30)+' L '+xb+' '+(BOT+30)+' L '+xb+' '+(BOT+6)}));
+      pconns.appendChild(svg('path',{class:'pcon '+col, d:'M '+bx+' '+(BOT+30)+' L '+bx+' 710'}));
+    } else {
+      pconns.appendChild(svg('path',{class:'pcon '+col, d:'M '+bx+' '+(BOT+6)+' L '+bx+' 710'}));
+    }
+  });
+
+  CHIPS.forEach(function(c){
+    const el=document.createElement('div'); el.className='chip';
+    el.innerHTML='<span class="cv'+(c.bad?' bad':'')+'">'+c.v+'</span><span class="ck">'+c.k+'</span>';
+    chipsEl.appendChild(el); chipDom.push(el);
+  });
+}
+
+/* ---------------- timeline ---------------- */
+const START=700, DWELL=1350, TRAVEL=1050;
+const arrive=[]; arrive[0]=START;
+for(let i=1;i<N;i++) arrive[i]=arrive[i-1]+DWELL+TRAVEL;
+const END=arrive[N-1]+DWELL+1100;              // end of the clean FLOW chapter
+
+/* three sequential chapters: FLOW -> 5 PEOPLE -> 3 SYSTEMS */
+const HOLD=5200;                               // how long each highlight chapter holds
+const CH_PEOPLE=END, CH_SYS=END+HOLD, TOTAL=END+HOLD+HOLD;
+const FR_FLOW=END-150, FR_PEOPLE=CH_PEOPLE+1300, FR_SYS=CH_SYS+1300;   // representative jump frames
+function chapterAt(t){ return t<CH_PEOPLE?'flow':(t<CH_SYS?'people':'sys'); }
+
+const ease=t=>{ t=Math.max(0,Math.min(1,t)); return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2; };
+const lerp=(a,b,t)=>a+(b-a)*t;
+
+function packetX(t){
+  if(t<=arrive[0]) return lerp(cx[0]-300, cx[0], ease(t/arrive[0]));
+  for(let i=0;i<N-1;i++){
+    const de=arrive[i]+DWELL;
+    if(t<=de) return cx[i];
+    if(t<arrive[i+1]) return lerp(cx[i], cx[i+1], ease((t-de)/TRAVEL));
+  }
+  return cx[N-1];
+}
+
+let playing=false, clock=0, lastTs=null, built=false, revealDone=false;
+
+function render(t){
+  const ch=chapterAt(t);
+  const ft=Math.min(t, END);          // flow time — freezes the flow complete during highlight chapters
+  const inFlow=(ch==='flow');
+
+  // drive the highlight chapter from the clock (people / systems shown one at a time)
+  stage.classList.toggle('peoplemode', ch==='people');
+  stage.classList.toggle('sysmode',   ch==='sys');
+  if(!inFlow) stage.classList.remove('painmode');     // pain is a manual overlay for the flow chapter only
+  btnFlow.classList.toggle('on', inFlow);
+  btnPeople.classList.toggle('on', ch==='people');
+  btnSys.classList.toggle('on', ch==='sys');
+  btnHi.classList.toggle('on', stage.classList.contains('painmode'));
+
+  // reveal cards progressively as the packet nears them (nice build-in)
+  for(let i=0;i<N;i++){
+    if(!cardEls[i].classList.contains('shown') && ft>=arrive[i]-1250) cardEls[i].classList.add('shown');
+  }
+  // actor pills ONLY appear in their own highlight chapter — the flow stays clean
+  actorEls.forEach(function(a){ a.el.classList.toggle('shown', !inFlow); });
+
+  // packet — bright while travelling between nodes, fades while a node processes (flow chapter only)
+  const px=packetX(ft);
+  packet.style.left=px+'px';
+  let travelling=false;
+  if(ft>arrive[0] && ft<arrive[N-1]){
+    for(let i=0;i<N-1;i++){ const de=arrive[i]+DWELL; if(ft>de && ft<arrive[i+1]){ travelling=true; break; } }
+  } else if(ft<=arrive[0]) travelling=true;
+  packet.classList.toggle('live', inFlow && travelling && ft<END-60);
+
+  // stage states
+  let cur=-1;
+  for(let i=0;i<N;i++){
+    const a=arrive[i], de=a+DWELL;
+    const active=inFlow && ft>=a && ft<=de;
+    const done=ft>de;
+    cardEls[i].classList.toggle('active', active);
+    cardEls[i].classList.toggle('done', done);
+    if(ft>=a) cur=i;
+  }
+  // connectors
+  for(let i=0;i<N-1;i++){
+    const de=arrive[i]+DWELL; let f=0;
+    if(ft>de) f=(ft>=arrive[i+1])?1:(ft-de)/TRAVEL;
+    prgEls[i].setAttribute('stroke-dashoffset', String(1-Math.max(0,Math.min(1,f))));
+    arrowEls[i].classList.toggle('hot', f>=1);
+  }
+  // fire the pain badge whose stage is active (flow chapter only)
+  badgeEls.forEach(function(b){
+    const on=inFlow && b.link.some(i=> ft>=arrive[i] && ft<=arrive[i]+DWELL);
+    b.el.classList.add('shown');
+    b.el.classList.toggle('fire', on);
+  });
+  // chips reveal near the end of the flow chapter
+  chipDom.forEach(function(el,i){ if(ft>=END-1600+i*140) el.classList.add('shown'); });
+
+  // top-right counter tracks the chapter
+  if(ch==='people'){ painNum.textContent='5'; painLbl.textContent='People touch each case'; }
+  else if(ch==='sys'){ painNum.textContent='3'; painLbl.textContent='Systems used per case'; }
+  else { painNum.textContent='4'; painLbl.textContent='Major friction points'; }
+
+  // panel
+  const frac=Math.max(0,Math.min(1,t/TOTAL));
+  document.getElementById('pfill').style.width=(frac*100)+'%';
+  document.getElementById('ptime').textContent=(t/1000).toFixed(1)+'s';
+  let label;
+  if(ch==='people') label='Chapter <b>2 / 3</b> &middot; The 5 people who touch each case';
+  else if(ch==='sys') label='Chapter <b>3 / 3</b> &middot; The 3 systems used per case';
+  else if(ft<arrive[0]) label='Chapter <b>1 / 3</b> &middot; Application incoming&hellip;';
+  else if(cur>=0 && ft<=arrive[cur]+DWELL) label='Step <b>'+(cur+1)+' / '+N+'</b> &middot; '+STAGES[cur].nm;
+  else if(cur>=0 && cur<N-1) label='In transit &middot; step '+(cur+1)+' &rarr; '+(cur+2);
+  else label='<b>Decision made</b> &middot; ~7 days later';
+  document.getElementById('stepLabel').innerHTML=label;
+}
+
+function loop(ts){
+  if(lastTs===null) lastTs=ts;
+  const dt=ts-lastTs; lastTs=ts;
+  if(playing){
+    clock+=dt;
+    if(clock>=TOTAL){ clock=TOTAL; playing=false; setPlayUI(false); }
+  }
+  render(clock);
+  requestAnimationFrame(loop);
+}
+
+/* ---------------- controls ---------------- */
+const btnPlay=document.getElementById('btnPlay'), btnPause=document.getElementById('btnPause'),
+      btnRestart=document.getElementById('btnRestart'), btnHi=document.getElementById('btnHi'),
+      btnPeople=document.getElementById('btnPeople'), btnSys=document.getElementById('btnSys'),
+      btnFlow=document.getElementById('btnFlow');
+const painNum=document.getElementById('painNum'), painLbl=document.getElementById('painLbl');
+
+function setPlayUI(on){
+  btnPlay.innerHTML = on
+    ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>Pause<span class="kbd">Space</span>'
+    : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Play<span class="kbd">Space</span>';
+}
+function play(){ if(clock>=TOTAL) clock=0; playing=true; lastTs=null; setPlayUI(true); }
+function pause(){ playing=false; setPlayUI(false); }
+function toggle(){ playing?pause():play(); }
+function restart(){ clock=0; lastTs=null; playing=true; setPlayUI(true);
+  cardEls.forEach(c=>c.classList.remove('shown','active','done'));
+  actorEls.forEach(a=>a.el.classList.remove('shown'));
+  chipDom.forEach(c=>c.classList.remove('shown')); }
+
+btnPlay.onclick=toggle;
+btnPause.onclick=pause;
+btnRestart.onclick=restart;
+
+/* buttons jump to a chapter and pause there, so each can be narrated on its own */
+function jumpTo(t){
+  clock=Math.max(0,Math.min(TOTAL,t)); lastTs=null; playing=false; setPlayUI(false);
+  cardEls.forEach(c=>c.classList.add('shown'));   // flow already complete when jumping ahead
+  render(clock);
+}
+function goFlow(){   jumpTo(FR_FLOW);   }   // chapter 1 — clean flow, complete
+function goPeople(){ jumpTo(FR_PEOPLE); }   // chapter 2 — the 5 people
+function goSys(){    jumpTo(FR_SYS);    }   // chapter 3 — the 3 systems
+
+btnFlow.onclick  =goFlow;
+btnPeople.onclick=goPeople;
+btnSys.onclick   =goSys;
+/* Pain Points stays a manual overlay while viewing the flow chapter */
+btnHi.onclick=function(){
+  if(chapterAt(clock)!=='flow') jumpTo(FR_FLOW);
+  const on=stage.classList.toggle('painmode'); btnHi.classList.toggle('on',on);
+};
+
+document.getElementById('pbar').addEventListener('click', function(e){
+  const r=this.getBoundingClientRect();
+  clock=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*END; lastTs=null; render(clock);
+});
+
+addEventListener('keydown', function(e){
+  if(e.code==='Space'){ e.preventDefault(); toggle(); }
+  else if(e.key==='r'||e.key==='R'){ restart(); }
+  else if(e.key==='f'||e.key==='F'){ goFlow(); }
+  else if(e.key==='p'||e.key==='P'){ goPeople(); }
+  else if(e.key==='s'||e.key==='S'){ goSys(); }
+  else if(e.key==='h'||e.key==='H'){ btnHi.click(); }
+});
+
+/* ---------------- go ---------------- */
+build();
+const qp=new URLSearchParams(location.search);
+const seekT=qp.get('t'), ch=qp.get('ch');
+if(seekT!==null || ch){
+  cardEls.forEach(c=>c.classList.add('shown'));
+  let ct = ch==='people'?FR_PEOPLE : ch==='sys'?FR_SYS : ch==='flow'?FR_FLOW
+         : Math.max(0,Math.min(TOTAL, parseInt(seekT,10)||0));
+  clock=ct; playing=false; setPlayUI(false); render(clock);
+  if(qp.get('pain')==='1' && chapterAt(clock)==='flow'){ stage.classList.add('painmode'); btnHi.classList.add('on'); }
+}else{
+  setPlayUI(true); playing=true;   // autoplay: flow -> people -> systems
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

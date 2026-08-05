@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automated Credit Engine — The Transformation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   AUTOMATED CREDIT ENGINE — script-synced pitch animation
+   1920x1080 · autoplays · light UOB theme (matches solution-flow.html)
+   Space = play/pause · R = restart · ?t=ms seek · ?s=n jump to scene n
+   6 beats mapped to the voiceover script.
+   ============================================================ */
+
+:root{
+  --bg:#f7f8fa; --ink:#0f172a; --sub:#64748b; --dim:#94a3b8;
+  --line:#cbd5e1; --stroke:#e4e8ee;
+  --blue:#005EB8; --blueDeep:#002E5D; --blueSoft:#3b8ede; --blueLite:#0072CE;
+  --blueTint:#eaf3fc; --blueGlow:rgba(0,94,184,.32);
+  --red:#c1272d; --redSoft:#e0575c; --redTint:#fdf3f3;
+  --green:#12855a; --greenSoft:#3aa77a; --greenTint:#e9f6f0;
+  --gold:#b7791f; --goldTint:#fbf6e9;
+  --sans:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ width:100%; height:100%; background:#0b0f16; overflow:hidden;
+  font-family:var(--sans); -webkit-font-smoothing:antialiased; }
+#viewport{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+#stage{
+  position:relative; width:1920px; height:1080px; flex:0 0 auto;
+  transform-origin:center center; color:var(--ink); background:var(--bg);
+  background-image:
+    radial-gradient(1300px 760px at 86% -14%, rgba(0,94,184,.06), transparent 60%),
+    radial-gradient(1000px 640px at 6% 112%, rgba(18,133,90,.055), transparent 60%);
+  overflow:hidden;
+}
+#stage::before{ content:''; position:absolute; inset:0; opacity:.6; pointer-events:none;
+  background-image:linear-gradient(rgba(15,23,42,.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15,23,42,.028) 1px, transparent 1px);
+  background-size:52px 52px; }
+
+/* ---------------- scene container ---------------- */
+.scene{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .6s ease, transform .6s cubic-bezier(.2,.8,.3,1); }
+.scene.shown{ opacity:1; }
+.scene.gone{ opacity:0; transform:translateY(-30px) scale(.975); }
+.wrap{ width:1760px; }
+.wrap.center{ text-align:center; }
+
+/* entrance helper */
+.rise{ opacity:0; transform:translateY(26px);
+  transition:opacity .7s ease, transform .7s cubic-bezier(.2,.8,.3,1); }
+.scene.shown .rise{ opacity:1; transform:none; }
+.pop{ opacity:0; transform:scale(.82);
+  transition:opacity .6s ease, transform .6s cubic-bezier(.2,1.5,.35,1); }
+.scene.shown .pop{ opacity:1; transform:none; }
+
+/* ---------------- shared type ---------------- */
+.eyebrow{ font-family:var(--mono); font-size:18px; font-weight:600; letter-spacing:.34em;
+  text-transform:uppercase; color:var(--blue); }
+.eyebrow .dot{ display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--blue);
+  margin-right:14px; vertical-align:2px; box-shadow:0 0 0 0 rgba(0,94,184,.5); animation:beat 1.9s infinite; }
+.eyebrow.g{ color:var(--green); } .eyebrow.g .dot{ background:var(--green); box-shadow:0 0 0 0 rgba(18,133,90,.5); }
+h1.huge{ font-size:82px; font-weight:900; letter-spacing:-.03em; line-height:1.02; color:var(--ink); margin-top:26px; }
+h1.huge em{ font-style:normal; color:var(--blue); }
+h1.huge em.grn{ color:var(--green); }
+.lede{ font-size:27px; font-weight:500; color:var(--sub); margin-top:26px; line-height:1.4; }
+
+/* ================= SCENE 1 — hook ================= */
+#s1 .growthSVG{ display:block; margin:56px auto 0; width:1040px; height:270px; overflow:visible; }
+#s1 .gline{ fill:none; stroke:url(#gGrad); stroke-width:7; stroke-linecap:round;
+  stroke-dasharray:1400; stroke-dashoffset:1400; transition:stroke-dashoffset 1.8s cubic-bezier(.3,.7,.3,1) .35s; }
+#s1.shown .gline{ stroke-dashoffset:0; }
+#s1 .gdot{ opacity:0; transition:opacity .5s ease 1.9s; }
+#s1.shown .gdot{ opacity:1; }
+#s1 .gfrom{ fill:var(--red); } #s1 .gto{ fill:var(--green); }
+.tagFrom,.tagTo{ position:absolute; font-family:var(--mono); font-size:16px; font-weight:600; letter-spacing:.08em; }
+#s1 .flabel{ font-family:var(--mono); font-size:15px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; }
+
+/* ================= SCENE 2 — engine reveal ================= */
+.core{ position:relative; width:236px; height:236px; margin:0 auto; border-radius:34px;
+  background:linear-gradient(145deg,var(--blueLite),var(--blueDeep)); color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 0 10px rgba(0,94,184,.10), 0 40px 90px -30px rgba(0,94,184,.6), 0 0 120px -20px var(--blueGlow); }
+.core svg{ width:112px; height:112px; }
+.core .ring{ position:absolute; inset:-26px; border-radius:44px; border:2px dashed rgba(0,94,184,.35);
+  animation:spin 22s linear infinite; }
+.core .ring.r2{ inset:-52px; border-radius:56px; border-color:rgba(18,133,90,.22); animation-duration:34s; animation-direction:reverse; }
+#s2 .prodName{ font-size:74px; font-weight:900; letter-spacing:-.03em; color:var(--ink); margin-top:56px; }
+#s2 .prodName em{ font-style:normal; color:var(--blue); }
+#s2 .chipline{ display:inline-flex; gap:12px; margin-top:26px; flex-wrap:wrap; justify-content:center; }
+.tag{ font-family:var(--mono); font-size:16px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--sub); background:#fff; border:1px solid var(--stroke); border-radius:999px; padding:11px 20px;
+  box-shadow:0 3px 10px -4px rgba(15,23,42,.14); }
+.tag b{ color:var(--blue); font-weight:700; }
+
+/* ================= SCENE 3 — 3 systems -> 1 ================= */
+#s3 .area{ position:relative; width:1760px; height:640px; margin:0 auto; }
+.sys{ position:absolute; left:150px; width:360px; height:118px; border-radius:18px; background:#fff;
+  border:1.5px solid var(--stroke); display:flex; align-items:center; gap:18px; padding:0 26px;
+  box-shadow:0 3px 8px rgba(15,23,42,.05), 0 22px 40px -26px rgba(15,23,42,.35); }
+.sys .si{ width:60px; height:60px; border-radius:14px; background:var(--redTint); border:1px solid rgba(193,39,45,.25);
+  color:var(--red); display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+.sys .si svg{ width:32px; height:32px; }
+.sys .st{ font-size:23px; font-weight:800; color:var(--ink); letter-spacing:-.01em; }
+.sys .ss{ font-family:var(--mono); font-size:13px; font-weight:600; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--sub); margin-top:3px; }
+.engine{ position:absolute; right:150px; top:206px; width:392px; height:230px; border-radius:26px;
+  background:linear-gradient(145deg,var(--blueLite),var(--blueDeep)); color:#fff; padding:30px 32px;
+  box-shadow:0 0 0 8px rgba(0,94,184,.10), 0 40px 80px -28px rgba(0,94,184,.6); }
+.engine .eh{ display:flex; align-items:center; gap:16px; }
+.engine .eic{ width:60px; height:60px; border-radius:15px; background:rgba(255,255,255,.16);
+  display:flex; align-items:center; justify-content:center; } .engine .eic svg{ width:34px; height:34px; }
+.engine .en{ font-size:30px; font-weight:900; letter-spacing:-.02em; line-height:1.05; }
+.engine .ed{ margin-top:18px; font-size:17px; font-weight:500; color:rgba(255,255,255,.86); line-height:1.45; }
+.engine .eone{ position:absolute; top:-22px; right:-18px; width:64px; height:64px; border-radius:50%;
+  background:var(--green); color:#fff; display:flex; align-items:center; justify-content:center;
+  font-size:30px; font-weight:900; box-shadow:0 12px 28px -8px rgba(18,133,90,.7); }
+#s3 .cSVG{ position:absolute; inset:0; width:1760px; height:640px; overflow:visible; pointer-events:none; }
+#s3 .flowc{ fill:none; stroke:url(#cGrad); stroke-width:4; stroke-linecap:round; }
+#s3 .caption{ text-align:center; margin-top:22px; }
+.pill{ display:inline-flex; align-items:center; gap:9px; font-family:var(--mono); font-size:16px; font-weight:600;
+  letter-spacing:.06em; color:var(--blueDeep); background:var(--blueTint); border:1px solid rgba(0,94,184,.2);
+  border-radius:999px; padding:10px 20px; margin:0 7px; }
+.pill .pd{ width:8px; height:8px; border-radius:50%; background:var(--blue); }
+
+/* ================= SCENE 4 — metrics ================= */
+#s4 .stats{ display:flex; justify-content:center; gap:34px; margin-top:44px; }
+.stat{ width:500px; border-radius:24px; background:#fff; border:1.5px solid var(--stroke); padding:40px 40px 36px;
+  box-shadow:0 4px 10px rgba(15,23,42,.05), 0 30px 60px -34px rgba(15,23,42,.4); text-align:left; }
+.stat .sk{ font-family:var(--mono); font-size:15px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--sub); }
+.stat .row{ display:flex; align-items:baseline; gap:20px; margin-top:22px; }
+.stat .was{ font-size:56px; font-weight:800; color:var(--dim); letter-spacing:-.03em; position:relative; font-variant-numeric:tabular-nums; }
+.stat .was::after{ content:''; position:absolute; left:-6px; right:-6px; top:52%; height:5px; background:var(--red);
+  border-radius:3px; transform:scaleX(0); transform-origin:left; transition:transform .5s ease .6s; }
+#s4.shown .stat .was::after{ transform:scaleX(1); }
+.stat .arr{ color:var(--dim); } .stat .arr svg{ width:34px; height:34px; }
+.stat .now{ font-size:92px; font-weight:900; color:var(--green); letter-spacing:-.05em; line-height:.9; font-variant-numeric:tabular-nums; }
+.stat.blue .now{ color:var(--blue); }
+.stat .unit{ font-size:26px; font-weight:700; color:var(--sub); margin-left:4px; }
+.stat .foot{ margin-top:22px; font-size:17px; font-weight:600; color:var(--ink); display:flex; align-items:center; gap:10px; }
+.stat .foot .fi{ width:26px; height:26px; border-radius:50%; background:var(--greenTint); color:var(--green);
+  display:flex; align-items:center; justify-content:center; } .stat .foot .fi svg{ width:15px; height:15px; }
+.stat.blue .foot .fi{ background:var(--blueTint); color:var(--blue); }
+
+/* ================= SCENE 5 — differentiators + $2B ================= */
+#s5 .grid{ display:grid; grid-template-columns:1fr 640px; gap:64px; align-items:center; margin-top:40px; }
+.feat{ display:flex; gap:22px; padding:24px 4px; border-bottom:1px solid var(--stroke); }
+.feat:last-child{ border-bottom:none; }
+.feat .fic{ width:66px; height:66px; border-radius:16px; background:var(--blueTint); border:1px solid rgba(0,94,184,.2);
+  color:var(--blue); display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+.feat .fic svg{ width:34px; height:34px; }
+.feat.grn .fic{ background:var(--greenTint); border-color:rgba(18,133,90,.25); color:var(--green); }
+.feat.gld .fic{ background:var(--goldTint); border-color:rgba(183,121,31,.25); color:var(--gold); }
+.feat .ft{ font-size:27px; font-weight:800; color:var(--ink); letter-spacing:-.01em; }
+.feat .fd{ font-size:18px; font-weight:500; color:var(--sub); margin-top:5px; line-height:1.4; }
+.market{ border-radius:28px; background:linear-gradient(150deg,#063d76,var(--blueDeep)); color:#fff;
+  padding:52px 48px; box-shadow:0 40px 90px -34px rgba(0,46,93,.7); position:relative; overflow:hidden; }
+.market::after{ content:''; position:absolute; right:-60px; top:-60px; width:260px; height:260px; border-radius:50%;
+  background:radial-gradient(circle, rgba(58,167,122,.5), transparent 70%); }
+.market .mk{ font-family:var(--mono); font-size:16px; font-weight:600; letter-spacing:.18em; text-transform:uppercase; color:rgba(255,255,255,.75); }
+.market .mv{ font-size:150px; font-weight:900; letter-spacing:-.05em; line-height:.92; margin-top:10px; }
+.market .mv em{ font-style:normal; color:var(--greenSoft); }
+.market .ms{ font-size:24px; font-weight:600; margin-top:8px; }
+.market .mtag{ display:inline-flex; align-items:center; gap:10px; margin-top:26px; font-family:var(--mono);
+  font-size:15px; font-weight:600; letter-spacing:.06em; background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:11px 20px; }
+.market .mtag svg{ width:18px; height:18px; color:var(--greenSoft); }
+
+/* ================= SCENE 6 — closer ================= */
+#s6 .brand{ font-family:var(--mono); font-size:20px; font-weight:600; letter-spacing:.28em; text-transform:uppercase; color:var(--blue); }
+#s6 .cta{ font-size:96px; font-weight:900; letter-spacing:-.03em; color:var(--ink); margin-top:28px; line-height:1.03; }
+#s6 .cta em{ font-style:normal; color:var(--blue); }
+#s6 .go{ display:inline-flex; align-items:center; gap:18px; margin-top:48px; height:78px; padding:0 40px;
+  border-radius:16px; background:linear-gradient(90deg,var(--blueLite),var(--blue)); color:#fff;
+  font-size:26px; font-weight:800; letter-spacing:.01em; box-shadow:0 26px 60px -22px var(--blueGlow); }
+#s6 .go svg{ width:30px; height:30px; }
+
+/* ---------------- footer progress ---------------- */
+#bar{ position:absolute; left:0; right:0; bottom:0; height:6px; background:rgba(15,23,42,.06); z-index:50; }
+#fill{ position:absolute; left:0; top:0; bottom:0; width:0; background:linear-gradient(90deg,var(--blueLite),var(--blue)); }
+#hint{ position:absolute; right:26px; bottom:22px; font-family:var(--mono); font-size:12px; letter-spacing:.1em;
+  color:var(--dim); z-index:50; transition:opacity .6s ease; }
+
+@keyframes beat{ 0%,100%{ box-shadow:0 0 0 0 rgba(0,94,184,.5);} 60%{ box-shadow:0 0 0 10px rgba(0,94,184,0);} }
+@keyframes spin{ to{ transform:rotate(360deg);} }
+</style>
+</head>
+<body>
+<div id="viewport"><div id="stage">
+
+  <!-- ============ SCENE 1 — hook ============ -->
+  <section class="scene" id="s1"><div class="wrap center">
+    <div class="eyebrow rise"><span class="dot"></span>The Transformation</div>
+    <h1 class="huge rise" style="transition-delay:.12s">From friction to <em class="grn">exponential growth</em>.</h1>
+    <p class="lede rise" style="transition-delay:.24s">We reimagined the entire lending architecture &mdash; end to end.</p>
+    <svg class="growthSVG rise" viewBox="0 0 1040 270" style="transition-delay:.34s">
+      <defs><linearGradient id="gGrad" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#c1272d"/><stop offset=".5" stop-color="#005EB8"/><stop offset="1" stop-color="#12855a"/>
+      </linearGradient></defs>
+      <path class="gline" d="M 20 240 C 260 236 360 210 520 150 C 700 82 820 40 1020 22"/>
+      <circle class="gdot gfrom" cx="20" cy="240" r="11"/>
+      <circle class="gdot gto" cx="1020" cy="22" r="13"/>
+      <text class="gdot flabel gfrom" x="20" y="266" text-anchor="start" fill="#c1272d">TODAY &middot; ~7-DAY TAT</text>
+      <text class="gdot flabel gto" x="1020" y="20" text-anchor="end" fill="#12855a">INSTANT APPROVALS</text>
+    </svg>
+  </div></section>
+
+  <!-- ============ SCENE 2 — engine reveal ============ -->
+  <section class="scene" id="s2"><div class="wrap center">
+    <div class="eyebrow rise"><span class="dot"></span>Introducing</div>
+    <div class="core pop" style="transition-delay:.15s; margin-top:34px;">
+      <span class="ring"></span><span class="ring r2"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="6" y="6" width="12" height="12" rx="2.5"/><path d="M9.5 9.5h5v5h-5z"/>
+        <path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg>
+    </div>
+    <div class="prodName rise" style="transition-delay:.35s">The <em>Automated Credit Engine</em></div>
+    <div class="chipline rise" style="transition-delay:.5s">
+      <span class="tag">A <b>single</b>, integrated platform</span>
+      <span class="tag">Reimagined lending architecture</span>
+    </div>
+  </div></section>
+
+  <!-- ============ SCENE 3 — 3 systems -> 1 ============ -->
+  <section class="scene" id="s3"><div class="wrap">
+    <div class="center"><div class="eyebrow rise"><span class="dot"></span>Consolidate &amp; Automate</div>
+      <h1 class="huge rise" style="transition-delay:.1s; font-size:56px; margin-top:18px;">3 systems into <em>1 engine</em>.</h1></div>
+    <div class="area">
+      <svg class="cSVG" viewBox="0 0 1760 640" preserveAspectRatio="none">
+        <defs><linearGradient id="cGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#e0575c"/><stop offset="1" stop-color="#005EB8"/></linearGradient></defs>
+        <g id="cpaths"></g>
+      </svg>
+      <div class="sys pop" id="sy0" style="top:80px;  transition-delay:.25s"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-13M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></svg></span><div><div class="st">BizConnect</div><div class="ss">Data entry #1</div></div></div>
+      <div class="sys pop" id="sy1" style="top:261px; transition-delay:.35s"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v13c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-13M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></svg></span><div><div class="st">BCAS</div><div class="ss">Data entry #2</div></div></div>
+      <div class="sys pop" id="sy2" style="top:442px; transition-delay:.45s"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.6v5c0 4.4-3 7.7-7 9.4-4-1.7-7-5-7-9.4v-5z"/></svg></span><div><div class="st">CIF &middot; World Check</div><div class="ss">Screening checks</div></div></div>
+      <div class="engine pop" style="transition-delay:.6s">
+        <span class="eone">1</span>
+        <div class="eh"><span class="eic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2.5"/><path d="M9.5 9.5h5v5h-5z"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg></span>
+          <div class="en">Automated<br>Credit Engine</div></div>
+        <div class="ed">Rules-based decisions &mdash; consistent, policy-driven, in real time.</div>
+      </div>
+    </div>
+    <div class="caption rise" style="transition-delay:.8s">
+      <span class="pill"><span class="pd"></span>Consistent</span>
+      <span class="pill"><span class="pd"></span>Policy-driven</span>
+      <span class="pill"><span class="pd"></span>Real-time decisions</span>
+    </div>
+  </div></section>
+
+  <!-- ============ SCENE 4 — metrics ============ -->
+  <section class="scene" id="s4"><div class="wrap center">
+    <div class="eyebrow g rise"><span class="dot"></span>Zero-Touch &middot; Instant</div>
+    <h1 class="huge rise" style="transition-delay:.1s; font-size:56px; margin-top:18px;">Manual effort out. <em class="grn">Speed in.</em></h1>
+    <div class="stats">
+      <div class="stat pop" style="transition-delay:.2s">
+        <div class="sk">Manual headcount / case</div>
+        <div class="row"><span class="was">5</span><span class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span><span class="now" id="stManual">5</span></div>
+        <div class="foot"><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Zero-touch operations</div>
+      </div>
+      <div class="stat blue pop" style="transition-delay:.32s">
+        <div class="sk">Credit turnaround</div>
+        <div class="row"><span class="was">7<span class="unit" style="color:var(--dim)">d</span></span><span class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></span><span class="now" id="stTat">7</span></div>
+        <div class="foot"><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>Instant approvals</div>
+      </div>
+      <div class="stat pop" style="transition-delay:.44s">
+        <div class="sk">Total client journey</div>
+        <div class="row"><span class="now" id="stDays" style="color:var(--green)">0</span><span class="unit">days off</span></div>
+        <div class="foot"><span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>13 full days stripped out</div>
+      </div>
+    </div>
+  </div></section>
+
+  <!-- ============ SCENE 5 — differentiators + $2B ============ -->
+  <section class="scene" id="s5"><div class="wrap">
+    <div class="eyebrow rise"><span class="dot"></span>Trusted &middot; Connected &middot; Scalable</div>
+    <div class="grid">
+      <div>
+        <div class="feat rise grn" style="transition-delay:.15s"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.6v5c0 4.4-3 7.7-7 9.4-4-1.7-7-5-7-9.4v-5z"/><path d="M9 12l2 2 4-4"/></svg></span>
+          <div><div class="ft">Built-in Compliance &amp; Audit Trail</div><div class="fd">Real-time monitoring, explainability and control &mdash; on every decision.</div></div></div>
+        <div class="feat rise" style="transition-delay:.28s"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><path d="M7.6 7.8 11 15.8M16.4 7.8 13 15.8M8.5 6h7"/></svg></span>
+          <div><div class="ft">Partner Ecosystem &amp; Alternative Data</div><div class="fd">Richer credit signals from beyond the bank widen who we can serve.</div></div></div>
+        <div class="feat rise gld" style="transition-delay:.41s"><span class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3 2.4-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><circle cx="17.5" cy="9" r="2.5"/><path d="M16.2 14.2c2.6.3 4.3 2.2 4.3 4.8"/></svg></span>
+          <div><div class="ft">Superior Client &amp; RM Experience</div><div class="fd">Simpler, faster, more transparent credit journeys for both sides.</div></div></div>
+      </div>
+      <div class="market pop" style="transition-delay:.3s">
+        <div class="mk">Direct access to an estimated</div>
+        <div class="mv"><em>$2B</em></div>
+        <div class="ms">untapped market</div>
+        <div class="mtag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg>Exponential revenue runway</div>
+      </div>
+    </div>
+  </div></section>
+
+  <!-- ============ SCENE 6 — closer ============ -->
+  <section class="scene" id="s6"><div class="wrap center">
+    <div class="brand rise">UOB BizMoney &middot; Automated Credit Engine</div>
+    <div class="cta rise" style="transition-delay:.12s">Let&rsquo;s dive into the <em>live demo</em>.</div>
+    <div class="go pop" style="transition-delay:.3s">Start the walkthrough
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
+  </div></section>
+
+  <div id="hint">SPACE play/pause &middot; R restart</div>
+  <div id="bar"><div id="fill"></div></div>
+
+</div></div>
+
+<script>
+"use strict";
+const stage=document.getElementById('stage');
+function fit(){ const s=Math.min(innerWidth/1920, innerHeight/1080); stage.style.transform='scale('+s+')'; }
+addEventListener('resize', fit); fit();
+
+/* scene start times (ms) — paced to the narration */
+const scenes=[...document.querySelectorAll('.scene')];
+const START=[0, 4200, 10800, 17600, 30200, 42600];
+const END=46800;
+
+/* scene 3 converging connectors (built once) */
+(function(){
+  const g=document.getElementById('cpaths');
+  const tops=[80+59, 261+59, 442+59];        // right-edge y of each sys tile (top + height/2)
+  const x1=510, ex=1610-392, ey=206+115;     // tile right edge x, engine left x, engine cy
+  tops.forEach(function(y,i){
+    const mx=(x1+ex)/2;
+    const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('class','flowc'); p.setAttribute('pathLength','1');
+    p.setAttribute('stroke-dasharray','1'); p.setAttribute('stroke-dashoffset','1');
+    p.setAttribute('d','M '+x1+' '+y+' C '+mx+' '+y+' '+mx+' '+ey+' '+ex+' '+ey);
+    g.appendChild(p);
+  });
+})();
+const cpaths=[...document.querySelectorAll('#s3 .flowc')];
+
+const fill=document.getElementById('fill'), hint=document.getElementById('hint');
+const stManual=document.getElementById('stManual'), stTat=document.getElementById('stTat'), stDays=document.getElementById('stDays');
+const easeOut=p=>1-Math.pow(1-Math.max(0,Math.min(1,p)),3);
+
+let clock=0, playing=false, lastTs=null;
+
+function render(t){
+  // scene visibility
+  let cur=0; for(let i=0;i<START.length;i++){ if(t>=START[i]) cur=i; }
+  scenes.forEach(function(el,i){
+    el.classList.toggle('shown', i===cur);
+    el.classList.toggle('gone', i<cur);
+  });
+
+  // scene 3 connector draw-on (once its scene is active)
+  const s3=t-START[2];
+  cpaths.forEach(function(p,i){
+    const f=easeOut((s3-(700+i*140))/900);
+    p.setAttribute('stroke-dashoffset', String(1-Math.max(0,Math.min(1,f))));
+  });
+
+  // scene 4 count animations
+  const s4=t-START[3];
+  const cp=easeOut((s4-500)/1700);
+  if(t>=START[3]){
+    stManual.textContent = Math.round(5-5*cp);
+    stTat.textContent    = Math.round(7-7*cp);
+    stDays.textContent   = '−'+Math.round(13*cp);
+  } else { stManual.textContent='5'; stTat.textContent='7'; stDays.textContent='0'; }
+
+  // footer
+  fill.style.width=(Math.max(0,Math.min(1,t/END))*100)+'%';
+  hint.style.opacity = (t>2600 && playing) ? '0' : '.9';
+}
+
+function loop(ts){
+  if(lastTs===null) lastTs=ts;
+  const dt=ts-lastTs; lastTs=ts;
+  if(playing){ clock+=dt; if(clock>=END){ clock=END; playing=false; } }
+  render(clock);
+  requestAnimationFrame(loop);
+}
+function play(){ if(clock>=END) clock=0; playing=true; lastTs=null; }
+function pause(){ playing=false; }
+function restart(){ clock=0; lastTs=null; playing=true;
+  scenes.forEach(el=>el.classList.remove('shown','gone')); }
+
+addEventListener('keydown', function(e){
+  if(e.code==='Space'){ e.preventDefault(); playing?pause():play(); }
+  else if(e.key==='r'||e.key==='R'){ restart(); }
+});
+
+/* init — supports ?t=ms and ?s=sceneIndex for deterministic stills */
+const qp=new URLSearchParams(location.search);
+const qs=qp.get('s'), qt=qp.get('t');
+if(qs!==null || qt!==null){
+  clock = qs!==null ? (START[Math.max(0,Math.min(START.length-1,parseInt(qs,10)||0))]+2700)
+                    : Math.max(0,Math.min(END, parseInt(qt,10)||0));
+  playing=false; render(clock);
+}else{ playing=true; }
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

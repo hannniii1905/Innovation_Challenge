@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UOB Credit AI — Enterprise-Grade AI Architecture &amp; Governance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   UOB CREDIT AI — Architecture & Governance slide
+   1920x1080 · light UOB theme (matches solution-pitch.html / opening.html)
+   Data flows left -> right:  INPUT ENGINE  ->  CONTROL LAYER  ->  GUARDRAILS
+   R = replay entrance · ?still=1 = settled instantly (for screenshots)
+   ============================================================ */
+
+:root{
+  --bg:#f7f8fa; --ink:#0f172a; --sub:#64748b; --dim:#94a3b8;
+  --line:#cbd5e1; --stroke:#e4e8ee;
+  --blue:#005EB8; --blueDeep:#002E5D; --blueSoft:#3b8ede; --blueLite:#0072CE;
+  --blueTint:#eaf3fc; --blueGlow:rgba(0,94,184,.32);
+  --red:#c1272d; --redSoft:#e0575c; --redTint:#fdf3f3;
+  --green:#12855a; --greenSoft:#3aa77a; --greenTint:#e9f6f0;
+  --gold:#b7791f; --goldTint:#fbf6e9;
+  --sans:'Inter',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ width:100%; height:100%; background:#0b0f16; overflow:hidden;
+  font-family:var(--sans); -webkit-font-smoothing:antialiased; }
+#viewport{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+#stage{
+  position:relative; width:1920px; height:1080px; flex:0 0 auto;
+  transform-origin:center center; color:var(--ink); background:var(--bg);
+  background-image:
+    radial-gradient(1300px 760px at 84% -14%, rgba(0,94,184,.06), transparent 60%),
+    radial-gradient(1000px 640px at 8% 112%, rgba(18,133,90,.05), transparent 60%);
+  overflow:hidden; display:flex; align-items:center; justify-content:center;
+}
+#stage::before{ content:''; position:absolute; inset:0; opacity:.6; pointer-events:none;
+  background-image:linear-gradient(rgba(15,23,42,.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15,23,42,.028) 1px, transparent 1px);
+  background-size:52px 52px; }
+
+.deck{ width:1800px; }
+
+/* ---------------- entrance helpers ---------------- */
+.rise{ opacity:0; transform:translateY(24px);
+  transition:opacity .7s ease, transform .7s cubic-bezier(.2,.8,.3,1); }
+.shown .rise{ opacity:1; transform:none; }
+.pop{ opacity:0; transform:scale(.9) translateY(14px);
+  transition:opacity .6s ease, transform .6s cubic-bezier(.2,1.35,.35,1); }
+.shown .pop{ opacity:1; transform:none; }
+body.still .rise, body.still .pop{ transition:none !important; opacity:1 !important; transform:none !important; }
+
+/* ---------------- header ---------------- */
+.head{ text-align:center; }
+.eyebrow{ font-family:var(--mono); font-size:16px; font-weight:600; letter-spacing:.32em;
+  text-transform:uppercase; color:var(--blue); }
+.eyebrow .dot{ display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--blue);
+  margin-right:12px; vertical-align:2px; box-shadow:0 0 0 0 rgba(0,94,184,.5); animation:beat 1.9s infinite; }
+h1.title{ font-size:47px; font-weight:900; letter-spacing:-.025em; line-height:1.05; margin-top:14px; color:var(--ink); }
+h1.title em{ font-style:normal; color:var(--blue); }
+.sub{ font-size:20px; font-weight:500; color:var(--sub); margin-top:12px; }
+.sub b{ color:var(--green); font-weight:700; }
+
+/* ---------------- principle banner ---------------- */
+.principle{ margin:22px auto 0; max-width:1520px; border-radius:16px;
+  background:linear-gradient(150deg,#063d76,var(--blueDeep)); color:#fff;
+  padding:18px 34px; display:flex; align-items:center; justify-content:center; gap:18px;
+  box-shadow:0 24px 54px -30px rgba(0,46,93,.75); position:relative; overflow:hidden; }
+.principle::after{ content:''; position:absolute; right:-80px; top:-120px; width:360px; height:360px;
+  background:radial-gradient(circle, rgba(58,167,122,.32), transparent 62%); pointer-events:none; }
+.principle .pi{ width:40px; height:40px; border-radius:11px; background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+.principle .pi svg{ width:22px; height:22px; color:#bfe0ff; }
+.principle .pt{ font-size:21px; font-weight:600; letter-spacing:.01em; }
+.principle .pt b{ font-weight:800; color:#7fdcb0; }
+.principle .pt span{ color:#cfe3ff; }
+
+/* ---------------- columns ---------------- */
+.cols{ display:flex; align-items:stretch; gap:0; margin-top:24px; }
+.col{ flex:1 1 0; background:#fff; border:1.5px solid var(--stroke); border-top:5px solid var(--blue);
+  border-radius:22px; padding:26px 28px 28px; position:relative;
+  box-shadow:0 4px 10px rgba(15,23,42,.05), 0 30px 60px -36px rgba(15,23,42,.42); }
+.col.c2{ flex:1.22 1 0; border-top-color:var(--blueDeep); box-shadow:0 6px 16px rgba(0,46,93,.1), 0 34px 68px -34px rgba(0,46,93,.5); }
+.col.c2 .item{ margin-top:13px; }
+.col.c2 .item .sub2{ margin-top:4px; }
+.col.c3{ border-top-color:var(--green); }
+.col.c2::before{ content:''; position:absolute; inset:-1px; border-radius:22px; pointer-events:none;
+  box-shadow:0 0 0 1px rgba(0,94,184,.14), 0 0 40px -6px rgba(0,94,184,.18) inset; }
+
+.chead{ display:flex; align-items:center; gap:14px; padding-bottom:16px; border-bottom:1px solid var(--stroke); }
+.cic{ width:52px; height:52px; border-radius:14px; background:var(--blueTint); border:1px solid rgba(0,94,184,.2);
+  color:var(--blue); display:flex; align-items:center; justify-content:center; flex:0 0 auto; } .cic svg{ width:28px; height:28px; }
+.c2 .cic{ background:#e7effb; border-color:rgba(0,46,93,.22); color:var(--blueDeep); }
+.c3 .cic{ background:var(--greenTint); border-color:rgba(18,133,90,.25); color:var(--green); }
+.cnum{ font-family:var(--mono); font-size:13px; font-weight:600; letter-spacing:.14em; color:var(--dim); }
+.ctitle{ font-size:21px; font-weight:800; letter-spacing:-.01em; color:var(--ink); margin-top:2px; line-height:1.12; }
+.ctag{ font-family:var(--mono); font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--blue); margin-top:5px; }
+.c2 .ctag{ color:var(--blueDeep); } .c3 .ctag{ color:var(--green); }
+
+.item{ margin-top:16px; }
+.item .l1{ display:flex; align-items:flex-start; gap:11px; font-size:18px; font-weight:700; color:var(--ink); line-height:1.25; }
+.item .l1 .mk{ width:18px; height:18px; border-radius:5px; background:var(--blueTint); color:var(--blue); flex:0 0 auto;
+  display:flex; align-items:center; justify-content:center; margin-top:2px; } .item .l1 .mk svg{ width:12px; height:12px; }
+.c2 .item .l1 .mk{ background:#e7effb; color:var(--blueDeep); }
+.c3 .item .l1 .mk{ background:var(--greenTint); color:var(--green); }
+.item .sub2{ font-size:15px; font-weight:500; color:var(--sub); line-height:1.35; margin:5px 0 0 29px; position:relative; }
+.item .sub2::before{ content:''; position:absolute; left:-14px; top:9px; width:7px; height:1.5px; background:var(--line); border-radius:2px; }
+
+/* flow connectors between columns */
+.flow{ flex:0 0 74px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; }
+.flow .fl{ font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--dim); text-align:center; white-space:nowrap; }
+.flow .arw{ width:44px; height:44px; border-radius:50%; background:#fff; border:1.5px solid var(--stroke);
+  display:flex; align-items:center; justify-content:center; box-shadow:0 10px 22px -12px rgba(15,23,42,.4); }
+.flow .arw svg{ width:22px; height:22px; color:var(--blue); }
+.flow.g .arw svg{ color:var(--green); }
+
+/* ---------------- metrics ribbon ---------------- */
+.ribbon{ margin-top:26px; border-radius:20px; background:linear-gradient(140deg,#063d76,var(--blueDeep));
+  color:#fff; display:flex; align-items:stretch; overflow:hidden; position:relative;
+  box-shadow:0 30px 66px -30px rgba(0,46,93,.75); }
+.ribbon::after{ content:''; position:absolute; left:-60px; bottom:-120px; width:380px; height:380px;
+  background:radial-gradient(circle, rgba(58,167,122,.28), transparent 62%); pointer-events:none; }
+.metric{ flex:1 1 0; padding:26px 40px; display:flex; align-items:center; gap:20px; position:relative; z-index:1; }
+.metric + .metric{ border-left:1px solid rgba(255,255,255,.14); }
+.metric .mnum{ font-size:52px; font-weight:900; letter-spacing:-.03em; line-height:1; color:#7fdcb0; white-space:nowrap; }
+.metric.b .mnum{ color:#8fc6ff; }
+.metric .mlab{ font-size:19px; font-weight:600; color:#eaf2ff; line-height:1.25; }
+.metric .mlab span{ display:block; font-family:var(--mono); font-size:12px; font-weight:500; letter-spacing:.1em;
+  text-transform:uppercase; color:#9dc0ea; margin-top:5px; }
+
+/* footer wordmark */
+.brand{ position:absolute; left:30px; bottom:22px; font-family:var(--mono); font-size:12px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--dim); }
+.brand b{ color:var(--blue); font-weight:600; }
+#hint{ position:absolute; right:28px; bottom:22px; font-family:var(--mono); font-size:12px; letter-spacing:.1em;
+  color:var(--dim); }
+
+@keyframes beat{ 0%,100%{ box-shadow:0 0 0 0 rgba(0,94,184,.5);} 60%{ box-shadow:0 0 0 9px rgba(0,94,184,0);} }
+</style>
+</head>
+<body>
+<div id="viewport"><div id="stage"><div class="deck" id="deck">
+
+  <!-- ================= HEADER ================= -->
+  <div class="head">
+    <div class="eyebrow rise"><span class="dot"></span>UOB Credit AI &middot; AI Architecture &amp; Governance</div>
+    <h1 class="title rise" style="transition-delay:.08s">Enterprise-Grade AI Architecture, <em>Bank-Grade Governance</em></h1>
+    <div class="sub rise" style="transition-delay:.16s"><b>Zero-Hallucination</b>, deterministic summarization engine &mdash; powered by modular skills &amp; strict guardrails</div>
+  </div>
+
+  <!-- ================= PRINCIPLE BANNER ================= -->
+  <div class="principle pop" style="transition-delay:.24s">
+    <span class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M5 6l7-4 7 4"/><path d="M3 10h4l-2 6a3 3 0 0 0 6 0l-2-6M17 10h4l-2 6a3 3 0 0 0 6 0"/></svg></span>
+    <div class="pt"><b>Determinism First, Summarization Second</b> &nbsp;&mdash;&nbsp; <span>Math is handled by <b style="color:#fff;font-weight:700">Rules</b>; Language is synthesized by <b style="color:#fff;font-weight:700">AI</b>.</span></div>
+  </div>
+
+  <!-- ================= 3 COLUMNS ================= -->
+  <div class="cols">
+
+    <!-- COLUMN 1 — INPUT ENGINE -->
+    <div class="col c1 pop" style="transition-delay:.34s">
+      <div class="chead">
+        <span class="cic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg></span>
+        <div><div class="cnum">01 &middot; DATA SOURCE</div><div class="ctitle">The Input Engine</div><div class="ctag">Deterministic &middot; Ground Truth</div></div>
+      </div>
+      <div class="item"><div class="l1"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 6"/></svg></span>Deterministic Risk-Engine Outputs</div></div>
+      <div class="item"><div class="l1"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 6"/></svg></span>Calculated Financial Ratios &amp; Cash Flows</div></div>
+      <div class="item"><div class="l1"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 6"/></svg></span>Rule-Based Policy Checks &amp; Disclosures</div></div>
+      <div class="item"><div class="l1"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 6"/></svg></span>Auto-Fetched ACRA &amp; Bank-Statement Ingestion</div>
+        <div class="sub2">Structured into one standardized JSON data bundle</div></div>
+    </div>
+
+    <div class="flow pop" style="transition-delay:.42s">
+      <div class="fl">JSON<br>bundle</div>
+      <div class="arw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
+    </div>
+
+    <!-- COLUMN 2 — CONTROL LAYER -->
+    <div class="col c2 pop" style="transition-delay:.5s">
+      <div class="chead">
+        <span class="cic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg></span>
+        <div><div class="cnum">02 &middot; SKILL.MD + LLM</div><div class="ctitle">The Control Layer</div><div class="ctag">Low-Temp Constrained Generation</div></div>
+      </div>
+      <div class="item"><div class="l1"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 6"/></svg></span>System Prompt &mdash; Persona &amp; Boundaries</div>
+        <div class="sub2">Enforces zero external assumptions &mdash; only the provided JSON facts</div></div>
+      <div class="item"><div class="l1"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 6"/></svg></span>SKILL.md &mdash; Domain Knowledge Playbook</div>
+        <div class="sub2">Credit-specific CAM formatting rules</div>
+        <div class="sub2">Tone mapping by risk tier (auto-approval &rarr; CA exception)</div></div>
+      <div class="item"><div class="l1"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 6"/></svg></span>Enterprise LLM Inference</div>
+        <div class="sub2">Temperature locked at <b style="color:var(--blueDeep)">0.0</b> for reproducible summaries</div></div>
+    </div>
+
+    <div class="flow g pop" style="transition-delay:.58s">
+      <div class="fl">draft<br>summary</div>
+      <div class="arw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
+    </div>
+
+    <!-- COLUMN 3 — GUARDRAILS -->
+    <div class="col c3 pop" style="transition-delay:.66s">
+      <div class="chead">
+        <span class="cic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 4v6c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6z"/><path d="M8.5 12l2.5 2.5L16 9"/></svg></span>
+        <div><div class="cnum">03 &middot; GUARDRAILS &amp; AUDIT</div><div class="ctitle">Zero-Hallucination Engine</div><div class="ctag">Verify &middot; Enforce &middot; Isolate</div></div>
+      </div>
+      <div class="item"><div class="l1"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 6"/></svg></span>Automated Fact Verification</div>
+        <div class="sub2">Regex extracts every number, cross-checks against source JSON</div></div>
+      <div class="item"><div class="l1"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 6"/></svg></span>Enforced JSON Output Schema</div>
+        <div class="sub2">Guarantees the dashboard UI never breaks</div></div>
+      <div class="item"><div class="l1"><span class="mk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l6 6L20 6"/></svg></span>Private &amp; Compliant Infrastructure</div>
+        <div class="sub2">Air-gapped / private tenant &mdash; model-agnostic</div>
+        <div class="sub2">No customer PII ever leaves the UOB perimeter</div></div>
+    </div>
+
+  </div>
+
+  <!-- ================= METRICS RIBBON ================= -->
+  <div class="ribbon pop" style="transition-delay:.76s">
+    <div class="metric"><div class="mnum">0%</div><div class="mlab">Numerical Hallucination<span>Every figure verified</span></div></div>
+    <div class="metric"><div class="mnum">100%</div><div class="mlab">Audit Traceability<span>Sentence-level provenance</span></div></div>
+    <div class="metric b"><div class="mnum" style="font-size:40px">Real-Time</div><div class="mlab">JSON Ingestion<span>Seamless dashboard render</span></div></div>
+  </div>
+
+</div>
+  <div class="brand"><b>UOB</b> BizMoney &middot; Credit AI</div>
+  <div id="hint">R replay</div>
+</div></div>
+
+<script>
+"use strict";
+const stage=document.getElementById('stage');
+function fit(){ const s=Math.min(innerWidth/1920, innerHeight/1080); stage.style.transform='scale('+s+')'; }
+addEventListener('resize', fit); fit();
+
+const deck=document.getElementById('deck');
+const qp=new URLSearchParams(location.search);
+if(qp.get('still')!==null){ document.body.classList.add('still'); deck.classList.add('shown'); }
+else{ requestAnimationFrame(()=>requestAnimationFrame(()=>deck.classList.add('shown'))); }
+
+function replay(){ deck.classList.remove('shown');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>deck.classList.add('shown'))); }
+addEventListener('keydown', e=>{ if(e.key==='r'||e.key==='R') replay(); });
+</script>
+</body>
+</html>
